@@ -1,0 +1,111 @@
+"use client";
+
+import Image from "next/image";
+import { useMemo, useState } from "react";
+import type { ReviewItem } from "@/lib/reviews-data";
+
+type ReviewCardProps = {
+  review: ReviewItem;
+  compact?: boolean;
+};
+
+const MAX_PREVIEW_LENGTH = 220;
+
+function InstagramIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.3" cy="6.7" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function ReviewCard({ review, compact = false }: ReviewCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  const isLong = review.text.length > MAX_PREVIEW_LENGTH;
+
+  const visibleText = useMemo(() => {
+    if (!isLong) return review.text;
+    if (expanded) return review.text;
+
+    return `${review.text.slice(0, MAX_PREVIEW_LENGTH).trim()}…`;
+  }, [expanded, isLong, review.text]);
+
+  return (
+    <div className="rounded-2xl border border-[var(--color-gray-200)] bg-white p-5">
+      <div className="flex items-center gap-4">
+        {!imageError && review.image ? (
+          <div className="h-14 w-14 overflow-hidden rounded-full bg-[var(--color-gray-100)]">
+            <Image
+              src={review.image}
+              alt={review.author}
+              width={80}
+              height={80}
+              className="h-full w-full object-cover"
+              onError={() => setImageError(true)}
+            />
+          </div>
+        ) : (
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-gray-100)] text-sm text-[var(--color-gray-500)]">
+            —
+          </div>
+        )}
+
+        <div className="min-w-0">
+          <p className="font-medium text-[var(--color-navy)]">
+            {review.author}
+          </p>
+
+          {review.city ? (
+            <p className="text-sm text-[var(--color-gray-500)]">
+              {review.city}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <p className="mt-5 text-sm leading-7 text-[var(--color-gray-700)]">
+        {visibleText}
+      </p>
+
+      <div className="mt-5 flex items-center justify-between gap-4">
+        {isLong || compact ? (
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="inline-flex text-sm font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
+          >
+            {expanded ? "Свернуть" : "Читать полностью"}
+          </button>
+        ) : (
+          <span />
+        )}
+
+        {review.instagramUrl ? (
+          <a
+            href={review.instagramUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-10 w-10 items-center justify-center text-[var(--color-teal)] transition hover:text-[var(--color-teal-hover)]"
+            aria-label="Instagram"
+            title="Instagram"
+          >
+            <InstagramIcon />
+          </a>
+        ) : null}
+      </div>
+    </div>
+  );
+}
