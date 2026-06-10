@@ -29,17 +29,17 @@ export const casesData: CaseItem[] = [
     status: "Было рекомендовано удаление",
     doctorSlug: "lead-doctor",
 
-    coverImage: "/case-1-cover.jpg",
-    imageBefore: "/cases/case-1-before.jpg",
-    imageAfter: "/cases/case-1-after.jpg",
+    coverImage: "/cases/case-1/cover.jpg",
+    imageBefore: "/cases/case-1/before.jpg",
+    imageAfter: "/cases/case-1/after.jpg",
 
     protocolImages: [
-      "/cases/case-1-protocol-1.jpg",
-      "/cases/case-1-protocol-2.jpg",
-      "/cases/case-1-protocol-3.jpg",
+      "/cases/case-1/protocol-1.jpg",
+      "/cases/case-1/protocol-2.jpg",
+      "/cases/case-1/protocol-3.jpg",
     ],
 
-    situation: `Пациентка обратилась с жалобами на боль в жевательном зубе при накусывании. 
+    situation: `Пациентка обратилась с жалобами на боль в жевательном зубе при накусывании.
 
 При осмотре отмечались выраженное воспаление десны и значительная подвижность зуба.
 
@@ -47,23 +47,23 @@ export const casesData: CaseItem[] = [
 
 С учётом полученных данных в другой клинике было рекомендовано удаление зуба.`,
 
-    diagnostics: `При анализе КЛКТ и клинической картины установлено, что зуб ранее не подвергался эндодонтическому лечению, что указывает на наличие первичной инфекции. 
+    diagnostics: `При анализе КЛКТ и клинической картины установлено, что зуб ранее не подвергался эндодонтическому лечению, что указывает на наличие первичной инфекции.
 
-Отсутствовала реакция на холодовой тест, что свидетельствует о некрозе пульпы. 
+Отсутствовала реакция на холодовой тест, что свидетельствует о некрозе пульпы.
 
-Геометрия воспалительного очага характеризовалась выраженным поражением костной ткани в апикальной области при относительно сохранной коронковой части, что указывает на эндодонтическую природу процесса. 
+Геометрия воспалительного очага характеризовалась выраженным поражением костной ткани в апикальной области при относительно сохранной коронковой части, что указывает на эндодонтическую природу процесса.
 
 Совокупность диагностических данных подтверждает возможность проведения зубосохраняющего эндодонтического лечения.`,
 
-    decision: `Удаление зуба в данной ситуации приводило бы к формированию выраженного костного дефекта и усложняло бы последующую имплантацию. 
+    decision: `Удаление зуба в данной ситуации приводило бы к формированию выраженного костного дефекта и усложняло бы последующую имплантацию.
 
-С учётом диагностических данных было принято решение о проведении зубосохраняющего лечения. 
+С учётом диагностических данных было принято решение о проведении зубосохраняющего лечения.
 
-Перед началом лечения выполнены профессиональная гигиена и шинирование зуба с опорой на соседние в связи с его подвижностью. 
+Перед началом лечения выполнены профессиональная гигиена и шинирование зуба с опорой на соседние в связи с его подвижностью.
 
 Далее проведено эндодонтическое лечение в два этапа.`,
 
-    result: `Через 6 месяцев по данным повторного КЛКТ отмечается устойчивая положительная динамика и восстановление костной структуры в области корней зуба. 
+    result: `Через 6 месяцев по данным повторного КЛКТ отмечается устойчивая положительная динамика и восстановление костной структуры в области корней зуба.
 
 Клиническая ситуация стабилизирована, что позволяет перейти к этапу постоянного протезирования.`,
   },
@@ -80,14 +80,14 @@ export const casesData: CaseItem[] = [
     status: "Срочная реставрация 6 передних зубов",
     doctorSlug: "restorative-doctor",
 
-    coverImage: "/case-2-cover.jpg",
-    imageBefore: "/cases/case-2-before.jpg",
-    imageAfter: "/cases/case-2-after.jpg",
+    coverImage: "/cases/case-2/cover.jpg",
+    imageBefore: "/cases/case-2/before.jpg",
+    imageAfter: "/cases/case-2/after.jpg",
 
     protocolImages: [
-      "/cases/case-2-protocol-1.jpg",
-      "/cases/case-2-protocol-2.jpg",
-      "/cases/case-2-protocol-3.jpg",
+      "/cases/case-2/protocol-1.jpg",
+      "/cases/case-2/protocol-2.jpg",
+      "/cases/case-2/protocol-3.jpg",
     ],
 
     situation: `После ранее проведённого лечения сохранялись жалобы и признаки воспалительного процесса.`,
@@ -111,14 +111,14 @@ export const casesData: CaseItem[] = [
     status: "Сложный случай",
     doctorSlug: "lead-doctor",
 
-    coverImage: "/cases/case-3-cover.jpg",
-    imageBefore: "/cases/case-3-before.jpg",
-    imageAfter: "/cases/case-3-after.jpg",
+    coverImage: "/cases/case-3/cover.jpg",
+    imageBefore: "/cases/case-3/before.jpg",
+    imageAfter: "/cases/case-3/after.jpg",
 
     protocolImages: [
-      "/cases/case-3-protocol-1.jpg",
-      "/cases/case-3-protocol-2.jpg",
-      "/cases/case-3-protocol-3.jpg",
+      "/cases/case-3/protocol-1.jpg",
+      "/cases/case-3/protocol-2.jpg",
+      "/cases/case-3/protocol-3.jpg",
     ],
 
     situation: `Пациент обратился с хроническим воспалительным процессом и сложной анатомией корневых каналов.`,
@@ -129,6 +129,7 @@ export const casesData: CaseItem[] = [
 
     result: `Удалось провести лечение в рамках консервативного подхода и сохранить зуб.`,
   },
+
   {
     slug: "case-4",
 
@@ -141,14 +142,14 @@ export const casesData: CaseItem[] = [
     status: "Срочная реставрация 6 передних зубов",
     doctorSlug: "restorative-doctor",
 
-    coverImage: "/case-2-cover.jpg",
-    imageBefore: "/cases/case-2-before.jpg",
-    imageAfter: "/cases/case-2-after.jpg",
+    coverImage: "/cases/case-4/cover.jpg",
+    imageBefore: "/cases/case-4/before.jpg",
+    imageAfter: "/cases/case-4/after.jpg",
 
     protocolImages: [
-      "/cases/case-2-protocol-1.jpg",
-      "/cases/case-2-protocol-2.jpg",
-      "/cases/case-2-protocol-3.jpg",
+      "/cases/case-4/protocol-1.jpg",
+      "/cases/case-4/protocol-2.jpg",
+      "/cases/case-4/protocol-3.jpg",
     ],
 
     situation: `После ранее проведённого лечения сохранялись жалобы и признаки воспалительного процесса.`,
@@ -159,6 +160,7 @@ export const casesData: CaseItem[] = [
 
     result: `Удалось добиться контролируемой положительной динамики и сохранить зуб.`,
   },
+
   {
     slug: "case-5",
 
@@ -171,14 +173,14 @@ export const casesData: CaseItem[] = [
     status: "Срочная реставрация 6 передних зубов",
     doctorSlug: "restorative-doctor",
 
-    coverImage: "/case-2-cover.jpg",
-    imageBefore: "/cases/case-2-before.jpg",
-    imageAfter: "/cases/case-2-after.jpg",
+    coverImage: "/cases/case-5/cover.jpg",
+    imageBefore: "/cases/case-5/before.jpg",
+    imageAfter: "/cases/case-5/after.jpg",
 
     protocolImages: [
-      "/cases/case-2-protocol-1.jpg",
-      "/cases/case-2-protocol-2.jpg",
-      "/cases/case-2-protocol-3.jpg",
+      "/cases/case-5/protocol-1.jpg",
+      "/cases/case-5/protocol-2.jpg",
+      "/cases/case-5/protocol-3.jpg",
     ],
 
     situation: `После ранее проведённого лечения сохранялись жалобы и признаки воспалительного процесса.`,
@@ -202,14 +204,14 @@ export const casesData: CaseItem[] = [
     status: "Срочная реставрация 6 передних зубов",
     doctorSlug: "restorative-doctor",
 
-    coverImage: "/case-2-cover.jpg",
-    imageBefore: "/cases/case-2-before.jpg",
-    imageAfter: "/cases/case-2-after.jpg",
+    coverImage: "/cases/case-6/cover.jpg",
+    imageBefore: "/cases/case-6/before.jpg",
+    imageAfter: "/cases/case-6/after.jpg",
 
     protocolImages: [
-      "/cases/case-2-protocol-1.jpg",
-      "/cases/case-2-protocol-2.jpg",
-      "/cases/case-2-protocol-3.jpg",
+      "/cases/case-6/protocol-1.jpg",
+      "/cases/case-6/protocol-2.jpg",
+      "/cases/case-6/protocol-3.jpg",
     ],
 
     situation: `После ранее проведённого лечения сохранялись жалобы и признаки воспалительного процесса.`,
@@ -220,6 +222,7 @@ export const casesData: CaseItem[] = [
 
     result: `Удалось добиться контролируемой положительной динамики и сохранить зуб.`,
   },
+
   {
     slug: "case-7",
 
@@ -232,14 +235,14 @@ export const casesData: CaseItem[] = [
     status: "Срочная реставрация 6 передних зубов",
     doctorSlug: "restorative-doctor",
 
-    coverImage: "/case-2-cover.jpg",
-    imageBefore: "/cases/case-2-before.jpg",
-    imageAfter: "/cases/case-2-after.jpg",
+    coverImage: "/cases/case-7/cover.jpg",
+    imageBefore: "/cases/case-7/before.jpg",
+    imageAfter: "/cases/case-7/after.jpg",
 
     protocolImages: [
-      "/cases/case-2-protocol-1.jpg",
-      "/cases/case-2-protocol-2.jpg",
-      "/cases/case-2-protocol-3.jpg",
+      "/cases/case-7/protocol-1.jpg",
+      "/cases/case-7/protocol-2.jpg",
+      "/cases/case-7/protocol-3.jpg",
     ],
 
     situation: `После ранее проведённого лечения сохранялись жалобы и признаки воспалительного процесса.`,
