@@ -1,6 +1,7 @@
 export type TeamMember = {
   slug: string;
   name: string;
+  position: string;
   role: string;
   shortRole: string;
   description: string;
@@ -14,6 +15,7 @@ export const teamData: TeamMember[] = [
   {
     slug: "lead-doctor",
     name: "Мурат Курджиев",
+    position: "Главный врач",
     role: "Врач-стоматолог. Ведущий фокус — сложная эндодонтия",
     shortRole: "Эндодонтия",
     description:
@@ -26,6 +28,7 @@ export const teamData: TeamMember[] = [
   {
     slug: "implantology",
     name: "Специалист по имплантации",
+    position: "Врач-имплантолог",
     role: "Имплантация",
     shortRole: "Имплантация",
     description:
@@ -38,6 +41,7 @@ export const teamData: TeamMember[] = [
   {
     slug: "gnathology",
     name: "Специалист по гнатологии",
+    position: "Врач-гнатолог",
     role: "Гнатология",
     shortRole: "Гнатология",
     description:
@@ -50,6 +54,7 @@ export const teamData: TeamMember[] = [
   {
     slug: "prosthetic-doctor",
     name: "Специалист по ортопедии",
+    position: "Врач-ортопед",
     role: "Ортопедия и микропротезирование",
     shortRole: "Ортопедия",
     description:
@@ -62,6 +67,7 @@ export const teamData: TeamMember[] = [
   {
     slug: "restorative-doctor",
     name: "Татьяна Макеева",
+    position: "Врач-реставратор",
     role: "Эстетические реставрации",
     shortRole: "Реставрация",
     description:

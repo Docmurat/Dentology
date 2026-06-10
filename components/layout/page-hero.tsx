@@ -8,7 +8,7 @@ type PageHeroProps = {
 
 export function PageHero({ eyebrow, title, description }: PageHeroProps) {
   return (
-    <Section className="pt-14 pb-16 md:pt-18 md:pb-40">
+    <Section className="pt-14 pb-16 md:pt-18 md:pb-16">
       <div className="max-w-4xl">
         {eyebrow ? (
           <p className="mb-5 text-sm uppercase tracking-[0.22em] text-[var(--color-gray-500)]">
