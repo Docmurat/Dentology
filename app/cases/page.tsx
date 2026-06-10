@@ -3,6 +3,7 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { CasesPageContent } from "@/components/cases/cases-page-content";
+import { getAllCases } from "@/lib/cases";
 
 export const metadata: Metadata = {
   title: "Клинические случаи",
@@ -10,7 +11,12 @@ export const metadata: Metadata = {
     "Реальные клинические случаи Dentology: сложная эндодонтия, повторное лечение и ситуации, где ранее рекомендовали удаление зуба.",
 };
 
-export default function CasesPage() {
+// Новые кейсы из кабинета появляются без пересборки.
+export const revalidate = 60;
+
+export default async function CasesPage() {
+  const cases = await getAllCases();
+
   return (
     <SiteShell>
       <PageHero
@@ -20,15 +26,15 @@ export default function CasesPage() {
       />
 
       <Section className="pb-20 md:pb-28">
-  <CasesPageContent />
+        <CasesPageContent cases={cases} />
 
-  <div className="mt-8 border-t border-[var(--color-gray-200)] pt-4">
-    <p className="text-xs leading-6 text-[var(--color-gray-500)]">
-      Каждый клинический случай на сайте показывает не только результат,
-      но и логику диагностики, выбора тактики и обоснованность лечения.
-    </p>
-  </div>
-</Section>
+        <div className="mt-8 border-t border-[var(--color-gray-200)] pt-4">
+          <p className="text-xs leading-6 text-[var(--color-gray-500)]">
+            Каждый клинический случай на сайте показывает не только результат,
+            но и логику диагностики, выбора тактики и обоснованность лечения.
+          </p>
+        </div>
+      </Section>
     </SiteShell>
   );
 }

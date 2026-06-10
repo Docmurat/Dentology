@@ -11,6 +11,7 @@ import { TeamPreview } from "@/components/home/team-preview";
 import { EducationPreview } from "@/components/home/education-preview";
 import { CtaSection } from "@/components/home/cta-section";
 import { ReviewsPreview } from "@/components/home/reviews-preview";
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Стоматологическая практика",

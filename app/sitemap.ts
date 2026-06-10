@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 import { directionsData } from "@/lib/directions-data";
-import { casesData } from "@/lib/cases-data";
+import { getCaseSlugs } from "@/lib/cases";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://dentology.ru";
 
   const staticPages = [
@@ -22,8 +22,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date(),
   }));
 
-  const casePages = casesData.map((item) => ({
-    url: `${baseUrl}/cases/${item.slug}`,
+  const caseSlugs = await getCaseSlugs();
+  const casePages = caseSlugs.map((slug) => ({
+    url: `${baseUrl}/cases/${slug}`,
     lastModified: new Date(),
   }));
 

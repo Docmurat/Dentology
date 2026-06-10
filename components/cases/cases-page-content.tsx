@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { casesData } from "@/lib/cases-data";
+import type { CaseItem } from "@/lib/cases-data";
 import { teamData } from "@/lib/team-data";
 
 const ITEMS_PER_PAGE = 6;
@@ -18,29 +18,22 @@ const filterOptions = [
   { value: "gnathology", label: "Гнатология" },
 ];
 
-export function CasesPageContent() {
+export function CasesPageContent({ cases }: { cases: CaseItem[] }) {
   const [activeFilter, setActiveFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredCases = useMemo(() => {
-    if (activeFilter === "all") return casesData;
+    if (activeFilter === "all") return cases;
 
-    return casesData.filter(
-      (item) => item.directionSlug === activeFilter
-    );
-  }, [activeFilter]);
+    return cases.filter((item) => item.directionSlug === activeFilter);
+  }, [activeFilter, cases]);
 
-  const totalPages = Math.ceil(
-    filteredCases.length / ITEMS_PER_PAGE
-  );
+  const totalPages = Math.ceil(filteredCases.length / ITEMS_PER_PAGE);
 
   const paginatedCases = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
 
-    return filteredCases.slice(
-      start,
-      start + ITEMS_PER_PAGE
-    );
+    return filteredCases.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredCases, currentPage]);
 
   return (
@@ -126,9 +119,7 @@ export function CasesPageContent() {
               <button
                 type="button"
                 onClick={() =>
-                  setCurrentPage((prev) =>
-                    Math.max(prev - 1, 1)
-                  )
+                  setCurrentPage((prev) => Math.max(prev - 1, 1))
                 }
                 disabled={currentPage === 1}
                 className="px-3 py-2 text-sm text-[var(--color-navy)] disabled:opacity-30"
@@ -136,9 +127,7 @@ export function CasesPageContent() {
                 ←
               </button>
 
-              {Array.from({
-                length: totalPages,
-              }).map((_, index) => {
+              {Array.from({ length: totalPages }).map((_, index) => {
                 const page = index + 1;
                 const isActive = currentPage === page;
 
@@ -161,9 +150,7 @@ export function CasesPageContent() {
               <button
                 type="button"
                 onClick={() =>
-                  setCurrentPage((prev) =>
-                    Math.min(prev + 1, totalPages)
-                  )
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                 }
                 disabled={currentPage === totalPages}
                 className="px-3 py-2 text-sm text-[var(--color-navy)] disabled:opacity-30"

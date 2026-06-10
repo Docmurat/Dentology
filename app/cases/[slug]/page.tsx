@@ -7,35 +7,30 @@ import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CtaSection } from "@/components/home/cta-section";
-import { casesData } from "@/lib/cases-data";
+import { getCaseBySlug, getCaseSlugs } from "@/lib/cases";
 import { teamData } from "@/lib/team-data";
 
+// Новые кейсы появляются без пересборки (ISR).
+export const revalidate = 60;
+
 type CaseDetailPageProps = {
-  params: Promise<{
-    slug: string;
-  }>;
+  params: Promise<{ slug: string }>;
 };
 
 type Doctor = (typeof teamData)[number];
 
-export function generateStaticParams() {
-  return casesData.map((item) => ({ slug: item.slug }));
+export async function generateStaticParams() {
+  const slugs = await getCaseSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
   params,
 }: CaseDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const item = casesData.find((caseItem) => caseItem.slug === slug);
-
-  if (!item) {
-    return {};
-  }
-
-  return {
-    title: item.title,
-    description: item.excerpt,
-  };
+  const item = await getCaseBySlug(slug);
+  if (!item) return {};
+  return { title: item.title, description: item.excerpt };
 }
 
 function CaseDoctorCard({
@@ -115,17 +110,15 @@ function CaseDoctorCard({
 
 export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
   const { slug } = await params;
-
-  const item = casesData.find((caseItem) => caseItem.slug === slug);
+  const item = await getCaseBySlug(slug);
 
   if (!item) {
     notFound();
   }
 
-  const caseDoctor =
-    "doctorSlug" in item && item.doctorSlug
-      ? teamData.find((doctor) => doctor.slug === item.doctorSlug)
-      : null;
+  const caseDoctor = item.doctorSlug
+    ? teamData.find((doctor) => doctor.slug === item.doctorSlug)
+    : null;
 
   return (
     <SiteShell>
@@ -160,7 +153,6 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
                       />
                     ) : null}
                   </div>
-
                   <div className="border-t border-[var(--color-gray-200)] px-4 py-3">
                     <p className="text-sm font-medium text-[var(--color-navy)]">
                       До лечения
@@ -180,7 +172,6 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
                       />
                     ) : null}
                   </div>
-
                   <div className="border-t border-[var(--color-gray-200)] px-4 py-3">
                     <p className="text-sm font-medium text-[var(--color-navy)]">
                       После лечения
@@ -256,7 +247,6 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
               <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
                 Фото этапов и протокола
               </h2>
-
               <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {item.protocolImages.map((image, index) => (
                   <div
