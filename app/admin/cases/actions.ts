@@ -23,27 +23,10 @@ async function requireStaff() {
   return { supabase, user };
 }
 
-// Картинки уже загружены в Storage на клиенте — сюда приходят только их URL.
-export async function createCase(
-  formData: FormData
-): Promise<{ error?: string; slug?: string }> {
-  const { supabase, user } = await requireStaff();
-
-  const title = String(formData.get("title") || "").trim();
-  if (!title) return { error: "Заголовок обязателен" };
-
-  const slug =
-    slugify(String(formData.get("slug") || "")) ||
-    slugify(title) ||
-    `case-${Date.now()}`;
-
-  const protocolImages = (formData.getAll("protocolImages") as string[]).filter(
-    Boolean
-  );
-
-  const { error } = await supabase.from("cases").insert({
-    slug,
-    title,
+// Общий набор полей из формы (картинки приходят уже ссылками).
+function readFields(formData: FormData) {
+  return {
+    title: String(formData.get("title") || "").trim(),
     excerpt: String(formData.get("excerpt") || ""),
     category: String(formData.get("category") || "") || null,
     direction_slug: String(formData.get("directionSlug") || "") || null,
@@ -52,13 +35,32 @@ export async function createCase(
     cover_image: String(formData.get("coverImage") || "") || null,
     image_before: String(formData.get("imageBefore") || "") || null,
     image_after: String(formData.get("imageAfter") || "") || null,
-    protocol_images: protocolImages,
+    protocol_images: (formData.getAll("protocolImages") as string[]).filter(
+      Boolean
+    ),
     situation: String(formData.get("situation") || ""),
     diagnostics: String(formData.get("diagnostics") || "") || null,
     decision: String(formData.get("decision") || "") || null,
     result: String(formData.get("result") || "") || null,
-    created_by: user.id,
-  });
+  };
+}
+
+export async function createCase(
+  formData: FormData
+): Promise<{ error?: string; slug?: string }> {
+  const { supabase, user } = await requireStaff();
+
+  const fields = readFields(formData);
+  if (!fields.title) return { error: "Заголовок обязателен" };
+
+  const slug =
+    slugify(String(formData.get("slug") || "")) ||
+    slugify(fields.title) ||
+    `case-${Date.now()}`;
+
+  const { error } = await supabase
+    .from("cases")
+    .insert({ slug, ...fields, created_by: user.id });
 
   if (error) {
     if (error.code === "23505")
@@ -70,6 +72,30 @@ export async function createCase(
   revalidatePath(`/cases/${slug}`);
   revalidatePath("/admin/cases");
   return { slug };
+}
+
+export async function updateCase(
+  formData: FormData
+): Promise<{ error?: string; slug?: string }> {
+  const { supabase } = await requireStaff();
+
+  const originalSlug = String(formData.get("originalSlug") || "");
+  if (!originalSlug) return { error: "Не указан кейс для обновления" };
+
+  const fields = readFields(formData);
+  if (!fields.title) return { error: "Заголовок обязателен" };
+
+  const { error } = await supabase
+    .from("cases")
+    .update(fields)
+    .eq("slug", originalSlug);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/cases");
+  revalidatePath(`/cases/${originalSlug}`);
+  revalidatePath("/admin/cases");
+  return { slug: originalSlug };
 }
 
 export async function deleteCase(formData: FormData) {

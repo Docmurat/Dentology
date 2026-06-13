@@ -1,8 +1,7 @@
 import { teamData } from "@/lib/team-data";
-import { CaseForm } from "./case-form";
+import { CaseForm } from "@/components/admin/case-form";
 
 export default function NewCasePage() {
-  // Выбор врача — из существующей базы команды.
   const doctors = teamData.map((doctor) => ({
     slug: doctor.slug,
     name: doctor.name,

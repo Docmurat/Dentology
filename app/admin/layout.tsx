@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { signOut } from "./actions";
 
@@ -13,7 +12,6 @@ export default async function AdminLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Страница логина рендерится вне этого защищённого каркаса.
   if (!user) {
     return <>{children}</>;
   }
@@ -52,11 +50,17 @@ export default async function AdminLayout({
             <Link href="/admin" className="font-semibold text-[var(--color-navy)]">
               Dentology · Кабинет
             </Link>
-            <nav className="flex items-center gap-4 text-sm text-[var(--color-gray-600)]">
-              <Link href="/admin/cases" className="hover:text-[var(--color-navy)]">
+            <nav className="flex items-center gap-3 text-sm">
+              <Link
+                href="/admin/cases"
+                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
+              >
                 Кейсы
               </Link>
-              <Link href="/admin/cases/new" className="hover:text-[var(--color-navy)]">
+              <Link
+                href="/admin/cases/new"
+                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
+              >
                 Добавить
               </Link>
             </nav>

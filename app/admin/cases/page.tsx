@@ -8,7 +8,7 @@ export default async function AdminCasesPage() {
   const supabase = await createClient();
   const { data: cases } = await supabase
     .from("cases")
-    .select("slug, title, category, created_at")
+    .select("slug, title, category, cover_image, created_at")
     .order("created_at", { ascending: false });
 
   return (
@@ -19,7 +19,8 @@ export default async function AdminCasesPage() {
         </h1>
         <Link
           href="/admin/cases/new"
-          className="rounded-lg bg-[var(--color-navy)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+          style={{ color: "#ffffff" }}
+          className="rounded-lg bg-[var(--color-navy)] px-4 py-2 text-sm font-medium hover:opacity-90"
         >
           Добавить кейс
         </Link>
@@ -33,17 +34,40 @@ export default async function AdminCasesPage() {
                 key={item.slug}
                 className="flex items-center justify-between gap-4 px-5 py-4"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-[var(--color-navy)]">
-                    {item.title}
-                  </p>
-                  <p className="text-xs text-[var(--color-gray-500)]">
-                    /{item.slug}
-                    {item.category ? ` · ${item.category}` : ""}
-                  </p>
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-[var(--color-gray-100)]">
+                    {item.cover_image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.cover_image}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] text-[var(--color-gray-400)]">
+                        нет фото
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-[var(--color-navy)]">
+                      {item.title}
+                    </p>
+                    <p className="text-xs text-[var(--color-gray-500)]">
+                      /{item.slug}
+                      {item.category ? ` · ${item.category}` : ""}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-3 text-sm">
+                  <Link
+                    href={`/admin/cases/${item.slug}/edit`}
+                    className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
+                  >
+                    Изменить
+                  </Link>
                   <Link
                     href={`/cases/${item.slug}`}
                     target="_blank"
