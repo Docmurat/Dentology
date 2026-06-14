@@ -25,8 +25,10 @@ export function Footer() {
             </h4>
             <div className="mt-5 flex flex-col gap-3 text-sm text-white/80">
               <Link href="/">Главная</Link>
-              <Link href="/directions">Направления</Link>
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a href="/#directions">Направления</a>
               <Link href="/cases">Клинические случаи</Link>
+              <Link href="/team">Команда</Link>
               <Link href="/about">О враче</Link>
               <Link href="/education">Education</Link>
               <Link href="/contacts">Контакты</Link>

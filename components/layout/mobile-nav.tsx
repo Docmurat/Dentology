@@ -7,6 +7,9 @@ import { siteConfig } from "@/lib/constants";
 export function MobileNav() {
   const [open, setOpen] = useState(false);
 
+  const linkClass =
+    "text-base text-[var(--color-gray-700)] transition-colors hover:text-[var(--color-navy)]";
+
   return (
     <div className="lg:hidden">
       <button
@@ -22,16 +25,32 @@ export function MobileNav() {
         <div className="absolute left-0 right-0 top-full border-b border-[var(--color-gray-200)] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
           <div className="mx-auto max-w-7xl px-6 py-6 md:px-10">
             <nav className="flex flex-col gap-4">
-              {siteConfig.navigation.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="text-base text-[var(--color-gray-700)] transition-colors hover:text-[var(--color-navy)]"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {siteConfig.navigation.map((item) => {
+                // Ссылки-якоря (/#directions) обрабатываем нативным <a>,
+                // иначе App Router не прокручивает к секции на той же странице.
+                const isAnchor = item.href.includes("#");
+
+                return isAnchor ? (
+                  // eslint-disable-next-line @next/next/no-html-link-for-pages
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={linkClass}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={linkClass}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
 
               <Link
                 href="/contacts"

@@ -142,42 +142,38 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div className="overflow-hidden rounded-2xl bg-[var(--color-gray-100)]">
-                  <div className="aspect-[4/3]">
-                    {item.imageBefore ? (
-                      <Image
-                        src={item.imageBefore}
-                        alt="До лечения"
-                        width={800}
-                        height={600}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : null}
-                  </div>
-                  <div className="border-t border-[var(--color-gray-200)] px-4 py-3">
-                    <p className="text-sm font-medium text-[var(--color-navy)]">
-                      До лечения
-                    </p>
-                  </div>
-                </div>
+  {item.imageBefore ? (
+    <Image
+      src={item.imageBefore}
+      alt="До лечения"
+      width={800}
+      height={600}
+      className="block w-full h-auto"
+    />
+  ) : null}
+  <div className="border-t border-[var(--color-gray-200)] px-4 py-3">
+    <p className="text-sm font-medium text-[var(--color-navy)]">
+      До лечения
+    </p>
+  </div>
+</div>
 
                 <div className="overflow-hidden rounded-2xl bg-[var(--color-gray-100)]">
-                  <div className="aspect-[4/3]">
-                    {item.imageAfter ? (
-                      <Image
-                        src={item.imageAfter}
-                        alt="После лечения"
-                        width={800}
-                        height={600}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : null}
-                  </div>
-                  <div className="border-t border-[var(--color-gray-200)] px-4 py-3">
-                    <p className="text-sm font-medium text-[var(--color-navy)]">
-                      После лечения
-                    </p>
-                  </div>
-                </div>
+  {item.imageAfter ? (
+    <Image
+      src={item.imageAfter}
+      alt="После лечения"
+      width={800}
+      height={600}
+      className="block w-full h-auto"
+    />
+  ) : null}
+  <div className="border-t border-[var(--color-gray-200)] px-4 py-3">
+    <p className="text-sm font-medium text-[var(--color-navy)]">
+      После лечения
+    </p>
+  </div>
+</div>
               </div>
             </Card>
           ) : null}

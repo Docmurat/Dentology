@@ -20,9 +20,10 @@ export function Header() {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-8 text-sm text-[var(--color-navy)]">
-            <Link href="/directions">Направления</Link>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/#directions">Направления</a>
             <Link href="/cases">Клинические случаи</Link>
-            <Link href="/#team">Команда</Link>
+            <Link href="/team">Команда</Link>
             <Link href="/education">Education</Link>
             <Link href="/contacts">Контакты</Link>
           </nav>

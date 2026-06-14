@@ -3,11 +3,11 @@ import Link from "next/link";
 import { Section } from "@/components/layout/section";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Card } from "@/components/ui/card";
-import { teamData } from "@/lib/team-data";
+import { getFeaturedTeam } from "@/lib/team";
 import { Button } from "@/components/ui/button";
 
-export function TeamPreview() {
-  const featuredMembers = teamData.filter((item) => item.featured);
+export async function TeamPreview() {
+  const featuredMembers = await getFeaturedTeam();
   const leadMember = featuredMembers[0];
   const otherFeaturedMembers = featuredMembers.slice(1);
 

@@ -7,10 +7,11 @@ import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { directionsData } from "@/lib/directions-data";
-import { teamData } from "@/lib/team-data";
-import { casesData } from "@/lib/cases-data";
+import { getLeadByDirection } from "@/lib/team";
+import { getAllCases } from "@/lib/cases";
 import { reviewsData } from "@/lib/reviews-data";
 import { ReviewCard } from "@/components/reviews/review-card";
+export const revalidate = 60;
 
 type Props = {
   params: Promise<{
@@ -27,11 +28,10 @@ export default async function DirectionPage({ params }: Props) {
     notFound();
   }
 
-  const relatedDoctor = teamData.find((doctor) =>
-    doctor.directionSlugs?.includes(slug)
-  );
+  const relatedDoctor = await getLeadByDirection(slug);
 
-  const relatedCases = casesData.filter((item) => item.directionSlug === slug);
+  const allCases = await getAllCases();
+const relatedCases = allCases.filter((item) => item.directionSlug === slug);
 const relatedReviews = reviewsData
   .filter((item) => item.directionSlugs?.includes(slug))
   .slice(0, 2
