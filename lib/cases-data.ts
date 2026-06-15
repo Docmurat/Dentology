@@ -1,10 +1,15 @@
+export type ContentBlock = {
+  title: string;
+  body: string;
+  images: string[];
+  float: "left" | "right" | "none";
+};
+
 export type CaseItem = {
   slug: string;
   title: string;
   excerpt: string;
-  category: string;
   directionSlug: string;
-  status?: string;
   coverImage?: string;
   imageBefore?: string;
   imageAfter?: string;
@@ -14,6 +19,8 @@ export type CaseItem = {
   diagnostics: string;
   decision: string;
   result: string;
+  doctorWords?: string;
+  contentBlocks?: ContentBlock[];
 };
 
 export const casesData: CaseItem[] = [
@@ -24,9 +31,7 @@ export const casesData: CaseItem[] = [
 
     excerpt: `Клинический случай, в котором при значительном воспалении и подвижности зуба удалось избежать удаления и добиться заживления.`,
 
-    category: "Эндодонтия",
     directionSlug: "endodontics",
-    status: "Было рекомендовано удаление",
     doctorSlug: "lead-doctor",
 
     coverImage: "/cases/case-1/cover.jpg",
@@ -75,9 +80,7 @@ export const casesData: CaseItem[] = [
 
     excerpt: `Разбор клинической ситуации, требующей повторной диагностики и пересмотра тактики.`,
 
-    category: "Реставрация",
     directionSlug: "restoration",
-    status: "Срочная реставрация 6 передних зубов",
     doctorSlug: "restorative-doctor",
 
     coverImage: "/cases/case-2/cover.jpg",
@@ -106,9 +109,7 @@ export const casesData: CaseItem[] = [
 
     excerpt: `Клинический случай с повышенной технической и диагностической сложностью.`,
 
-    category: "Эндодонтия",
     directionSlug: "endodontics",
-    status: "Сложный случай",
     doctorSlug: "lead-doctor",
 
     coverImage: "/cases/case-3/cover.jpg",
@@ -137,9 +138,7 @@ export const casesData: CaseItem[] = [
 
     excerpt: `Разбор клинической ситуации, требующей повторной диагностики и пересмотра тактики.`,
 
-    category: "Реставрация",
     directionSlug: "restoration",
-    status: "Срочная реставрация 6 передних зубов",
     doctorSlug: "restorative-doctor",
 
     coverImage: "/cases/case-4/cover.jpg",
@@ -168,9 +167,7 @@ export const casesData: CaseItem[] = [
 
     excerpt: `Разбор клинической ситуации, требующей повторной диагностики и пересмотра тактики.`,
 
-    category: "Реставрация",
     directionSlug: "restoration",
-    status: "Срочная реставрация 6 передних зубов",
     doctorSlug: "restorative-doctor",
 
     coverImage: "/cases/case-5/cover.jpg",
@@ -199,9 +196,7 @@ export const casesData: CaseItem[] = [
 
     excerpt: `Разбор клинической ситуации, требующей повторной диагностики и пересмотра тактики.`,
 
-    category: "Реставрация",
     directionSlug: "restoration",
-    status: "Срочная реставрация 6 передних зубов",
     doctorSlug: "restorative-doctor",
 
     coverImage: "/cases/case-6/cover.jpg",
@@ -230,9 +225,7 @@ export const casesData: CaseItem[] = [
 
     excerpt: `Разбор клинической ситуации, требующей повторной диагностики и пересмотра тактики.`,
 
-    category: "Реставрация",
     directionSlug: "restoration",
-    status: "Срочная реставрация 6 передних зубов",
     doctorSlug: "restorative-doctor",
 
     coverImage: "/cases/case-7/cover.jpg",

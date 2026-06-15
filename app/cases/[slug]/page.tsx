@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CtaSection } from "@/components/home/cta-section";
+import { CaseContentBlocks } from "@/components/cases/case-content-blocks";
+import { BeforeAfter } from "@/components/cases/before-after";
 import { getCaseBySlug, getCaseSlugs } from "@/lib/cases";
-import { teamData } from "@/lib/team-data";
+import { getTeamMemberBySlug } from "@/lib/team";
+import type { TeamMember } from "@/lib/team-data";
 
 // Новые кейсы появляются без пересборки (ISR).
 export const revalidate = 60;
@@ -16,8 +19,6 @@ export const revalidate = 60;
 type CaseDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
-
-type Doctor = (typeof teamData)[number];
 
 export async function generateStaticParams() {
   const slugs = await getCaseSlugs();
@@ -33,48 +34,8 @@ export async function generateMetadata({
   return { title: item.title, description: item.excerpt };
 }
 
-function CaseDoctorCard({
-  doctor,
-  compact = false,
-}: {
-  doctor: Doctor;
-  compact?: boolean;
-}) {
-  if (compact) {
-    return (
-      <Card>
-        <div className="flex items-center gap-4">
-          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[var(--color-gray-100)]">
-            <Image
-              src={doctor.image}
-              alt={doctor.name}
-              width={64}
-              height={64}
-              className="h-full w-full object-cover"
-            />
-          </div>
-
-          <div>
-            <p className="text-sm uppercase tracking-[0.14em] text-[var(--color-teal)]">
-              {doctor.position}
-            </p>
-            <p className="mt-1 text-base font-semibold text-[var(--color-navy)]">
-              {doctor.name}
-            </p>
-          </div>
-        </div>
-
-        <p className="mt-4 text-base leading-7 text-[var(--color-gray-700)]">
-          {doctor.description}
-        </p>
-
-        <Button href="/contacts" className="mt-5 w-full justify-center">
-          Записаться на консультацию
-        </Button>
-      </Card>
-    );
-  }
-
+// Узкая карточка врача: фото, должность, ФИО. Без описания и кнопки.
+function CaseDoctorCard({ doctor }: { doctor: TeamMember }) {
   return (
     <Card className="overflow-hidden p-0">
       <div className="bg-[var(--color-gray-100)]">
@@ -82,27 +43,26 @@ function CaseDoctorCard({
           <Image
             src={doctor.image}
             alt={doctor.name}
-            width={700}
-            height={875}
+            width={600}
+            height={750}
             className="h-full w-full object-cover"
           />
         </div>
       </div>
 
-      <div className="p-6">
-        <p className="text-sm uppercase tracking-[0.14em] text-[var(--color-teal)]">
-          {doctor.position}
-        </p>
-        <h2 className="mt-3 text-2xl font-semibold text-[var(--color-navy)]">
+      <div className="p-5">
+        <h2 className="text-xl font-semibold text-[var(--color-navy)]">
           {doctor.name}
         </h2>
-        <p className="mt-4 text-base leading-7 text-[var(--color-gray-700)]">
-          {doctor.description}
+        <p className="mt-2 text-sm font-medium text-[var(--color-navy-secondary)]">
+          {doctor.position}
         </p>
-
-        <Button href="/contacts" className="mt-6 w-full justify-center">
-          Записаться на консультацию
-        </Button>
+        <Link
+          href={`/team/${doctor.slug}`}
+          className="mt-3 inline-flex text-xs uppercase tracking-[0.14em] text-[var(--color-teal)] hover:text-[var(--color-navy)]"
+        >
+          Подробнее о враче
+        </Link>
       </div>
     </Card>
   );
@@ -117,7 +77,7 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
   }
 
   const caseDoctor = item.doctorSlug
-    ? teamData.find((doctor) => doctor.slug === item.doctorSlug)
+    ? await getTeamMemberBySlug(item.doctorSlug)
     : null;
 
   return (
@@ -130,6 +90,7 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
 
       <Section>
         <div className="grid gap-8">
+          {/* Визуальная динамика — без изменений */}
           {item.imageBefore || item.imageAfter ? (
             <Card>
               <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
@@ -140,133 +101,57 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
                 лечения.
               </p>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <div className="overflow-hidden rounded-2xl bg-[var(--color-gray-100)]">
-  {item.imageBefore ? (
-    <Image
-      src={item.imageBefore}
-      alt="До лечения"
-      width={800}
-      height={600}
-      className="block w-full h-auto"
-    />
-  ) : null}
-  <div className="border-t border-[var(--color-gray-200)] px-4 py-3">
-    <p className="text-sm font-medium text-[var(--color-navy)]">
-      До лечения
-    </p>
-  </div>
-</div>
-
-                <div className="overflow-hidden rounded-2xl bg-[var(--color-gray-100)]">
-  {item.imageAfter ? (
-    <Image
-      src={item.imageAfter}
-      alt="После лечения"
-      width={800}
-      height={600}
-      className="block w-full h-auto"
-    />
-  ) : null}
-  <div className="border-t border-[var(--color-gray-200)] px-4 py-3">
-    <p className="text-sm font-medium text-[var(--color-navy)]">
-      После лечения
-    </p>
-  </div>
-</div>
-              </div>
+              <BeforeAfter before={item.imageBefore} after={item.imageAfter} />
             </Card>
           ) : null}
 
-          <div className="grid gap-8 lg:grid-cols-[1.24fr_0.76fr] lg:items-start">
-            <div className="grid gap-8">
-              <Card>
-                <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-                  Клиническая ситуация
-                </h2>
-                <p className="mt-4 whitespace-pre-line text-base leading-7 text-[var(--color-gray-700)]">
-                  {item.situation}
-                </p>
-              </Card>
-
-              {item.diagnostics ? (
-                <Card>
-                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-                    Диагностика
-                  </h2>
-                  <p className="mt-4 whitespace-pre-line text-base leading-7 text-[var(--color-gray-700)]">
-                    {item.diagnostics}
-                  </p>
-                </Card>
-              ) : null}
-
-              {item.decision ? (
-                <Card className="bg-[var(--color-gray-50)]">
-                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-                    Принятое решение
-                  </h2>
-                  <p className="mt-4 whitespace-pre-line text-base leading-7 text-[var(--color-gray-700)]">
-                    {item.decision}
-                  </p>
-                </Card>
-              ) : null}
-
-              {item.result ? (
-                <Card>
-                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-                    Результат
-                  </h2>
-                  <p className="mt-4 whitespace-pre-line text-base leading-7 text-[var(--color-gray-700)]">
-                    {item.result}
-                  </p>
-                </Card>
-              ) : null}
-
-              {caseDoctor ? (
-                <div className="lg:hidden">
-                  <CaseDoctorCard doctor={caseDoctor} compact />
-                </div>
-              ) : null}
-            </div>
-
+          {/* Врач слева, описание справа */}
+          <div
+            className={
+              caseDoctor
+                ? "grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start"
+                : "grid gap-8"
+            }
+          >
             {caseDoctor ? (
-              <aside className="hidden lg:block">
-                <div className="sticky top-24">
-                  <CaseDoctorCard doctor={caseDoctor} />
-                </div>
+              <aside className="lg:sticky lg:top-24 lg:self-start">
+                <CaseDoctorCard doctor={caseDoctor} />
               </aside>
             ) : null}
-          </div>
 
-          {item.protocolImages?.length ? (
-            <Card>
-              <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-                Фото этапов и протокола
-              </h2>
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {item.protocolImages.map((image, index) => (
-                  <div
-                    key={image}
-                    className="overflow-hidden rounded-2xl bg-[var(--color-gray-100)]"
+            <div className="space-y-10">
+              {item.doctorWords ? (
+                <figure className="border-l-2 border-[var(--color-teal)] pl-6">
+                  <span
+                    aria-hidden="true"
+                    className="block font-serif text-5xl leading-none text-[var(--color-gray-200)]"
                   >
-                    <div className="aspect-[4/3]">
-                      <Image
-                        src={image}
-                        alt={`Этап лечения ${index + 1}`}
-                        width={700}
-                        height={500}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  </div>
-                ))}
+                    “
+                  </span>
+                  <blockquote className="mt-1 whitespace-pre-line font-serif text-xl italic leading-8 text-[var(--color-navy)]">
+                    {item.doctorWords}
+                  </blockquote>
+                </figure>
+              ) : null}
+
+              <CaseContentBlocks blocks={item.contentBlocks ?? []} />
+
+              <div className="rounded-[28px] bg-[var(--color-navy)] px-6 py-10 text-white md:px-10 md:py-12">
+                <h2 className="text-2xl font-semibold leading-tight md:text-3xl">
+                  Запись на консультацию
+                </h2>
+                <p className="mt-4 leading-7 text-white/80">
+                  Консультация позволяет оценить клиническую ситуацию и
+                  определить возможные варианты лечения.
+                </p>
+                <div className="mt-8">
+                  <Button href="/contacts">Записаться на консультацию</Button>
+                </div>
               </div>
-            </Card>
-          ) : null}
+            </div>
+          </div>
         </div>
       </Section>
-
-      <CtaSection />
     </SiteShell>
   );
 }

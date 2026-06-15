@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import type { CaseItem } from "@/lib/cases-data";
+import { directionLabel } from "@/lib/directions";
 import { teamData } from "@/lib/team-data";
 
 const ITEMS_PER_PAGE = 6;
@@ -12,7 +13,7 @@ const ITEMS_PER_PAGE = 6;
 const filterOptions = [
   { value: "all", label: "Все случаи" },
   { value: "endodontics", label: "Эндодонтия" },
-  { value: "restoration", label: "Реставрации" },
+  { value: "restoration", label: "Реставрация" },
   { value: "prosthetics", label: "Ортопедия" },
   { value: "implantation", label: "Имплантация" },
   { value: "gnathology", label: "Гнатология" },
@@ -92,7 +93,7 @@ export function CasesPageContent({ cases }: { cases: CaseItem[] }) {
                     </div>
 
                     <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                      {item.category}
+                      {directionLabel(item.directionSlug)}
                     </p>
 
                     <h2 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
@@ -118,9 +119,7 @@ export function CasesPageContent({ cases }: { cases: CaseItem[] }) {
             <div className="mt-10 flex items-center justify-center gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.max(prev - 1, 1))
-                }
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
                 className="px-3 py-2 text-sm text-[var(--color-navy)] disabled:opacity-30"
               >

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
 import { getAllCases } from "@/lib/cases";
+import { directionLabel } from "@/lib/directions";
 
 export async function CasesPreview() {
   const previewCases = (await getAllCases()).slice(0, 3);
@@ -46,7 +47,7 @@ export async function CasesPreview() {
               </div>
 
               <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                {item.category}
+                {directionLabel(item.directionSlug)}
               </p>
 
               <h3 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">

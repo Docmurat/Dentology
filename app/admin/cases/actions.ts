@@ -28,9 +28,7 @@ function readFields(formData: FormData) {
   return {
     title: String(formData.get("title") || "").trim(),
     excerpt: String(formData.get("excerpt") || ""),
-    category: String(formData.get("category") || "") || null,
     direction_slug: String(formData.get("directionSlug") || "") || null,
-    status: String(formData.get("status") || "") || null,
     doctor_slug: String(formData.get("doctorSlug") || "") || null,
     cover_image: String(formData.get("coverImage") || "") || null,
     image_before: String(formData.get("imageBefore") || "") || null,
@@ -38,11 +36,18 @@ function readFields(formData: FormData) {
     protocol_images: (formData.getAll("protocolImages") as string[]).filter(
       Boolean
     ),
-    situation: String(formData.get("situation") || ""),
-    diagnostics: String(formData.get("diagnostics") || "") || null,
-    decision: String(formData.get("decision") || "") || null,
-    result: String(formData.get("result") || "") || null,
+    doctor_words: String(formData.get("doctorWords") || "") || null,
+    content_blocks: parseBlocks(formData.get("contentBlocks")),
   };
+}
+
+function parseBlocks(value: FormDataEntryValue | null) {
+  try {
+    const parsed = JSON.parse(String(value || "[]"));
+    return Array.isArray(parsed) ? parsed.slice(0, 10) : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function createCase(

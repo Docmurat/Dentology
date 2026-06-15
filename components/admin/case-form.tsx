@@ -1,5 +1,6 @@
 "use client";
-
+import { ContentBlocksEditor } from "@/components/admin/content-blocks-editor";
+import { CropField } from "@/components/admin/crop-field";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createCase, updateCase } from "@/app/admin/cases/actions";
@@ -24,91 +25,22 @@ const cardCls =
   "rounded-2xl border border-[var(--color-gray-200)] bg-white p-6 space-y-4";
 
 const BUCKET = "case-images";
+const COVER_ASPECT = 3 / 2;
 
-async function uploadFile(
+async function uploadBlob(
   supabase: ReturnType<typeof createClient>,
   slug: string,
   name: string,
-  file: File | null
+  blob: Blob | null
 ): Promise<string | null> {
-  if (!file || file.size === 0) return null;
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${slug}/${name}-${Date.now()}.${ext}`;
+  if (!blob) return null;
+  const path = `${slug}/${name}-${Date.now()}.jpg`;
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type });
+    .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
   if (error) throw new Error(`Не удалось загрузить ${name}: ${error.message}`);
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   return data.publicUrl;
-}
-
-function UploadIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  );
-}
-
-// Понятный кликабельный блок выбора файла (скрытый нативный input внутри label).
-function FileField({
-  name,
-  multiple,
-  hint,
-}: {
-  name: string;
-  multiple?: boolean;
-  hint: string;
-}) {
-  const [picked, setPicked] = useState<string[]>([]);
-
-  return (
-    <label className="mt-1 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[var(--color-gray-200)] bg-[var(--color-gray-50)] px-3 py-4 text-center text-sm text-[var(--color-gray-600)] transition hover:border-[var(--color-teal)] hover:bg-white hover:text-[var(--color-navy)]">
-      <input
-        name={name}
-        type="file"
-        accept="image/*"
-        multiple={multiple}
-        onChange={(e) =>
-          setPicked(Array.from(e.target.files ?? []).map((f) => f.name))
-        }
-        className="hidden"
-      />
-      <span className="text-[var(--color-teal)]">
-        <UploadIcon />
-      </span>
-      {picked.length ? (
-        <span className="font-medium text-[var(--color-navy)]">
-          {picked.length > 1 ? `Выбрано файлов: ${picked.length}` : picked[0]}
-        </span>
-      ) : (
-        <span>{hint}</span>
-      )}
-    </label>
-  );
-}
-
-function Thumb({ url }: { url: string }) {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={url}
-      alt=""
-      className="mt-2 h-20 w-20 rounded-lg border border-[var(--color-gray-200)] object-cover"
-    />
-  );
 }
 
 export function CaseForm({
@@ -125,12 +57,16 @@ export function CaseForm({
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
 
+  // Обрезанные картинки (Blob) и их «удалить текущее».
+  const [coverBlob, setCoverBlob] = useState<Blob | null>(null);
+  const [beforeBlob, setBeforeBlob] = useState<Blob | null>(null);
+  const [afterBlob, setAfterBlob] = useState<Blob | null>(null);
   const [coverRemoved, setCoverRemoved] = useState(false);
   const [beforeRemoved, setBeforeRemoved] = useState(false);
   const [afterRemoved, setAfterRemoved] = useState(false);
-  const [protocolKeep, setProtocolKeep] = useState<string[]>(
-    initial?.protocolImages ?? []
-  );
+
+  // Общий формат «до/после»: задаёт тот, кого обрезали первым.
+  const [baAspect, setBaAspect] = useState<number | "free" | null>(null);
 
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -157,16 +93,12 @@ export function CaseForm({
       setStatus("Загрузка изображений…");
 
       async function resolveSingle(
-        field: string,
+        name: string,
+        blob: Blob | null,
         existing: string | undefined,
         removed: boolean
       ): Promise<string> {
-        const uploaded = await uploadFile(
-          supabase,
-          finalSlug,
-          field,
-          raw.get(field) as File | null
-        );
+        const uploaded = await uploadBlob(supabase, finalSlug, name, blob);
         if (uploaded) return uploaded;
         if (removed) return "";
         return existing ?? "";
@@ -174,32 +106,22 @@ export function CaseForm({
 
       const coverUrl = await resolveSingle(
         "coverImage",
+        coverBlob,
         initial?.coverImage,
         coverRemoved
       );
       const beforeUrl = await resolveSingle(
         "imageBefore",
+        beforeBlob,
         initial?.imageBefore,
         beforeRemoved
       );
       const afterUrl = await resolveSingle(
         "imageAfter",
+        afterBlob,
         initial?.imageAfter,
         afterRemoved
       );
-
-      const newProtocolFiles = raw.getAll("protocolImages") as File[];
-      const newProtocolUrls: string[] = [];
-      for (let i = 0; i < newProtocolFiles.length; i++) {
-        const url = await uploadFile(
-          supabase,
-          finalSlug,
-          `protocol-${Date.now()}-${i + 1}`,
-          newProtocolFiles[i]
-        );
-        if (url) newProtocolUrls.push(url);
-      }
-      const finalProtocols = [...protocolKeep, ...newProtocolUrls];
 
       setStatus("Сохранение…");
       const payload = new FormData();
@@ -210,19 +132,14 @@ export function CaseForm({
         "excerpt",
         "doctorSlug",
         "directionSlug",
-        "category",
-        "status",
-        "situation",
-        "diagnostics",
-        "decision",
-        "result",
+        "doctorWords",
+        "contentBlocks",
       ]) {
         payload.set(field, String(raw.get(field) || ""));
       }
       payload.set("coverImage", coverUrl);
       payload.set("imageBefore", beforeUrl);
       payload.set("imageAfter", afterUrl);
-      finalProtocols.forEach((url) => payload.append("protocolImages", url));
 
       const result = isEdit
         ? await updateCase(payload)
@@ -246,6 +163,49 @@ export function CaseForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className={cardCls}>
+        <p className="text-sm font-semibold text-[var(--color-navy)]">
+          Изображения
+        </p>
+
+        <div className="grid gap-6 sm:grid-cols-3">
+          <CropField
+            label="Обложка (3:2)"
+            aspect={COVER_ASPECT}
+            existingUrl={initial?.coverImage}
+            onCropped={(blob) => setCoverBlob(blob)}
+            onRemovedToggle={setCoverRemoved}
+          />
+
+          <CropField
+            label="Фото «До»"
+            aspect={baAspect}
+            existingUrl={initial?.imageBefore}
+            onCropped={(blob, a) => {
+              setBeforeBlob(blob);
+              setBaAspect(a);
+            }}
+            onRemovedToggle={setBeforeRemoved}
+          />
+
+          <CropField
+            label="Фото «После»"
+            aspect={baAspect}
+            existingUrl={initial?.imageAfter}
+            onCropped={(blob, a) => {
+              setAfterBlob(blob);
+              setBaAspect(a);
+            }}
+            onRemovedToggle={setAfterRemoved}
+          />
+        </div>
+
+        <p className="text-xs text-[var(--color-gray-500)]">
+          Формат «до/после» задаёт та картинка, которую обрежете первой; вторая
+          наследует его — у неё можно поменять только область кропа.
+        </p>
+      </div>
+
       <div className={cardCls}>
         <div>
           <label className={labelCls}>Заголовок *</label>
@@ -320,156 +280,9 @@ export function CaseForm({
             </select>
           </div>
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelCls}>Категория</label>
-            <input
-              name="category"
-              defaultValue={initial?.category}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Статус (опционально)</label>
-            <input
-              name="status"
-              defaultValue={initial?.status}
-              className={inputCls}
-            />
-          </div>
-        </div>
       </div>
 
-      <div className={cardCls}>
-        <div>
-          <label className={labelCls}>Клиническая ситуация</label>
-          <textarea
-            name="situation"
-            rows={4}
-            defaultValue={initial?.situation}
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Диагностика</label>
-          <textarea
-            name="diagnostics"
-            rows={4}
-            defaultValue={initial?.diagnostics}
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Принятое решение</label>
-          <textarea
-            name="decision"
-            rows={4}
-            defaultValue={initial?.decision}
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Результат</label>
-          <textarea
-            name="result"
-            rows={4}
-            defaultValue={initial?.result}
-            className={inputCls}
-          />
-        </div>
-      </div>
-
-      <div className={cardCls}>
-        <p className="text-sm font-semibold text-[var(--color-navy)]">
-          Изображения
-        </p>
-
-        <div className="grid gap-6 sm:grid-cols-3">
-          <div>
-            <label className={labelCls}>Обложка</label>
-            {initial?.coverImage && !coverRemoved ? (
-              <>
-                <Thumb url={initial.coverImage} />
-                <label className="mt-1 flex items-center gap-2 text-xs text-[var(--color-gray-600)]">
-                  <input
-                    type="checkbox"
-                    onChange={(e) => setCoverRemoved(e.target.checked)}
-                  />
-                  Удалить текущее
-                </label>
-              </>
-            ) : null}
-            <FileField name="coverImage" hint="Нажмите, чтобы выбрать файл" />
-          </div>
-
-          <div>
-            <label className={labelCls}>Фото «До»</label>
-            {initial?.imageBefore && !beforeRemoved ? (
-              <>
-                <Thumb url={initial.imageBefore} />
-                <label className="mt-1 flex items-center gap-2 text-xs text-[var(--color-gray-600)]">
-                  <input
-                    type="checkbox"
-                    onChange={(e) => setBeforeRemoved(e.target.checked)}
-                  />
-                  Удалить текущее
-                </label>
-              </>
-            ) : null}
-            <FileField name="imageBefore" hint="Нажмите, чтобы выбрать файл" />
-          </div>
-
-          <div>
-            <label className={labelCls}>Фото «После»</label>
-            {initial?.imageAfter && !afterRemoved ? (
-              <>
-                <Thumb url={initial.imageAfter} />
-                <label className="mt-1 flex items-center gap-2 text-xs text-[var(--color-gray-600)]">
-                  <input
-                    type="checkbox"
-                    onChange={(e) => setAfterRemoved(e.target.checked)}
-                  />
-                  Удалить текущее
-                </label>
-              </>
-            ) : null}
-            <FileField name="imageAfter" hint="Нажмите, чтобы выбрать файл" />
-          </div>
-        </div>
-
-        <div>
-          <label className={labelCls}>Протокол</label>
-
-          {protocolKeep.length ? (
-            <div className="mt-2 flex flex-wrap gap-3">
-              {protocolKeep.map((url) => (
-                <div key={url} className="relative">
-                  <Thumb url={url} />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setProtocolKeep((prev) => prev.filter((u) => u !== url))
-                    }
-                    className="absolute -right-2 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
-                    aria-label="Удалить фото"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          <div className="mt-2">
-            <FileField
-              name="protocolImages"
-              multiple
-              hint="Нажмите, чтобы добавить фото (можно несколько)"
-            />
-          </div>
-        </div>
-      </div>
+      <ContentBlocksEditor initial={initial} />
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
