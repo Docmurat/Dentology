@@ -1,5 +1,6 @@
 import type { CaseItem, ContentBlock } from "@/lib/cases-data";
 import { createPublicClient } from "@/lib/supabase-public";
+import { createClient } from "@/utils/supabase/server";
 
 // Строка в БД (snake_case) -> доменная модель CaseItem (camelCase).
 type CaseRow = {
@@ -43,6 +44,7 @@ function mapRow(row: CaseRow): CaseItem {
 const COLUMNS =
   "slug,title,excerpt,direction_slug,doctor_slug,cover_image,image_before,image_after,protocol_images,situation,diagnostics,decision,result,doctor_words,content_blocks";
 
+// --- Публичное чтение (только опубликованные кейсы, RLS) ---
 export async function getAllCases(): Promise<CaseItem[]> {
   const supabase = createPublicClient();
   const { data, error } = await supabase
@@ -71,4 +73,20 @@ export async function getCaseSlugs(): Promise<string[]> {
   const { data, error } = await supabase.from("cases").select("slug");
   if (error) throw error;
   return (data as { slug: string }[]).map((row) => row.slug);
+}
+
+// --- Чтение под сессией пользователя (RLS пускает сотрудника/автора
+//     к неопубликованным) — для предпросмотра и редактирования. ---
+export async function getCaseBySlugAuthed(
+  slug: string
+): Promise<CaseItem | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("cases")
+    .select(COLUMNS)
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapRow(data as CaseRow) : null;
 }

@@ -255,12 +255,6 @@ const relatedReviews = reviewsData
                       </div>
                     </div>
 
-                    {item.status ? (
-                      <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                        {item.status}
-                      </p>
-                    ) : null}
-
                     <h3 className="mt-3 text-lg font-semibold text-[var(--color-navy)]">
                       {item.title}
                     </h3>

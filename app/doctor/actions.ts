@@ -46,7 +46,7 @@ function readFields(formData: FormData) {
   };
 }
 
-// Кейс от врача всегда уходит на модерацию: published = false.
+// Новый кейс от врача — на модерацию (published = false).
 export async function createDoctorCase(
   formData: FormData
 ): Promise<{ error?: string; slug?: string }> {
@@ -73,4 +73,30 @@ export async function createDoctorCase(
   revalidatePath("/doctor");
   revalidatePath("/admin/cases");
   return { slug };
+}
+
+// Правка врачом своего кейса, пока он на модерации.
+// RLS не даст обновить опубликованный или чужой кейс.
+export async function updateDoctorCase(
+  formData: FormData
+): Promise<{ error?: string; slug?: string }> {
+  const { supabase } = await requireDoctor();
+
+  const originalSlug = String(formData.get("originalSlug") || "");
+  if (!originalSlug) return { error: "Не указан кейс для обновления" };
+
+  const fields = readFields(formData);
+  if (!fields.title) return { error: "Заголовок обязателен" };
+
+  const { error } = await supabase
+    .from("cases")
+    .update(fields)
+    .eq("slug", originalSlug)
+    .eq("published", false);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/doctor");
+  revalidatePath("/admin/cases");
+  return { slug: originalSlug };
 }

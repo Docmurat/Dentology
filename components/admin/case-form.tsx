@@ -52,12 +52,15 @@ export function CaseForm({
   createAction = createCase,
   updateAction = updateCase,
   redirectTo = "/admin/cases",
+  lockedDoctorSlug,
 }: {
   doctors: DoctorOption[];
   initial?: CaseItem;
   createAction?: CaseAction;
   updateAction?: CaseAction;
   redirectTo?: string;
+  // Если задан — поле «врач» зафиксировано на этом slug (для роли доктора).
+  lockedDoctorSlug?: string;
 }) {
   const router = useRouter();
   const isEdit = Boolean(initial);
@@ -66,7 +69,6 @@ export function CaseForm({
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
 
-  // Обрезанные картинки (Blob) и их «удалить текущее».
   const [coverBlob, setCoverBlob] = useState<Blob | null>(null);
   const [beforeBlob, setBeforeBlob] = useState<Blob | null>(null);
   const [afterBlob, setAfterBlob] = useState<Blob | null>(null);
@@ -74,7 +76,6 @@ export function CaseForm({
   const [beforeRemoved, setBeforeRemoved] = useState(false);
   const [afterRemoved, setAfterRemoved] = useState(false);
 
-  // Общий формат «до/после»: задаёт тот, кого обрезали первым.
   const [baAspect, setBaAspect] = useState<number | "free" | null>(null);
 
   const [status, setStatus] = useState<string | null>(null);
@@ -259,18 +260,38 @@ export function CaseForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={labelCls}>Врач, ведущий случай</label>
-            <select
-              name="doctorSlug"
-              defaultValue={initial?.doctorSlug ?? ""}
-              className={inputCls}
-            >
-              <option value="">— не выбран —</option>
-              {doctors.map((d) => (
-                <option key={d.slug} value={d.slug}>
-                  {d.name} ({d.position})
-                </option>
-              ))}
-            </select>
+            {lockedDoctorSlug ? (
+              <>
+                <select
+                  defaultValue={lockedDoctorSlug}
+                  disabled
+                  className={`${inputCls} opacity-70`}
+                >
+                  {doctors.map((d) => (
+                    <option key={d.slug} value={d.slug}>
+                      {d.name} ({d.position})
+                    </option>
+                  ))}
+                </select>
+                <input type="hidden" name="doctorSlug" value={lockedDoctorSlug} />
+                <p className="mt-1 text-xs text-[var(--color-gray-500)]">
+                  Кейс будет привязан к вам.
+                </p>
+              </>
+            ) : (
+              <select
+                name="doctorSlug"
+                defaultValue={initial?.doctorSlug ?? ""}
+                className={inputCls}
+              >
+                <option value="">— не выбран —</option>
+                {doctors.map((d) => (
+                  <option key={d.slug} value={d.slug}>
+                    {d.name} ({d.position})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
