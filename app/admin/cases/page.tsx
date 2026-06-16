@@ -1,18 +1,55 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
-import { deleteCase } from "./actions";
+import { directionLabel } from "@/lib/directions";
+import { approveCase, deleteCase } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+type Row = {
+  slug: string;
+  title: string;
+  direction_slug: string | null;
+  cover_image: string | null;
+  published: boolean;
+};
+
+function Cover({ url }: { url: string | null }) {
+  return (
+    <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-[var(--color-gray-100)]">
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[10px] text-[var(--color-gray-400)]">
+          нет фото
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Meta({ row }: { row: Row }) {
+  return (
+    <p className="text-xs text-[var(--color-gray-500)]">
+      /{row.slug}
+      {row.direction_slug ? ` · ${directionLabel(row.direction_slug)}` : ""}
+    </p>
+  );
+}
+
 export default async function AdminCasesPage() {
   const supabase = await createClient();
-  const { data: cases } = await supabase
+  const { data } = await supabase
     .from("cases")
-    .select("slug, title, category, cover_image, created_at")
+    .select("slug, title, direction_slug, cover_image, published")
     .order("created_at", { ascending: false });
 
+  const rows = (data ?? []) as Row[];
+  const pending = rows.filter((r) => !r.published);
+  const published = rows.filter((r) => r.published);
+
   return (
-    <div>
+    <div className="space-y-10">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-[var(--color-navy)]">
           Клинические случаи
@@ -26,71 +63,124 @@ export default async function AdminCasesPage() {
         </Link>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white">
-        {cases && cases.length ? (
-          <ul className="divide-y divide-[var(--color-gray-200)]">
-            {cases.map((item) => (
-              <li
-                key={item.slug}
-                className="flex items-center justify-between gap-4 px-5 py-4"
-              >
-                <div className="flex min-w-0 items-center gap-4">
-                  <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-[var(--color-gray-100)]">
-                    {item.cover_image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.cover_image}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[10px] text-[var(--color-gray-400)]">
-                        нет фото
-                      </div>
-                    )}
+      {/* --- На модерации --- */}
+      {pending.length ? (
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-amber-700">
+              На модерации
+            </h2>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+              {pending.length}
+            </span>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/40">
+            <ul className="divide-y divide-amber-100">
+              {pending.map((row) => (
+                <li
+                  key={row.slug}
+                  className="flex items-center justify-between gap-4 px-5 py-4"
+                >
+                  <div className="flex min-w-0 items-center gap-4">
+                    <Cover url={row.cover_image} />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[var(--color-navy)]">
+                        {row.title}
+                      </p>
+                      <Meta row={row} />
+                    </div>
                   </div>
 
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-[var(--color-navy)]">
-                      {item.title}
-                    </p>
-                    <p className="text-xs text-[var(--color-gray-500)]">
-                      /{item.slug}
-                      {item.category ? ` · ${item.category}` : ""}
-                    </p>
+                  <div className="flex shrink-0 items-center gap-3 text-sm">
+                    <Link
+                      href={`/cases/${row.slug}/preview`}
+                      target="_blank"
+                      className="text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
+                    >
+                      Предпросмотр
+                    </Link>
+                    <Link
+                      href={`/admin/cases/${row.slug}/edit`}
+                      className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
+                    >
+                      Изменить
+                    </Link>
+                    <form action={approveCase}>
+                      <input type="hidden" name="slug" value={row.slug} />
+                      <button className="rounded-lg bg-green-600 px-3 py-1.5 font-medium text-white hover:bg-green-700">
+                        Подтвердить и опубликовать
+                      </button>
+                    </form>
+                    <form action={deleteCase}>
+                      <input type="hidden" name="slug" value={row.slug} />
+                      <button className="text-red-600 hover:text-red-700">
+                        Удалить
+                      </button>
+                    </form>
                   </div>
-                </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
 
-                <div className="flex shrink-0 items-center gap-3 text-sm">
-                  <Link
-                    href={`/admin/cases/${item.slug}/edit`}
-                    className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
-                  >
-                    Изменить
-                  </Link>
-                  <Link
-                    href={`/cases/${item.slug}`}
-                    target="_blank"
-                    className="text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
-                  >
-                    Открыть
-                  </Link>
-                  <form action={deleteCase}>
-                    <input type="hidden" name="slug" value={item.slug} />
-                    <button className="text-red-600 hover:text-red-700">
-                      Удалить
-                    </button>
-                  </form>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="px-5 py-8 text-center text-sm text-[var(--color-gray-500)]">
-            Пока нет ни одного кейса. Нажмите «Добавить кейс».
-          </p>
-        )}
-      </div>
+      {/* --- Опубликованные --- */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--color-gray-500)]">
+          Опубликованные
+        </h2>
+
+        <div className="overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white">
+          {published.length ? (
+            <ul className="divide-y divide-[var(--color-gray-200)]">
+              {published.map((row) => (
+                <li
+                  key={row.slug}
+                  className="flex items-center justify-between gap-4 px-5 py-4"
+                >
+                  <div className="flex min-w-0 items-center gap-4">
+                    <Cover url={row.cover_image} />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[var(--color-navy)]">
+                        {row.title}
+                      </p>
+                      <Meta row={row} />
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-3 text-sm">
+                    <Link
+                      href={`/admin/cases/${row.slug}/edit`}
+                      className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
+                    >
+                      Изменить
+                    </Link>
+                    <Link
+                      href={`/cases/${row.slug}`}
+                      target="_blank"
+                      className="text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
+                    >
+                      Открыть
+                    </Link>
+                    <form action={deleteCase}>
+                      <input type="hidden" name="slug" value={row.slug} />
+                      <button className="text-red-600 hover:text-red-700">
+                        Удалить
+                      </button>
+                    </form>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-5 py-8 text-center text-sm text-[var(--color-gray-500)]">
+              Опубликованных кейсов пока нет.
+            </p>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

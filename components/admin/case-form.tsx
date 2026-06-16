@@ -9,6 +9,9 @@ import { createClient } from "@/utils/supabase/client";
 import type { CaseItem } from "@/lib/cases-data";
 
 type DoctorOption = { slug: string; name: string; position: string };
+type CaseAction = (
+  formData: FormData
+) => Promise<{ error?: string; slug?: string }>;
 
 const DIRECTIONS = [
   { slug: "endodontics", label: "Эндодонтия" },
@@ -46,9 +49,15 @@ async function uploadBlob(
 export function CaseForm({
   doctors,
   initial,
+  createAction = createCase,
+  updateAction = updateCase,
+  redirectTo = "/admin/cases",
 }: {
   doctors: DoctorOption[];
   initial?: CaseItem;
+  createAction?: CaseAction;
+  updateAction?: CaseAction;
+  redirectTo?: string;
 }) {
   const router = useRouter();
   const isEdit = Boolean(initial);
@@ -142,8 +151,8 @@ export function CaseForm({
       payload.set("imageAfter", afterUrl);
 
       const result = isEdit
-        ? await updateCase(payload)
-        : await createCase(payload);
+        ? await updateAction(payload)
+        : await createAction(payload);
 
       if (result?.error) {
         setError(result.error);
@@ -152,7 +161,7 @@ export function CaseForm({
         return;
       }
 
-      router.push("/admin/cases");
+      router.push(redirectTo);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось сохранить кейс");
@@ -300,7 +309,7 @@ export function CaseForm({
         </button>
         <button
           type="button"
-          onClick={() => router.push("/admin/cases")}
+          onClick={() => router.push(redirectTo)}
           className="text-sm text-[var(--color-gray-600)] hover:text-[var(--color-navy)]"
         >
           Отмена

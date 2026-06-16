@@ -1,40 +1,36 @@
 import { notFound } from "next/navigation";
-import { teamData } from "@/lib/team-data";
 import { CaseForm } from "@/components/admin/case-form";
-import { getCaseBySlug } from "@/lib/cases";
+import { getCaseBySlugAuthed } from "@/lib/cases";
+import { getTeamMembers } from "@/lib/team";
 
 export const dynamic = "force-dynamic";
 
-type EditCasePageProps = {
+export default async function AdminEditCasePage({
+  params,
+}: {
   params: Promise<{ slug: string }>;
-};
-
-export default async function EditCasePage({ params }: EditCasePageProps) {
+}) {
   const { slug } = await params;
-  const item = await getCaseBySlug(slug);
+  const item = await getCaseBySlugAuthed(slug);
+  if (!item) notFound();
 
-  if (!item) {
-    notFound();
-  }
-
-  const doctors = teamData.map((doctor) => ({
-    slug: doctor.slug,
-    name: doctor.name,
-    position: doctor.position,
+  const team = await getTeamMembers();
+  const doctors = team.map((d) => ({
+    slug: d.slug,
+    name: d.name,
+    position: d.position,
   }));
 
   return (
     <div>
       <h1 className="text-2xl font-semibold text-[var(--color-navy)]">
-        Редактирование кейса
+        Изменить кейс
       </h1>
-      <p className="mt-2 text-sm text-[var(--color-gray-600)]">
-        {item.title}
+      <p className="mt-2 mb-6 text-sm text-[var(--color-gray-600)]">
+        Правки администратора. Статус публикации не меняется.
       </p>
 
-      <div className="mt-8">
-        <CaseForm doctors={doctors} initial={item} />
-      </div>
+      <CaseForm doctors={doctors} initial={item} redirectTo="/admin/cases" />
     </div>
   );
 }

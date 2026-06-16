@@ -63,9 +63,10 @@ export async function createCase(
     slugify(fields.title) ||
     `case-${Date.now()}`;
 
+  // Кейс, созданный сотрудником, публикуется сразу.
   const { error } = await supabase
     .from("cases")
-    .insert({ slug, ...fields, created_by: user.id });
+    .insert({ slug, ...fields, published: true, created_by: user.id });
 
   if (error) {
     if (error.code === "23505")
@@ -90,6 +91,7 @@ export async function updateCase(
   const fields = readFields(formData);
   if (!fields.title) return { error: "Заголовок обязателен" };
 
+  // published не трогаем — статус публикации меняется только модерацией.
   const { error } = await supabase
     .from("cases")
     .update(fields)
@@ -101,6 +103,22 @@ export async function updateCase(
   revalidatePath(`/cases/${originalSlug}`);
   revalidatePath("/admin/cases");
   return { slug: originalSlug };
+}
+
+// Модерация: опубликовать кейс (например, присланный врачом).
+export async function approveCase(formData: FormData) {
+  const { supabase } = await requireStaff();
+  const slug = String(formData.get("slug") || "");
+
+  const { error } = await supabase
+    .from("cases")
+    .update({ published: true })
+    .eq("slug", slug);
+  if (error) throw error;
+
+  revalidatePath("/cases");
+  revalidatePath(`/cases/${slug}`);
+  revalidatePath("/admin/cases");
 }
 
 export async function deleteCase(formData: FormData) {
