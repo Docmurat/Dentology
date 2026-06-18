@@ -44,6 +44,7 @@ export default async function DoctorNewCasePage() {
         createAction={createDoctorCase}
         redirectTo="/doctor"
         lockedDoctorSlug={lockedDoctorSlug}
+        doctorLocked
       />
     </div>
   );

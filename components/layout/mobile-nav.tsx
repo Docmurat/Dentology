@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { siteConfig } from "@/lib/constants";
+import { AuthNav } from "@/components/layout/auth-nav";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
@@ -26,8 +27,6 @@ export function MobileNav() {
           <div className="mx-auto max-w-7xl px-6 py-6 md:px-10">
             <nav className="flex flex-col gap-4">
               {siteConfig.navigation.map((item) => {
-                // Ссылки-якоря (/#directions) обрабатываем нативным <a>,
-                // иначе App Router не прокручивает к секции на той же странице.
                 const isAnchor = item.href.includes("#");
 
                 return isAnchor ? (
@@ -59,6 +58,10 @@ export function MobileNav() {
               >
                 Записаться
               </Link>
+
+              <div className="mt-2 flex flex-col gap-4 border-t border-[var(--color-gray-200)] pt-4">
+                <AuthNav variant="mobile" onNavigate={() => setOpen(false)} />
+              </div>
             </nav>
           </div>
         </div>

@@ -67,6 +67,7 @@ export default async function DoctorEditCasePage({
         updateAction={updateDoctorCase}
         redirectTo="/doctor"
         lockedDoctorSlug={lockedDoctorSlug}
+        doctorLocked
       />
     </div>
   );

@@ -22,6 +22,17 @@ export default async function CasePreviewPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/admin/login");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // Ссылка «к списку» — туда, откуда пришёл пользователь по роли.
+  const backHref = ["admin", "editor"].includes(profile?.role ?? "")
+    ? "/admin/cases"
+    : "/doctor";
+
   const item = await getCaseBySlugAuthed(slug);
   if (!item) notFound();
 
@@ -33,7 +44,7 @@ export default async function CasePreviewPage({
     <>
       <div className="flex items-center justify-between gap-4 bg-amber-100 px-4 py-2 text-sm text-amber-800">
         <span>Предпросмотр · так кейс будет выглядеть на сайте</span>
-        <Link href="/admin/cases" className="font-medium underline">
+        <Link href={backHref} className="font-medium underline">
           ← к списку
         </Link>
       </div>

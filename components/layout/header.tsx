@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Section } from "@/components/layout/section";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { AuthNav } from "@/components/layout/auth-nav";
 
 export function Header() {
   return (
@@ -28,7 +29,8 @@ export function Header() {
             <Link href="/contacts">Контакты</Link>
           </nav>
 
-          <div className="hidden lg:flex">
+          <div className="hidden items-center gap-5 lg:flex">
+            <AuthNav variant="desktop" />
             <Link
               href="/contacts"
               className="inline-flex items-center justify-center rounded-xl bg-[var(--color-teal)] px-5 py-3 text-sm font-medium text-white"

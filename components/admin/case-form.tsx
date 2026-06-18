@@ -53,14 +53,17 @@ export function CaseForm({
   updateAction = updateCase,
   redirectTo = "/admin/cases",
   lockedDoctorSlug,
+  doctorLocked = false,
 }: {
   doctors: DoctorOption[];
   initial?: CaseItem;
   createAction?: CaseAction;
   updateAction?: CaseAction;
   redirectTo?: string;
-  // Если задан — поле «врач» зафиксировано на этом slug (для роли доктора).
+  // slug врача, к которому привязан аккаунт (для роли доктора).
   lockedDoctorSlug?: string;
+  // true — у роли доктора: выбор врача недоступен, врач = он сам.
+  doctorLocked?: boolean;
 }) {
   const router = useRouter();
   const isEdit = Boolean(initial);
@@ -260,24 +263,28 @@ export function CaseForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={labelCls}>Врач, ведущий случай</label>
-            {lockedDoctorSlug ? (
-              <>
-                <select
-                  defaultValue={lockedDoctorSlug}
-                  disabled
-                  className={`${inputCls} opacity-70`}
-                >
-                  {doctors.map((d) => (
-                    <option key={d.slug} value={d.slug}>
-                      {d.name} ({d.position})
-                    </option>
-                  ))}
-                </select>
-                <input type="hidden" name="doctorSlug" value={lockedDoctorSlug} />
+            {doctorLocked ? (
+              lockedDoctorSlug ? (
+                <>
+                  <div className="mt-1 rounded-lg border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] px-3 py-2 text-sm text-[var(--color-navy)]">
+                    {doctors.find((d) => d.slug === lockedDoctorSlug)?.name ??
+                      lockedDoctorSlug}
+                  </div>
+                  <input
+                    type="hidden"
+                    name="doctorSlug"
+                    value={lockedDoctorSlug}
+                  />
+                  <p className="mt-1 text-xs text-[var(--color-gray-500)]">
+                    Кейс привязан к вам.
+                  </p>
+                </>
+              ) : (
                 <p className="mt-1 text-xs text-[var(--color-gray-500)]">
-                  Кейс будет привязан к вам.
+                  Ваш аккаунт не привязан к карточке врача — кейс добавится без
+                  врача, администратор укажет его при модерации.
                 </p>
-              </>
+              )
             ) : (
               <select
                 name="doctorSlug"
