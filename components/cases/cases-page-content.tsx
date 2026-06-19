@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import type { CaseItem } from "@/lib/cases-data";
 import { directionLabel } from "@/lib/directions";
+import { CaseExcerpt } from "@/components/cases/case-excerpt";
 import { teamData } from "@/lib/team-data";
 
 const ITEMS_PER_PAGE = 6;
@@ -100,9 +101,7 @@ export function CasesPageContent({ cases }: { cases: CaseItem[] }) {
                       {item.title}
                     </h2>
 
-                    <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-gray-700)]">
-                      {item.excerpt}
-                    </p>
+                    <CaseExcerpt text={item.excerpt} />
 
                     {doctor ? (
                       <p className="mt-5 text-sm font-medium text-[var(--color-navy-secondary)]">

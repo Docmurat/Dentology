@@ -231,24 +231,27 @@ export function CaseForm({
           />
         </div>
 
-        <div>
-          <label className={labelCls}>Slug (адрес страницы)</label>
-          <input
-            name="slug"
-            value={autoSlug}
-            onChange={(e) => {
-              setSlugTouched(true);
-              setSlug(e.target.value);
-            }}
-            disabled={isEdit}
-            className={`${inputCls} ${isEdit ? "opacity-60" : ""}`}
-          />
-          <p className="mt-1 text-xs text-[var(--color-gray-500)]">
-            {isEdit
-              ? "Адрес кейса менять нельзя, чтобы не ломать ссылки."
-              : `Страница будет доступна по адресу /cases/${autoSlug || "…"}`}
-          </p>
-        </div>
+        {/* Slug нужен только сотрудникам; врачу его не показываем. */}
+        {!doctorLocked ? (
+          <div>
+            <label className={labelCls}>Slug (адрес страницы)</label>
+            <input
+              name="slug"
+              value={autoSlug}
+              onChange={(e) => {
+                setSlugTouched(true);
+                setSlug(e.target.value);
+              }}
+              disabled={isEdit}
+              className={`${inputCls} ${isEdit ? "opacity-60" : ""}`}
+            />
+            <p className="mt-1 text-xs text-[var(--color-gray-500)]">
+              {isEdit
+                ? "Адрес кейса менять нельзя, чтобы не ломать ссылки."
+                : `Страница будет доступна по адресу /cases/${autoSlug || "…"}`}
+            </p>
+          </div>
+        ) : null}
 
         <div>
           <label className={labelCls}>Краткое описание</label>

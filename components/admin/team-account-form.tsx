@@ -15,11 +15,11 @@ const inputCls =
 export function TeamAccountForm({
   slug,
   name,
-  currentEmail,
+  currentLogin,
 }: {
   slug: string;
   name: string;
-  currentEmail: string | null;
+  currentLogin: string | null;
 }) {
   const [state, action, pending] = useActionState<State, FormData>(
     linkTeamAccount,
@@ -32,7 +32,7 @@ export function TeamAccountForm({
         <p className="text-sm font-semibold text-[var(--color-navy)]">
           Аккаунт для входа
         </p>
-        {currentEmail ? (
+        {currentLogin ? (
           <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
             привязан
           </span>
@@ -54,25 +54,27 @@ export function TeamAccountForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className={labelCls}>Email</label>
+            <label className={labelCls}>Логин</label>
             <input
-              name="email"
-              type="email"
+              name="login"
+              type="text"
               required
-              defaultValue={currentEmail ?? ""}
+              defaultValue={currentLogin ?? ""}
               className={inputCls}
             />
           </div>
           <div>
             <label className={labelCls}>
-              {currentEmail ? "Новый пароль" : "Пароль *"}
+              {currentLogin ? "Новый пароль" : "Пароль *"}
             </label>
             <input
               name="password"
               type="text"
               minLength={8}
               placeholder={
-                currentEmail ? "оставьте пустым, чтобы не менять" : "от 8 символов"
+                currentLogin
+                  ? "оставьте пустым, чтобы не менять"
+                  : "от 8 символов"
               }
               className={inputCls}
             />
@@ -95,7 +97,7 @@ export function TeamAccountForm({
         </button>
       </form>
 
-      {currentEmail ? (
+      {currentLogin ? (
         <form action={unlinkTeamAccount} className="mt-3">
           <input type="hidden" name="slug" value={slug} />
           <button

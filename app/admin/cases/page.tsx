@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { directionLabel } from "@/lib/directions";
+import { getTeamMembers } from "@/lib/team";
 import { approveCase, deleteCase } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ type Row = {
   slug: string;
   title: string;
   direction_slug: string | null;
+  doctor_slug: string | null;
   cover_image: string | null;
   published: boolean;
 };
@@ -28,11 +30,11 @@ function Cover({ url }: { url: string | null }) {
   );
 }
 
-function Meta({ row }: { row: Row }) {
+function Meta({ doctorName, direction }: { doctorName: string; direction: string | null }) {
   return (
     <p className="text-xs text-[var(--color-gray-500)]">
-      /{row.slug}
-      {row.direction_slug ? ` · ${directionLabel(row.direction_slug)}` : ""}
+      {doctorName}
+      {direction ? ` · ${directionLabel(direction)}` : ""}
     </p>
   );
 }
@@ -41,10 +43,17 @@ export default async function AdminCasesPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("cases")
-    .select("slug, title, direction_slug, cover_image, published")
+    .select("slug, title, direction_slug, doctor_slug, cover_image, published")
     .order("created_at", { ascending: false });
 
   const rows = (data ?? []) as Row[];
+
+  // Карта slug врача -> «Фамилия Имя».
+  const team = await getTeamMembers();
+  const doctorName = new Map(team.map((d) => [d.slug, d.name]));
+  const nameOf = (slug: string | null) =>
+    (slug ? doctorName.get(slug) : null) ?? "Врач не указан";
+
   const pending = rows.filter((r) => !r.published);
   const published = rows.filter((r) => r.published);
 
@@ -88,7 +97,10 @@ export default async function AdminCasesPage() {
                       <p className="truncate font-medium text-[var(--color-navy)]">
                         {row.title}
                       </p>
-                      <Meta row={row} />
+                      <Meta
+                        doctorName={nameOf(row.doctor_slug)}
+                        direction={row.direction_slug}
+                      />
                     </div>
                   </div>
 
@@ -146,7 +158,10 @@ export default async function AdminCasesPage() {
                       <p className="truncate font-medium text-[var(--color-navy)]">
                         {row.title}
                       </p>
-                      <Meta row={row} />
+                      <Meta
+                        doctorName={nameOf(row.doctor_slug)}
+                        direction={row.direction_slug}
+                      />
                     </div>
                   </div>
 

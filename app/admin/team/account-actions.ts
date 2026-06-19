@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { loginToEmail } from "@/lib/auth-login";
 
 type Result = { error?: string; ok?: boolean };
 
@@ -50,13 +51,12 @@ export async function linkTeamAccount(
 
   const slug = String(formData.get("slug") || "");
   const name = String(formData.get("name") || "").trim();
-  const email = String(formData.get("email") || "")
-    .trim()
-    .toLowerCase();
+  const login = String(formData.get("login") || "");
   const password = String(formData.get("password") || "");
+  const email = loginToEmail(login);
 
   if (!slug) return { error: "Нет карточки сотрудника" };
-  if (!email) return { error: "Укажите email" };
+  if (!login.trim()) return { error: "Укажите логин" };
 
   const admin = createAdminClient();
   const existing = await findUserByEmail(admin, email);

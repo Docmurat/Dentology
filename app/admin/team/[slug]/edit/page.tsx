@@ -4,6 +4,7 @@ import { TeamAccountForm } from "@/components/admin/team-account-form";
 import { getTeamMemberBySlug } from "@/lib/team";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { emailToLogin } from "@/lib/auth-login";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export default async function EditTeamMemberPage({
           <TeamAccountForm
             slug={member.slug}
             name={member.name}
-            currentEmail={currentEmail}
+            currentLogin={currentEmail ? emailToLogin(currentEmail) : null}
           />
         ) : null}
       </div>

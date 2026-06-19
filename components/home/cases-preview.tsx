@@ -6,6 +6,7 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
 import { getAllCases } from "@/lib/cases";
 import { directionLabel } from "@/lib/directions";
+import { CaseExcerpt } from "@/components/cases/case-excerpt";
 
 export async function CasesPreview() {
   const previewCases = (await getAllCases()).slice(0, 3);
@@ -54,9 +55,7 @@ export async function CasesPreview() {
                 {item.title}
               </h3>
 
-              <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-gray-700)]">
-                {item.excerpt}
-              </p>
+              <CaseExcerpt text={item.excerpt} />
             </Card>
           </Link>
         ))}
