@@ -7,6 +7,7 @@ import type { ReviewItem } from "@/lib/reviews-data";
 type ReviewCardProps = {
   review: ReviewItem;
   compact?: boolean;
+  date?: string;
 };
 
 const MAX_PREVIEW_LENGTH = 220;
@@ -30,7 +31,7 @@ function InstagramIcon() {
   );
 }
 
-export function ReviewCard({ review, compact = false }: ReviewCardProps) {
+export function ReviewCard({ review, compact = false, date }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -39,7 +40,6 @@ export function ReviewCard({ review, compact = false }: ReviewCardProps) {
   const visibleText = useMemo(() => {
     if (!isLong) return review.text;
     if (expanded) return review.text;
-
     return `${review.text.slice(0, MAX_PREVIEW_LENGTH).trim()}…`;
   }, [expanded, isLong, review.text]);
 
@@ -68,7 +68,9 @@ export function ReviewCard({ review, compact = false }: ReviewCardProps) {
             {review.author}
           </p>
 
-          {review.city ? (
+          {date ? (
+            <p className="text-sm text-[var(--color-gray-500)]">{date}</p>
+          ) : review.city ? (
             <p className="text-sm text-[var(--color-gray-500)]">
               {review.city}
             </p>

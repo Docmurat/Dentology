@@ -58,6 +58,18 @@ export default function AdminHomePage() {
             Логины и пароли для входа в личный кабинет.
           </p>
         </Link>
+
+        <Link
+          href="/admin/reviews"
+          className="rounded-2xl border border-[var(--color-gray-200)] bg-white p-6 transition hover:shadow-[0_8px_28px_rgba(0,0,0,0.06)]"
+        >
+          <p className="text-lg font-semibold text-[var(--color-navy)]">
+            Отзывы
+          </p>
+          <p className="mt-1 text-sm text-[var(--color-gray-600)]">
+            Модерация отзывов от пациентов с сайта.
+          </p>
+        </Link>
       </div>
     </div>
   );
