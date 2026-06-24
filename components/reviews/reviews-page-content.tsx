@@ -8,6 +8,8 @@ type ReviewsPageContentProps = {
   reviews: ReviewItem[];
 };
 
+const ITEMS_PER_PAGE = 6;
+
 const filterOptions = [
   { value: "all", label: "Все отзывы" },
   { value: "endodontics", label: "Эндодонтия" },
@@ -19,6 +21,7 @@ const filterOptions = [
 
 export function ReviewsPageContent({ reviews }: ReviewsPageContentProps) {
   const [activeFilter, setActiveFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -35,6 +38,18 @@ export function ReviewsPageContent({ reviews }: ReviewsPageContentProps) {
     if (activeFilter === "all") return reviews;
     return reviews.filter((item) => item.directionSlugs?.includes(activeFilter));
   }, [activeFilter, reviews]);
+
+  const totalPages = Math.ceil(filteredReviews.length / ITEMS_PER_PAGE);
+
+  const paginatedReviews = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredReviews.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredReviews, currentPage]);
+
+  const selectFilter = (value: string) => {
+    setActiveFilter(value);
+    setCurrentPage(1);
+  };
 
   return (
     <div>
@@ -53,7 +68,7 @@ export function ReviewsPageContent({ reviews }: ReviewsPageContentProps) {
                 >
                   <button
                     type="button"
-                    onClick={() => setActiveFilter(option.value)}
+                    onClick={() => selectFilter(option.value)}
                     className={
                       isActive
                         ? "inline-flex min-h-[36px] items-center justify-center rounded-full bg-[var(--color-navy)] px-4 py-1.5 text-[13px] font-medium text-white"
@@ -75,7 +90,7 @@ export function ReviewsPageContent({ reviews }: ReviewsPageContentProps) {
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setActiveFilter(option.value)}
+                onClick={() => selectFilter(option.value)}
                 className={
                   isActive
                     ? "inline-flex items-center justify-center rounded-full bg-[var(--color-navy)] px-5 py-2.5 text-sm font-medium text-white"
@@ -89,12 +104,57 @@ export function ReviewsPageContent({ reviews }: ReviewsPageContentProps) {
         </div>
       )}
 
-      {filteredReviews.length ? (
-        <div className="grid gap-8 lg:grid-cols-2">
-          {filteredReviews.map((item) => (
-            <ReviewCard key={item.slug} review={item} />
-          ))}
-        </div>
+      {paginatedReviews.length ? (
+        <>
+          <div className="grid gap-8 lg:grid-cols-2">
+            {paginatedReviews.map((item) => (
+              <ReviewCard key={item.slug} review={item} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="mt-10 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-sm text-[var(--color-navy)] disabled:opacity-30"
+              >
+                ←
+              </button>
+
+              {Array.from({ length: totalPages }).map((_, index) => {
+                const page = index + 1;
+                const isActive = currentPage === page;
+                return (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={
+                      isActive
+                        ? "rounded-full bg-[var(--color-navy)] px-3 py-1 text-sm text-white"
+                        : "rounded-full px-3 py-1 text-sm text-[var(--color-navy)] hover:bg-[var(--color-gray-100)]"
+                    }
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 text-sm text-[var(--color-navy)] disabled:opacity-30"
+              >
+                →
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="rounded-2xl border border-[var(--color-gray-200)] bg-white px-6 py-8">
           <p className="text-base leading-7 text-[var(--color-gray-700)]">

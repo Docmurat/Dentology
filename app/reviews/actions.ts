@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/lib/supabase-admin";
 
 type Result = { error?: string; ok?: boolean };
 
@@ -33,14 +34,41 @@ export async function submitReview(
   if (text.length > 4000) return { error: "Отзыв слишком длинный" };
 
   const id = crypto.randomUUID();
-  const supabase = await createClient();
 
+  // Необязательное фото посетителя -> в бакет через сервис-роль.
+  let image: string | null = null;
+  const photo = formData.get("photo");
+  if (photo instanceof File && photo.size > 0) {
+    if (!photo.type.startsWith("image/"))
+      return { error: "Фото должно быть изображением" };
+    if (photo.size > 5 * 1024 * 1024)
+      return { error: "Фото слишком большое (до 5 МБ)" };
+    try {
+      const admin = createAdminClient();
+      const ext = (photo.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${id}/visitor-${Date.now()}.${ext}`;
+      const { error: upErr } = await admin.storage
+        .from("review-images")
+        .upload(path, photo, { contentType: photo.type, upsert: true });
+      if (!upErr) {
+        const { data } = admin.storage
+          .from("review-images")
+          .getPublicUrl(path);
+        image = data.publicUrl;
+      }
+    } catch {
+      // если фото не загрузилось — отзыв всё равно отправляем без него
+    }
+  }
+
+  const supabase = await createClient();
   const { error } = await supabase.from("reviews").insert({
     id,
     author,
     text,
     doctor_slug: doctorSlug,
     instagram,
+    image,
     status: "pending",
     verified: false,
   });

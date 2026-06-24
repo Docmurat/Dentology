@@ -1,7 +1,6 @@
 import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
-import { reviewsData } from "@/lib/reviews-data";
 import { getApprovedReviews } from "@/lib/reviews";
 import { getTeamMembers } from "@/lib/team";
 import { ReviewsPageContent } from "@/components/reviews/reviews-page-content";
@@ -10,11 +9,10 @@ import { ReviewForm } from "@/components/reviews/review-form";
 export const revalidate = 60;
 
 export default async function ReviewsPage() {
-  const [approved, team] = await Promise.all([
+  const [reviews, team] = await Promise.all([
     getApprovedReviews(),
     getTeamMembers(),
   ]);
-  const reviews = [...approved, ...reviewsData];
   const doctors = team
     .filter((m) => m.category === "doctor")
     .map((m) => ({ slug: m.slug, name: m.name }));

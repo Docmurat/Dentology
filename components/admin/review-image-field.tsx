@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { setReviewImage } from "@/app/admin/reviews/actions";
 
@@ -14,16 +13,16 @@ export function ReviewImageField({
   id: string;
   current: string | null;
 }) {
-  const router = useRouter();
+  const [url, setUrl] = useState<string | null>(current);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function save(url: string) {
+  async function save(next: string) {
     const fd = new FormData();
     fd.set("id", id);
-    fd.set("url", url);
+    fd.set("url", next);
     await setReviewImage(fd);
-    router.refresh();
+    setUrl(next || null);
   }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -56,10 +55,10 @@ export function ReviewImageField({
 
   return (
     <div className="flex items-center gap-3">
-      {current ? (
+      {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={current}
+          src={url}
           alt=""
           className="h-12 w-12 shrink-0 rounded-full object-cover"
         />
@@ -70,7 +69,7 @@ export function ReviewImageField({
       )}
 
       <label className="cursor-pointer text-sm font-medium text-[var(--color-navy)] underline-offset-2 hover:underline">
-        {busy ? "Загрузка…" : current ? "Заменить фото" : "Добавить фото"}
+        {busy ? "Загрузка…" : url ? "Заменить фото" : "Добавить фото"}
         <input
           type="file"
           accept="image/*"
@@ -80,7 +79,7 @@ export function ReviewImageField({
         />
       </label>
 
-      {current ? (
+      {url ? (
         <button
           type="button"
           onClick={remove}

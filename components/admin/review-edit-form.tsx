@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateReview } from "@/app/admin/reviews/actions";
+import { ReviewImageField } from "@/components/admin/review-image-field";
 
 type State = { error?: string; ok?: boolean };
 
@@ -25,8 +26,11 @@ export function ReviewEditForm({
     id: string;
     author: string;
     text: string;
-    direction_slug: string | null;
+    direction_slugs: string[] | null;
+    instagram: string | null;
     review_date: string | null;
+    sort_order: number | null;
+    image: string | null;
   };
 }) {
   const router = useRouter();
@@ -34,6 +38,7 @@ export function ReviewEditForm({
     updateReview,
     {}
   );
+  const [dirs, setDirs] = useState<string[]>(review.direction_slugs ?? []);
 
   useEffect(() => {
     if (state.ok) {
@@ -41,6 +46,15 @@ export function ReviewEditForm({
       router.refresh();
     }
   }, [state.ok, router]);
+
+  const toggle = (slug: string) =>
+    setDirs((prev) =>
+      prev.includes(slug)
+        ? prev.filter((s) => s !== slug)
+        : prev.length < 3
+          ? [...prev, slug]
+          : prev
+    );
 
   return (
     <form action={action} className="max-w-xl space-y-4">
@@ -57,32 +71,66 @@ export function ReviewEditForm({
       </div>
 
       <div>
-        <label className={labelCls}>Направление *</label>
-        <select
-          name="directionSlug"
-          defaultValue={review.direction_slug ?? ""}
-          required
+        <label className={labelCls}>Instagram</label>
+        <input
+          name="instagram"
+          defaultValue={review.instagram ?? ""}
           className={inputCls}
-        >
-          <option value="" disabled>
-            — выберите —
-          </option>
-          {DIRECTIONS.map((d) => (
-            <option key={d.slug} value={d.slug}>
-              {d.label}
-            </option>
-          ))}
-        </select>
+          placeholder="@username или ссылка"
+        />
       </div>
 
       <div>
-        <label className={labelCls}>Дата</label>
-        <input
-          name="reviewDate"
-          type="date"
-          defaultValue={review.review_date ?? ""}
-          className={inputCls}
-        />
+        <label className={labelCls}>Направления (до 3) *</label>
+        <div className="mt-2 flex flex-wrap gap-3">
+          {DIRECTIONS.map((d) => {
+            const isOn = dirs.includes(d.slug);
+            return (
+              <label
+                key={d.slug}
+                className={
+                  "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm " +
+                  (isOn
+                    ? "border-[var(--color-teal)] bg-[var(--color-teal)]/10 text-[var(--color-navy)]"
+                    : "border-[var(--color-gray-200)] text-[var(--color-navy)]")
+                }
+              >
+                <input
+                  type="checkbox"
+                  name="directionSlug"
+                  value={d.slug}
+                  checked={isOn}
+                  onChange={() => toggle(d.slug)}
+                  disabled={!isOn && dirs.length >= 3}
+                />
+                {d.label}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className={labelCls}>Дата</label>
+          <input
+            name="reviewDate"
+            type="date"
+            defaultValue={review.review_date ?? ""}
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Порядковый номер</label>
+          <input
+            name="sortOrder"
+            type="number"
+            min={1}
+            defaultValue={review.sort_order ?? ""}
+            className={inputCls}
+            placeholder="напр. 3 — всегда третий"
+          />
+        </div>
       </div>
 
       <div>
@@ -94,6 +142,13 @@ export function ReviewEditForm({
           defaultValue={review.text}
           className={inputCls}
         />
+      </div>
+
+      <div>
+        <label className={labelCls}>Фото</label>
+        <div className="mt-2">
+          <ReviewImageField id={review.id} current={review.image} />
+        </div>
       </div>
 
       {state.error ? (

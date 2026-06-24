@@ -32,7 +32,7 @@ function mapRow(row: TeamRow): TeamMember {
     shortRole: row.short_role,
     excerpt: row.excerpt,
     description: row.description,
-    image: row.image ?? "/team-placeholder.jpg",
+    image: row.image?.trim() || "",
     category: row.category,
     isChief: row.is_chief,
     isLead: row.is_lead,

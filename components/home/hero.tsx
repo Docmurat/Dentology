@@ -17,8 +17,7 @@ export function Hero() {
 
           <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--color-gray-700)]">
             Ведущая экспертиза в сложной эндодонтии, дополненная имплантацией,
-            ортодонтией и гнатологией как частью комплексного подхода к
-            лечению.
+            ортодонтией и гнатологией как частью комплексного подхода к лечению.
           </p>
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -45,8 +44,10 @@ export function Hero() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] px-4 py-5">
-              <p className="text-sm text-[var(--color-gray-500)]">Education</p>
+            <div className="rounded-2xl border border-[var(--color-gold)] bg-[var(--color-gold)]/10 px-4 py-5">
+              <p className="text-sm font-medium text-[var(--color-gold)]">
+                Education
+              </p>
               <p className="mt-2 text-sm font-medium leading-6 text-[var(--color-navy)]">
                 Обучение врачей по эндодонтии
               </p>
@@ -56,7 +57,7 @@ export function Hero() {
 
         <div className="relative max-w-[520px] ml-auto">
           <div className="rounded-[32px] bg-[var(--color-gray-100)] shadow-[0_12px_36px_rgba(0,0,0,0.06)]">
-           <div className="overflow-hidden rounded-[32px]">
+            <div className="overflow-hidden rounded-[32px]">
               <Image
                 src="/hero-doctor.jpg"
                 alt="Dentology — врач"
@@ -69,20 +70,19 @@ export function Hero() {
           </div>
 
           <div className="absolute bottom-6 left-6 right-6">
-  <div className="rounded-2xl border border-white/30 bg-white/60 p-6 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+            <div className="rounded-2xl border border-white/30 bg-white/60 p-6 shadow-[0_10px_30px_rgba(0,0,0,0.08)] backdrop-blur-md">
+              <p className="text-[32px] leading-none text-white/40">“</p>
 
-    <p className="text-[32px] leading-none text-white/40">“</p>
+              <p className="mt-2 text-base leading-7 text-[var(--color-navy)]">
+                В ряде случаев зуб можно сохранить, даже если ранее
+                рекомендовано удаление
+              </p>
 
-    <p className="mt-2 text-base leading-7 text-[var(--color-navy)]">
-      В ряде случаев зуб можно сохранить, даже если ранее рекомендовано удаление
-    </p>
-
-    <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[var(--color-gray-600)]">
-      Курджиев Мурат    
-    </p>
-
-  </div>
-</div>
+              <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[var(--color-gray-600)]">
+                Курджиев Мурат
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </Section>

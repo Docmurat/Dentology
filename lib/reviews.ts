@@ -17,16 +17,18 @@ function formatDate(value: string | null): string {
 }
 
 // Одобренные отзывы из БД -> ReviewItem (+ дата). Телефон НЕ читается.
-// Картинка: загруженное админом фото в приоритете; иначе аватарка
-// из инстаграма через unavatar.io (с фолбэком).
+// Сортировка: сначала по ручному порядковому номеру (sort_order),
+// затем по дате (новые выше). Картинка: загруженное фото в приоритете,
+// иначе аватарка из инстаграма (unavatar) с фолбэком.
 export async function getApprovedReviews(): Promise<ApprovedReview[]> {
   const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("reviews")
     .select(
-      "id, author, text, image, instagram, direction_slug, review_date, created_at"
+      "id, author, text, image, instagram, direction_slug, direction_slugs, sort_order, review_date, created_at"
     )
     .eq("status", "approved")
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("review_date", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -38,13 +40,18 @@ export async function getApprovedReviews(): Promise<ApprovedReview[]> {
     const handle = instagramHandle(instagram);
     const image =
       stored ?? (handle ? `https://unavatar.io/instagram/${handle}` : null);
+
+    const arr = (r.direction_slugs as string[] | null) ?? [];
+    const directionSlugs =
+      arr.length > 0 ? arr : r.direction_slug ? [r.direction_slug as string] : [];
+
     return {
       slug: r.id as string,
       author: r.author as string,
       text: r.text as string,
       image,
       instagramUrl: instagram,
-      directionSlugs: r.direction_slug ? [r.direction_slug as string] : [],
+      directionSlugs,
       featured: false,
       date: formatDate(
         (r.review_date as string) ?? (r.created_at as string) ?? null

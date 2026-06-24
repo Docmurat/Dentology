@@ -21,6 +21,7 @@ function ReviewModal({
     submitReview,
     {}
   );
+  const [photoName, setPhotoName] = useState<string | null>(null);
 
   // После успешной отправки окно закрывается само через 3 секунды.
   useEffect(() => {
@@ -30,16 +31,10 @@ function ReviewModal({
   }, [state.ok, onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         {state.ok ? (
-          <p className="py-10 text-center text-xl font-semibold text-[var(--color-navy)]">
+          <p className="py-10 text-center text-lg font-medium text-[var(--color-navy)]">
             Спасибо за отзыв
           </p>
         ) : (
@@ -70,12 +65,12 @@ function ReviewModal({
               />
 
               <div>
-                <label className={labelCls}>Фамилия и имя *</label>
+                <label className={labelCls}>Как вас зовут *</label>
                 <input
                   name="author"
                   required
                   className={inputCls}
-                  placeholder="Как вас зовут"
+                  placeholder="Имя Фамилия"
                 />
               </div>
 
@@ -128,6 +123,26 @@ function ReviewModal({
                 />
               </div>
 
+              <div>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[var(--color-gray-300)] px-3 py-2 text-sm text-[var(--color-navy)] hover:bg-[var(--color-gray-50)]">
+                  <span>Добавить фото (по желанию)</span>
+                  <input
+                    type="file"
+                    name="photo"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      setPhotoName(e.target.files?.[0]?.name ?? null)
+                    }
+                  />
+                </label>
+                {photoName ? (
+                  <p className="mt-1 truncate text-xs text-[var(--color-gray-500)]">
+                    {photoName}
+                  </p>
+                ) : null}
+              </div>
+
               {state.error ? (
                 <p className="text-sm text-red-600">{state.error}</p>
               ) : null}
@@ -155,9 +170,9 @@ export function ReviewForm({ doctors = [] }: { doctors?: DoctorOption[] }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center justify-center rounded-full border border-[var(--color-gray-200)] bg-white px-5 py-2.5 text-sm font-medium text-[var(--color-navy)] transition hover:border-[var(--color-gray-300)] hover:bg-[var(--color-gray-50)]"
+        className="inline-flex items-center justify-center rounded-full bg-[var(--color-teal)] px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
       >
-        Оставить отзыв
+        + Оставить отзыв
       </button>
 
       {open ? (

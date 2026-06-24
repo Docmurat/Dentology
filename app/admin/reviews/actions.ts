@@ -12,46 +12,144 @@ function normalizeInstagram(value: string): string | null {
   return `https://www.instagram.com/${s}`;
 }
 
-export async function submitReview(
+async function requireStaff() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Не авторизован");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile || !["admin", "editor"].includes(profile.role)) {
+    throw new Error("Недостаточно прав");
+  }
+  return supabase;
+}
+
+function revalidateReviews() {
+  revalidatePath("/admin/reviews");
+  revalidatePath("/reviews");
+  revalidatePath("/");
+}
+
+export async function approveReview(formData: FormData) {
+  const supabase = await requireStaff();
+  const id = String(formData.get("id") || "");
+  const dirs = formData
+    .getAll("directionSlug")
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 3);
+  // Без выбранного направления отзыв не публикуется.
+  if (!dirs.length) return;
+  await supabase
+    .from("reviews")
+    .update({ status: "approved", direction_slugs: dirs })
+    .eq("id", id);
+  revalidateReviews();
+}
+
+export async function rejectReview(formData: FormData) {
+  const supabase = await requireStaff();
+  await supabase
+    .from("reviews")
+    .update({ status: "rejected" })
+    .eq("id", String(formData.get("id") || ""));
+  revalidateReviews();
+}
+
+export async function unpublishReview(formData: FormData) {
+  const supabase = await requireStaff();
+  await supabase
+    .from("reviews")
+    .update({ status: "pending" })
+    .eq("id", String(formData.get("id") || ""));
+  revalidateReviews();
+}
+
+export async function deleteReview(formData: FormData) {
+  const supabase = await requireStaff();
+  await supabase
+    .from("reviews")
+    .delete()
+    .eq("id", String(formData.get("id") || ""));
+  revalidateReviews();
+}
+
+export async function setReviewVerified(formData: FormData) {
+  const supabase = await requireStaff();
+  await supabase
+    .from("reviews")
+    .update({ verified: String(formData.get("verified") || "") === "true" })
+    .eq("id", String(formData.get("id") || ""));
+  revalidateReviews();
+}
+
+export async function setReviewImage(formData: FormData) {
+  const supabase = await requireStaff();
+  await supabase
+    .from("reviews")
+    .update({ image: String(formData.get("url") || "") || null })
+    .eq("id", String(formData.get("id") || ""));
+  revalidateReviews();
+}
+
+export async function updateReview(
   _prev: Result,
   formData: FormData
 ): Promise<Result> {
-  if (String(formData.get("company") || "").trim()) {
-    return { ok: true };
+  let supabase;
+  try {
+    supabase = await requireStaff();
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Ошибка" };
   }
 
+  const id = String(formData.get("id") || "");
   const author = String(formData.get("author") || "").trim();
   const text = String(formData.get("text") || "").trim();
-  const doctorSlug = String(formData.get("doctorSlug") || "") || null;
+  const reviewDate = String(formData.get("reviewDate") || "") || null;
   const instagram = normalizeInstagram(String(formData.get("instagram") || ""));
-  const phone = String(formData.get("phone") || "").trim() || null;
+  const dirs = formData
+    .getAll("directionSlug")
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 3);
 
-  if (!author) return { error: "Укажите фамилию и имя" };
-  if (!phone) return { error: "Укажите телефон" };
-  if (text.length < 20)
-    return { error: "Отзыв слишком короткий (минимум 20 символов)" };
-  if (text.length > 4000) return { error: "Отзыв слишком длинный" };
+  const sortRaw = String(formData.get("sortOrder") || "").trim();
+  const parsed = sortRaw ? Number.parseInt(sortRaw, 10) : null;
+  const sortOrder = parsed !== null && !Number.isNaN(parsed) ? parsed : null;
 
-  const id = crypto.randomUUID();
-  const supabase = await createClient();
+  if (!author) return { error: "Укажите имя" };
+  if (text.length < 5) return { error: "Текст слишком короткий" };
+  if (!dirs.length) return { error: "Выберите хотя бы одно направление" };
 
-  const { error } = await supabase.from("reviews").insert({
-    id,
+  // Освобождаем номер у другого отзыва, если он уже занят (номер уникален).
+  if (sortOrder !== null) {
+    await supabase
+      .from("reviews")
+      .update({ sort_order: null })
+      .eq("sort_order", sortOrder)
+      .neq("id", id);
+  }
+
+  const patch: Record<string, unknown> = {
     author,
     text,
-    doctor_slug: doctorSlug,
+    direction_slugs: dirs,
     instagram,
-    status: "pending",
-    verified: false,
-  });
-  if (error) {
-    return { error: "Не удалось отправить отзыв. Попробуйте позже." };
-  }
+    sort_order: sortOrder,
+  };
+  if (reviewDate) patch.review_date = reviewDate;
 
-  if (phone) {
-    await supabase.from("review_contacts").insert({ review_id: id, phone });
-  }
+  const { error } = await supabase.from("reviews").update(patch).eq("id", id);
+  if (error) return { error: error.message };
 
-  revalidatePath("/admin/reviews");
+  revalidateReviews();
   return { ok: true };
 }

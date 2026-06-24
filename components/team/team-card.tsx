@@ -1,35 +1,36 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { MemberPhoto } from "@/components/team/member-photo";
 import type { TeamMember } from "@/lib/team-data";
 
-// Карточка одинакового размера: фото 4:5, должность, имя, краткое описание
-// и ссылка «Продолжить чтение». Стиль повторяет блок команды на главной.
-export function TeamCard({ member }: { member: TeamMember }) {
+type TeamCardProps = {
+  member: TeamMember;
+  /** Компактный вид — для единого списка под шапкой. */
+  compact?: boolean;
+};
+
+export function TeamCard({ member, compact = false }: TeamCardProps) {
   const eyebrow = member.isChief
     ? "Главный врач"
     : member.shortRole || member.position;
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden p-0" id={member.slug}>
-      <div className="bg-[var(--color-gray-100)]">
-        <div className="aspect-[4/5]">
-          <Image
-            src={member.image}
-            alt={member.name}
-            width={700}
-            height={875}
-            className="h-full w-full object-cover"
-          />
-        </div>
-      </div>
+    <Card
+      id={member.slug}
+      className="group relative flex h-full flex-col overflow-hidden p-0 transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-[var(--color-teal)]"
+    >
+      <MemberPhoto src={member.image} name={member.name} />
 
-      <div className="flex flex-1 flex-col p-6">
+      <div className={`flex flex-1 flex-col ${compact ? "p-4" : "p-6"}`}>
         <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-teal)]">
           {eyebrow}
         </p>
 
-        <h3 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
+        <h3
+          className={`mt-2 font-semibold text-[var(--color-navy)] ${
+            compact ? "text-base" : "text-lg"
+          }`}
+        >
           {member.name}
         </h3>
 
@@ -37,16 +38,20 @@ export function TeamCard({ member }: { member: TeamMember }) {
           {member.position}
         </p>
 
-        <p className="mt-3 line-clamp-4 text-sm leading-6 text-[var(--color-gray-700)]">
+        <p
+          className={`mt-2 text-sm leading-6 text-[var(--color-gray-700)] ${
+            compact ? "line-clamp-2" : "line-clamp-4"
+          }`}
+        >
           {member.excerpt || member.description}
         </p>
 
-        <div className="mt-auto pt-5">
+        <div className={`mt-auto ${compact ? "pt-4" : "pt-5"}`}>
           <Link
             href={`/team/${member.slug}`}
-            className="inline-flex text-sm font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
+            className="inline-flex text-sm font-medium text-[var(--color-navy-secondary)] after:absolute after:inset-0 group-hover:text-[var(--color-navy)] group-hover:underline focus:outline-none"
           >
-            Продолжить чтение
+            Подробнее о враче
           </Link>
         </div>
       </div>
