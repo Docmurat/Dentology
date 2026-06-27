@@ -1,15 +1,11 @@
-import Image from "next/image";
-import Link from "next/link";
 import { Section } from "@/components/layout/section";
-import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
 import { getAllCases } from "@/lib/cases";
-import { directionLabel } from "@/lib/directions";
-import { CaseExcerpt } from "@/components/cases/case-excerpt";
+import { CasesCarousel } from "@/components/cases/cases-carousel";
 
 export async function CasesPreview() {
-  const previewCases = (await getAllCases()).slice(0, 3);
+  const previewCases = (await getAllCases()).slice(0, 9);
 
   return (
     <Section id="cases" className="py-20 md:py-28">
@@ -25,41 +21,15 @@ export async function CasesPreview() {
         </Button>
       </div>
 
-      <div className="mt-12 grid gap-6 lg:grid-cols-3">
-        {previewCases.map((item) => (
-          <Link
-            key={item.slug}
-            href={`/cases/${item.slug}`}
-            className="group block h-full"
-          >
-            <Card className="flex h-full flex-col overflow-hidden transition group-hover:-translate-y-1 group-hover:shadow-lg">
-              <div className="relative mb-5">
-                <div className="relative aspect-[3/2] w-full overflow-hidden rounded-xl">
-                  {item.coverImage ? (
-                    <Image
-                      src={item.coverImage}
-                      alt={item.title}
-                      width={1500}
-                      height={1000}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
-                </div>
-              </div>
-
-              <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                {directionLabel(item.directionSlug)}
-              </p>
-
-              <h3 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
-                {item.title}
-              </h3>
-
-              <CaseExcerpt text={item.excerpt} />
-            </Card>
-          </Link>
-        ))}
-      </div>
+      {previewCases.length ? (
+        <div className="mt-12">
+          <CasesCarousel cases={previewCases} />
+        </div>
+      ) : (
+        <p className="mt-10 text-sm text-[var(--color-gray-500)]">
+          Пока нет опубликованных случаев.
+        </p>
+      )}
     </Section>
   );
 }

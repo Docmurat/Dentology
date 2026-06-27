@@ -72,6 +72,7 @@ function readFields(formData: FormData) {
     quote: String(formData.get("quote") || "").trim() || null,
     courses: parseLines(String(formData.get("courses") || "")),
     diploma_image: String(formData.get("diplomaImage") || "") || null,
+    name_genitive: String(formData.get("nameGenitive") || "").trim() || null,
   };
 }
 

@@ -115,6 +115,7 @@ export async function updateReview(
   const text = String(formData.get("text") || "").trim();
   const reviewDate = String(formData.get("reviewDate") || "") || null;
   const instagram = normalizeInstagram(String(formData.get("instagram") || ""));
+  const doctorSlug = String(formData.get("doctorSlug") || "") || null;
   const dirs = formData
     .getAll("directionSlug")
     .map(String)
@@ -143,6 +144,7 @@ export async function updateReview(
     text,
     direction_slugs: dirs,
     instagram,
+    doctor_slug: doctorSlug,
     sort_order: sortOrder,
   };
   if (reviewDate) patch.review_date = reviewDate;

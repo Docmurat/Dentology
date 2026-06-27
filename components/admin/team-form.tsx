@@ -118,6 +118,18 @@ export function TeamForm({ initial }: { initial?: TeamMember }) {
           />
         </div>
 
+        <div>
+          <label className={labelCls}>
+            Имя в родительном падеже (для заголовка «Все кейсы …»)
+          </label>
+          <input
+            name="nameGenitive"
+            defaultValue={initial?.nameGenitive ?? ""}
+            className={inputCls}
+            placeholder="Мурата Курджиева"
+          />
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={labelCls}>Должность</label>

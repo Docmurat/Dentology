@@ -9,7 +9,10 @@ import { getTeamMemberBySlug } from "@/lib/team";
 import { getAllCases } from "@/lib/cases";
 import { getReviewsByDoctor } from "@/lib/reviews";
 import { directionsData } from "@/lib/directions-data";
+import { directionLabel } from "@/lib/directions";
+import { CaseExcerpt } from "@/components/cases/case-excerpt";
 import { ReviewCard } from "@/components/reviews/review-card";
+import { ReviewsCarousel } from "@/components/reviews/reviews-carousel";
 import { DoctorDocuments } from "@/components/team/doctor-documents";
 
 export const revalidate = 60;
@@ -89,16 +92,13 @@ export default async function DoctorPage({ params }: Props) {
             </p>
 
             {doctorDirections.length ? (
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-wrap gap-2">
                 {doctorDirections.map((direction) => (
                   <div
                     key={direction.slug}
-                    className="rounded-2xl border border-[var(--color-gray-200)] bg-white px-5 py-4"
+                    className="rounded-xl border border-[var(--color-gray-200)] bg-white px-3 py-1.5"
                   >
-                    <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                      Направление
-                    </p>
-                    <p className="mt-1 text-sm font-medium text-[var(--color-navy)]">
+                    <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-navy)]">
                       {direction.title}
                     </p>
                   </div>
@@ -184,9 +184,18 @@ export default async function DoctorPage({ params }: Props) {
 
           {doctorCases.length ? (
             <Card>
-              <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-                Клинические случаи врача
-              </h2>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                  Клинические случаи врача
+                </h2>
+
+                <Button
+                  href={`/cases?doctor=${doctor.slug}`}
+                  variant="secondary"
+                >
+                  Смотреть все случаи
+                </Button>
+              </div>
 
               <div className="mt-6 grid gap-6 lg:grid-cols-3">
                 {doctorCases.slice(0, 3).map((item) => (
@@ -208,13 +217,15 @@ export default async function DoctorPage({ params }: Props) {
                         ) : null}
                       </div>
 
-                      <h3 className="mt-5 text-lg font-semibold text-[var(--color-navy)]">
+                      <p className="mt-5 text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
+                        {directionLabel(item.directionSlug)}
+                      </p>
+
+                      <h3 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
                         {item.title}
                       </h3>
 
-                      <p className="mt-3 text-sm leading-6 text-[var(--color-gray-700)]">
-                        {item.excerpt}
-                      </p>
+                      <CaseExcerpt text={item.excerpt} />
                     </div>
                   </Link>
                 ))}
@@ -272,20 +283,41 @@ export default async function DoctorPage({ params }: Props) {
                 )}
               </Card>
             }
-            reviews={
+            reviewsBeside={
               doctorReviews.length ? (
                 <div>
                   <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
                     Отзывы о враче
                   </h2>
-                  <div className="mt-6 grid gap-6 lg:grid-cols-2">
-                    {doctorReviews.slice(0, 4).map((review) => (
+                  <div className="mt-6 grid gap-6">
+                    {doctorReviews.slice(0, 3).map((review) => (
                       <ReviewCard
                         key={review.slug}
                         review={review}
                         date={review.date}
                       />
                     ))}
+                  </div>
+
+                  <div className="mt-8">
+                    <Button
+                      href={`/reviews?doctor=${doctor.slug}`}
+                      variant="secondary"
+                    >
+                      Смотреть все отзывы
+                    </Button>
+                  </div>
+                </div>
+              ) : null
+            }
+            reviewsWide={
+              doctorReviews.length ? (
+                <div>
+                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                    Отзывы о враче
+                  </h2>
+                  <div className="mt-6">
+                    <ReviewsCarousel reviews={doctorReviews.slice(0, 9)} />
                   </div>
 
                   <div className="mt-8">

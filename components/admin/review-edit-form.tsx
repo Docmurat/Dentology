@@ -21,17 +21,20 @@ const DIRECTIONS = [
 
 export function ReviewEditForm({
   review,
+  doctors,
 }: {
   review: {
     id: string;
     author: string;
     text: string;
+    doctor_slug: string | null;
     direction_slugs: string[] | null;
     instagram: string | null;
     review_date: string | null;
     sort_order: number | null;
     image: string | null;
   };
+  doctors: { slug: string; name: string }[];
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<State, FormData>(
@@ -78,6 +81,22 @@ export function ReviewEditForm({
           className={inputCls}
           placeholder="@username или ссылка"
         />
+      </div>
+
+      <div>
+        <label className={labelCls}>Врач</label>
+        <select
+          name="doctorSlug"
+          defaultValue={review.doctor_slug ?? ""}
+          className={inputCls}
+        >
+          <option value="">— не выбран —</option>
+          {doctors.map((d) => (
+            <option key={d.slug} value={d.slug}>
+              {d.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

@@ -24,10 +24,11 @@ type TeamRow = {
   quote: string | null;
   courses: string[] | null;
   diploma_image: string | null;
+  name_genitive: string | null;
 };
 
 const COLUMNS =
-  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order,stats,approach,focus_points,visit_points,quote,courses,diploma_image";
+  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order,stats,approach,focus_points,visit_points,quote,courses,diploma_image,name_genitive";
 
 function mapRow(row: TeamRow): TeamMember {
   const featured = row.is_chief || row.is_lead;
@@ -53,6 +54,7 @@ function mapRow(row: TeamRow): TeamMember {
     quote: row.quote ?? undefined,
     courses: row.courses ?? undefined,
     diplomaImage: row.diploma_image ?? undefined,
+    nameGenitive: row.name_genitive ?? undefined,
     featured,
     showOnHomepage: featured,
   };

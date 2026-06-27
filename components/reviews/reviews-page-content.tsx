@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { ReviewCard } from "@/components/reviews/review-card";
 import type { ReviewItem } from "@/lib/reviews-data";
 
 type ReviewsPageContentProps = {
   reviews: ReviewItem[];
+  doctorFilter?: { slug: string; name: string } | null;
 };
 
 const ITEMS_PER_PAGE = 6;
@@ -19,7 +21,10 @@ const filterOptions = [
   { value: "gnathology", label: "Гнатология" },
 ];
 
-export function ReviewsPageContent({ reviews }: ReviewsPageContentProps) {
+export function ReviewsPageContent({
+  reviews,
+  doctorFilter = null,
+}: ReviewsPageContentProps) {
   const [activeFilter, setActiveFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
@@ -35,9 +40,10 @@ export function ReviewsPageContent({ reviews }: ReviewsPageContentProps) {
   }, []);
 
   const filteredReviews = useMemo(() => {
+    if (doctorFilter) return reviews;
     if (activeFilter === "all") return reviews;
     return reviews.filter((item) => item.directionSlugs?.includes(activeFilter));
-  }, [activeFilter, reviews]);
+  }, [activeFilter, reviews, doctorFilter]);
 
   const totalPages = Math.ceil(filteredReviews.length / ITEMS_PER_PAGE);
 
@@ -53,7 +59,19 @@ export function ReviewsPageContent({ reviews }: ReviewsPageContentProps) {
 
   return (
     <div>
-      {isMobile ? (
+      {doctorFilter ? (
+        <div className="mb-8 flex flex-wrap gap-3">
+          <Link
+            href="/reviews"
+            className="inline-flex items-center justify-center rounded-full border border-[var(--color-gray-200)] bg-white px-5 py-2.5 text-sm font-medium text-[var(--color-navy)] transition hover:border-[var(--color-gray-300)] hover:bg-[var(--color-gray-50)]"
+          >
+            Все отзывы
+          </Link>
+          <span className="inline-flex items-center justify-center rounded-full bg-[var(--color-navy)] px-5 py-2.5 text-sm font-medium text-white">
+            {doctorFilter.name}
+          </span>
+        </div>
+      ) : isMobile ? (
         <div className="mb-8 mt-2 px-14">
           <div
             className="grid grid-cols-2"
@@ -158,7 +176,7 @@ export function ReviewsPageContent({ reviews }: ReviewsPageContentProps) {
       ) : (
         <div className="rounded-2xl border border-[var(--color-gray-200)] bg-white px-6 py-8">
           <p className="text-base leading-7 text-[var(--color-gray-700)]">
-            По выбранному направлению отзывов пока нет.
+            Отзывов пока нет.
           </p>
         </div>
       )}

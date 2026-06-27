@@ -5,6 +5,8 @@ export type TeamCategory = "doctor" | "staff";
 export type TeamMember = {
   slug: string;
   name: string;
+  /** Имя в родительном падеже — для заголовка «Все кейсы …». */
+  nameGenitive?: string;
   position: string;
   role: string;
   shortRole: string;

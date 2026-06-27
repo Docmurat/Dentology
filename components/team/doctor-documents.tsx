@@ -16,26 +16,30 @@ const useIsoLayoutEffect =
  * Раскладка «Диплом + Дополнительное образование + Отзывы».
  * Диплом — слева, образование — справа.
  * Если образование по высоте больше диплома в 1.5 раза (на десктопе),
- * отзывы встают под диплом в левую колонку, заполняя пустоту.
- * Иначе отзывы занимают всю ширину снизу.
+ * отзывы встают под диплом в левую колонку (столбиком — reviewsBeside).
+ * Иначе отзывы занимают всю ширину снизу (каруселью — reviewsWide).
  */
 export function DoctorDocuments({
   diploma,
   education,
-  reviews,
+  reviewsBeside,
+  reviewsWide,
   initialBeside = false,
 }: {
   diploma: ReactNode;
   education: ReactNode;
-  reviews: ReactNode | null;
+  reviewsBeside: ReactNode | null;
+  reviewsWide: ReactNode | null;
   initialBeside?: boolean;
 }) {
   const dipRef = useRef<HTMLDivElement>(null);
   const eduRef = useRef<HTMLDivElement>(null);
   const [beside, setBeside] = useState(initialBeside);
 
+  const hasReviews = reviewsBeside != null;
+
   useIsoLayoutEffect(() => {
-    if (!reviews) {
+    if (!hasReviews) {
       setBeside(false);
       return;
     }
@@ -57,14 +61,14 @@ export function DoctorDocuments({
       ro.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [reviews, beside]);
+  }, [hasReviews, beside]);
 
-  if (beside && reviews) {
+  if (beside && hasReviews) {
     return (
       <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
         <div className="grid gap-8">
           <div ref={dipRef}>{diploma}</div>
-          <div>{reviews}</div>
+          <div>{reviewsBeside}</div>
         </div>
         <div ref={eduRef}>{education}</div>
       </div>
@@ -77,7 +81,7 @@ export function DoctorDocuments({
         <div ref={dipRef}>{diploma}</div>
         <div ref={eduRef}>{education}</div>
       </div>
-      {reviews ? <div>{reviews}</div> : null}
+      {hasReviews ? <div>{reviewsWide}</div> : null}
     </>
   );
 }
