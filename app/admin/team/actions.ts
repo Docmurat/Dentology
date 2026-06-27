@@ -25,6 +25,23 @@ async function requireStaff() {
 
 type Supabase = Awaited<ReturnType<typeof requireStaff>>["supabase"];
 
+function parseLines(value: string): string[] {
+  return value
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function readStats(formData: FormData) {
+  const out: { value: string; label: string }[] = [];
+  for (let i = 1; i <= 3; i++) {
+    const value = String(formData.get(`statValue${i}`) || "").trim();
+    const label = String(formData.get(`statLabel${i}`) || "").trim();
+    if (value || label) out.push({ value, label });
+  }
+  return out;
+}
+
 function readFields(formData: FormData) {
   const isLead = formData.get("isLead") === "on";
   const leadDirection = String(formData.get("leadDirectionSlug") || "") || null;
@@ -49,6 +66,12 @@ function readFields(formData: FormData) {
     lead_direction_slug: isLead ? leadDirection : null,
     direction_slugs: directionSlugs,
     sort_order: Number(formData.get("sortOrder") || 0) || 0,
+    stats: readStats(formData),
+    focus_points: parseLines(String(formData.get("focusPoints") || "")),
+    visit_points: parseLines(String(formData.get("visitPoints") || "")),
+    quote: String(formData.get("quote") || "").trim() || null,
+    courses: parseLines(String(formData.get("courses") || "")),
+    diploma_image: String(formData.get("diplomaImage") || "") || null,
   };
 }
 

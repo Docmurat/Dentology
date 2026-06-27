@@ -17,10 +17,17 @@ type TeamRow = {
   lead_direction_slug: string | null;
   direction_slugs: string[] | null;
   sort_order: number;
+  stats: { value: string; label: string }[] | null;
+  approach: string | null;
+  focus_points: string[] | null;
+  visit_points: string[] | null;
+  quote: string | null;
+  courses: string[] | null;
+  diploma_image: string | null;
 };
 
 const COLUMNS =
-  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order";
+  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order,stats,approach,focus_points,visit_points,quote,courses,diploma_image";
 
 function mapRow(row: TeamRow): TeamMember {
   const featured = row.is_chief || row.is_lead;
@@ -39,6 +46,13 @@ function mapRow(row: TeamRow): TeamMember {
     leadDirectionSlug: row.lead_direction_slug ?? undefined,
     directionSlugs: row.direction_slugs ?? undefined,
     sortOrder: row.sort_order,
+    stats: row.stats ?? undefined,
+    approach: row.approach ?? undefined,
+    focusPoints: row.focus_points ?? undefined,
+    visitPoints: row.visit_points ?? undefined,
+    quote: row.quote ?? undefined,
+    courses: row.courses ?? undefined,
+    diplomaImage: row.diploma_image ?? undefined,
     featured,
     showOnHomepage: featured,
   };

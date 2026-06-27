@@ -22,6 +22,20 @@ export type TeamMember = {
   leadDirectionSlug?: string;
   /** Все направления, в которых участвует. */
   directionSlugs?: string[];
+  /** Цитата под hero (в стиле кейсов). */
+  quote?: string;
+  /** Счётчики (показатели): значение + подпись. */
+  stats?: { value: string; label: string }[];
+  /** Текст мини-карточки «Подход». */
+  approach?: string;
+  /** Пункты блока «Клинический фокус». */
+  focusPoints?: string[];
+  /** Пункты блока «Когда стоит обратиться». */
+  visitPoints?: string[];
+  /** Пройденные курсы (нумерованный список). */
+  courses?: string[];
+  /** Скан диплома специалиста (4:3). */
+  diplomaImage?: string;
   /** Ручная сортировка внутри своей группы. */
   sortOrder: number;
   /** Совместимость со старыми компонентами: showcase на главной = chief || lead. */
