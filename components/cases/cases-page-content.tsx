@@ -11,24 +11,30 @@ import { teamData } from "@/lib/team-data";
 
 const ITEMS_PER_PAGE = 6;
 
-const filterOptions = [
-  { value: "all", label: "Все случаи" },
-  { value: "endodontics", label: "Эндодонтия" },
-  { value: "restoration", label: "Реставрация" },
-  { value: "prosthetics", label: "Ортопедия" },
-  { value: "implantation", label: "Имплантация" },
-  { value: "gnathology", label: "Гнатология" },
-];
-
 export function CasesPageContent({
   cases,
+  directions = [],
   doctorFilter = null,
 }: {
   cases: CaseItem[];
+  directions?: { slug: string; label: string }[];
   doctorFilter?: { slug: string; name: string } | null;
 }) {
   const [activeFilter, setActiveFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Кнопки фильтра и карта подписей — из направлений БД.
+  const filterOptions = useMemo(
+    () => [
+      { value: "all", label: "Все случаи" },
+      ...directions.map((d) => ({ value: d.slug, label: d.label })),
+    ],
+    [directions]
+  );
+  const dirLabel = useMemo(
+    () => Object.fromEntries(directions.map((d) => [d.slug, d.label])),
+    [directions]
+  );
 
   const filteredCases = useMemo(() => {
     if (doctorFilter) return cases;
@@ -115,7 +121,7 @@ export function CasesPageContent({
                     </div>
 
                     <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                      {directionLabel(item.directionSlug)}
+                      {directionLabel(item.directionSlug, dirLabel)}
                     </p>
 
                     <h2 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">

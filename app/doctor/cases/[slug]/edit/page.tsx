@@ -3,6 +3,7 @@ import { CaseForm } from "@/components/admin/case-form";
 import { updateDoctorCase } from "../../../actions";
 import { getCaseBySlugAuthed } from "@/lib/cases";
 import { getTeamMembers } from "@/lib/team";
+import { getDirections } from "@/lib/directions-db";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +48,11 @@ export default async function DoctorEditCasePage({
     position: d.position,
   }));
 
+  const directions = (await getDirections()).map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
+
   const lockedDoctorSlug =
     profile?.doctor_slug && doctors.some((d) => d.slug === profile.doctor_slug)
       ? profile.doctor_slug
@@ -63,6 +69,7 @@ export default async function DoctorEditCasePage({
 
       <CaseForm
         doctors={doctors}
+        directions={directions}
         initial={item}
         updateAction={updateDoctorCase}
         redirectTo="/doctor"

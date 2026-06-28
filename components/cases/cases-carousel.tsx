@@ -8,7 +8,13 @@ import { directionLabel } from "@/lib/directions";
 import { CaseExcerpt } from "@/components/cases/case-excerpt";
 import type { CaseItem } from "@/lib/cases-data";
 
-export function CasesCarousel({ cases }: { cases: CaseItem[] }) {
+export function CasesCarousel({
+  cases,
+  dirLabel = {},
+}: {
+  cases: CaseItem[];
+  dirLabel?: Record<string, string>;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   const scroll = (dir: number) => {
@@ -48,7 +54,7 @@ export function CasesCarousel({ cases }: { cases: CaseItem[] }) {
                 </div>
 
                 <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                  {directionLabel(item.directionSlug)}
+                  {directionLabel(item.directionSlug, dirLabel)}
                 </p>
 
                 <h3 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">

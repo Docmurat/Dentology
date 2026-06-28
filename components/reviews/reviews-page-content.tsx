@@ -7,27 +7,29 @@ import type { ReviewItem } from "@/lib/reviews-data";
 
 type ReviewsPageContentProps = {
   reviews: ReviewItem[];
+  directions?: { slug: string; label: string }[];
   doctorFilter?: { slug: string; name: string } | null;
 };
 
 const ITEMS_PER_PAGE = 6;
 
-const filterOptions = [
-  { value: "all", label: "Все отзывы" },
-  { value: "endodontics", label: "Эндодонтия" },
-  { value: "restoration", label: "Реставрации" },
-  { value: "prosthetics", label: "Ортопедия" },
-  { value: "implantation", label: "Имплантация" },
-  { value: "gnathology", label: "Гнатология" },
-];
-
 export function ReviewsPageContent({
   reviews,
+  directions = [],
   doctorFilter = null,
 }: ReviewsPageContentProps) {
   const [activeFilter, setActiveFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Кнопки фильтра — из направлений БД.
+  const filterOptions = useMemo(
+    () => [
+      { value: "all", label: "Все отзывы" },
+      ...directions.map((d) => ({ value: d.slug, label: d.label })),
+    ],
+    [directions]
+  );
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 639px)");

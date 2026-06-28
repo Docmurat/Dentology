@@ -1,11 +1,19 @@
 import { teamData } from "@/lib/team-data";
 import { CaseForm } from "@/components/admin/case-form";
+import { getDirections } from "@/lib/directions-db";
 
-export default function NewCasePage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewCasePage() {
   const doctors = teamData.map((doctor) => ({
     slug: doctor.slug,
     name: doctor.name,
     position: doctor.position,
+  }));
+
+  const directions = (await getDirections()).map((d) => ({
+    slug: d.slug,
+    label: d.title,
   }));
 
   return (
@@ -19,7 +27,7 @@ export default function NewCasePage() {
       </p>
 
       <div className="mt-8">
-        <CaseForm doctors={doctors} />
+        <CaseForm doctors={doctors} directions={directions} />
       </div>
     </div>
   );

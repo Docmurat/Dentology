@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { TeamForm } from "@/components/admin/team-form";
 import { TeamAccountForm } from "@/components/admin/team-account-form";
 import { getTeamMemberBySlug } from "@/lib/team";
+import { getDirections } from "@/lib/directions-db";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { emailToLogin } from "@/lib/auth-login";
@@ -18,6 +19,12 @@ export default async function EditTeamMemberPage({
   const { slug } = await params;
   const member = await getTeamMemberBySlug(slug);
   if (!member) notFound();
+
+  const directions = (await getDirections()).map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
+
 
   // Управление аккаунтом — только администратору.
   const supabase = await createClient();
@@ -53,7 +60,7 @@ export default async function EditTeamMemberPage({
       <p className="mt-2 text-sm text-[var(--color-gray-600)]">{member.name}</p>
 
       <div className="mt-8 space-y-8">
-        <TeamForm initial={member} />
+        <TeamForm initial={member} directions={directions} />
 
         {isAdmin ? (
           <TeamAccountForm

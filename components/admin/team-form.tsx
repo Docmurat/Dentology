@@ -8,14 +8,6 @@ import { slugify } from "@/lib/slugify";
 import { createClient } from "@/utils/supabase/client";
 import type { TeamMember } from "@/lib/team-data";
 
-const DIRECTIONS = [
-  { slug: "endodontics", label: "Эндодонтия" },
-  { slug: "implantation", label: "Имплантация" },
-  { slug: "gnathology", label: "Гнатология" },
-  { slug: "prosthetics", label: "Ортопедия" },
-  { slug: "restoration", label: "Реставрация" },
-];
-
 const labelCls = "text-sm font-medium text-[var(--color-navy)]";
 const inputCls =
   "mt-1 w-full rounded-lg border border-[var(--color-gray-200)] px-3 py-2 text-sm outline-none focus:border-[var(--color-teal)]";
@@ -40,7 +32,13 @@ async function uploadBlob(
   return data.publicUrl;
 }
 
-export function TeamForm({ initial }: { initial?: TeamMember }) {
+export function TeamForm({
+  initial,
+  directions,
+}: {
+  initial?: TeamMember;
+  directions: { slug: string; label: string }[];
+}) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -333,6 +331,15 @@ export function TeamForm({ initial }: { initial?: TeamMember }) {
         <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
           <input
             type="checkbox"
+            name="showOnHomepage"
+            defaultChecked={initial?.showOnHomepage ?? true}
+          />
+          Показывать на главной странице (не более 5 карточек)
+        </label>
+
+        <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
+          <input
+            type="checkbox"
             name="isChief"
             defaultChecked={initial?.isChief}
           />
@@ -358,7 +365,7 @@ export function TeamForm({ initial }: { initial?: TeamMember }) {
               className={inputCls}
             >
               <option value="">— выберите —</option>
-              {DIRECTIONS.map((d) => (
+              {directions.map((d) => (
                 <option key={d.slug} value={d.slug}>
                   {d.label}
                 </option>
@@ -374,7 +381,7 @@ export function TeamForm({ initial }: { initial?: TeamMember }) {
         <div>
           <label className={labelCls}>Участвует в направлениях</label>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {DIRECTIONS.map((d) => (
+            {directions.map((d) => (
               <label
                 key={d.slug}
                 className="flex items-center gap-2 text-sm text-[var(--color-gray-700)]"

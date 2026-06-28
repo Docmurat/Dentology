@@ -5,6 +5,7 @@ import { Section } from "@/components/layout/section";
 import { CasesPageContent } from "@/components/cases/cases-page-content";
 import { getAllCases } from "@/lib/cases";
 import { getTeamMemberBySlug } from "@/lib/team";
+import { getDirections } from "@/lib/directions-db";
 
 export const metadata: Metadata = {
   title: "Клинические случаи",
@@ -22,10 +23,16 @@ export default async function CasesPage({
 }) {
   const { doctor: doctorSlug } = await searchParams;
 
-  const [allCases, doctor] = await Promise.all([
+  const [allCases, doctor, allDirections] = await Promise.all([
     getAllCases(),
     doctorSlug ? getTeamMemberBySlug(doctorSlug) : Promise.resolve(null),
+    getDirections(),
   ]);
+
+  const directions = allDirections.map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
 
   const cases = doctor
     ? allCases.filter((item) => item.doctorSlug === doctor.slug)
@@ -52,6 +59,7 @@ export default async function CasesPage({
       <Section className="pb-20 md:pb-28">
         <CasesPageContent
           cases={cases}
+          directions={directions}
           doctorFilter={
             doctor ? { slug: doctor.slug, name: doctor.name } : null
           }

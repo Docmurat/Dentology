@@ -11,17 +11,10 @@ const labelCls = "text-sm font-medium text-[var(--color-navy)]";
 const inputCls =
   "mt-1 w-full rounded-lg border border-[var(--color-gray-200)] px-3 py-2 text-sm outline-none focus:border-[var(--color-teal)]";
 
-const DIRECTIONS = [
-  { slug: "endodontics", label: "Эндодонтия" },
-  { slug: "implantation", label: "Имплантация" },
-  { slug: "gnathology", label: "Гнатология" },
-  { slug: "prosthetics", label: "Ортопедия" },
-  { slug: "restoration", label: "Реставрация" },
-];
-
 export function ReviewEditForm({
   review,
   doctors,
+  directions,
 }: {
   review: {
     id: string;
@@ -35,6 +28,7 @@ export function ReviewEditForm({
     image: string | null;
   };
   doctors: { slug: string; name: string }[];
+  directions: { slug: string; label: string }[];
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<State, FormData>(
@@ -102,7 +96,7 @@ export function ReviewEditForm({
       <div>
         <label className={labelCls}>Направления (до 3) *</label>
         <div className="mt-2 flex flex-wrap gap-3">
-          {DIRECTIONS.map((d) => {
+          {directions.map((d) => {
             const isOn = dirs.includes(d.slug);
             return (
               <label

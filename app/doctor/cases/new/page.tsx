@@ -1,6 +1,7 @@
 import { CaseForm } from "@/components/admin/case-form";
 import { createDoctorCase } from "../../actions";
 import { getTeamMembers } from "@/lib/team";
+import { getDirections } from "@/lib/directions-db";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,10 @@ export default async function DoctorNewCasePage() {
     name: d.name,
     position: d.position,
   }));
+  const directions = (await getDirections()).map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
 
   // Подставляем врача-себя, только если аккаунт привязан к карточке и она есть.
   const lockedDoctorSlug =
@@ -41,6 +46,7 @@ export default async function DoctorNewCasePage() {
 
       <CaseForm
         doctors={doctors}
+        directions={directions}
         createAction={createDoctorCase}
         redirectTo="/doctor"
         lockedDoctorSlug={lockedDoctorSlug}

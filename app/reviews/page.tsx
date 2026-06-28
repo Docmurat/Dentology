@@ -2,6 +2,7 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { getApprovedReviews, getReviewsByDoctor } from "@/lib/reviews";
+import { getDirections } from "@/lib/directions-db";
 import { getTeamMembers, getTeamMemberBySlug } from "@/lib/team";
 import { ReviewsPageContent } from "@/components/reviews/reviews-page-content";
 import { ReviewForm } from "@/components/reviews/review-form";
@@ -15,11 +16,17 @@ export default async function ReviewsPage({
 }) {
   const { doctor: doctorSlug } = await searchParams;
 
-  const [reviews, team, doctor] = await Promise.all([
+  const [reviews, team, doctor, allDirections] = await Promise.all([
     doctorSlug ? getReviewsByDoctor(doctorSlug) : getApprovedReviews(),
     getTeamMembers(),
     doctorSlug ? getTeamMemberBySlug(doctorSlug) : Promise.resolve(null),
+    getDirections(),
   ]);
+
+  const directions = allDirections.map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
 
   const doctors = team
     .filter((m) => m.category === "doctor")
@@ -48,6 +55,7 @@ export default async function ReviewsPage({
 
         <ReviewsPageContent
           reviews={reviews}
+          directions={directions}
           doctorFilter={
             doctor ? { slug: doctor.slug, name: doctor.name } : null
           }

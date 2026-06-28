@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getTeamMembers } from "@/lib/team";
+import { getDirections } from "@/lib/directions-db";
 import { ReviewEditForm } from "@/components/admin/review-edit-form";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,10 @@ export default async function EditReviewPage({
   const doctors = team
     .filter((m) => m.category === "doctor")
     .map((m) => ({ slug: m.slug, name: m.name }));
+  const directions = (await getDirections()).map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
 
   return (
     <div>
@@ -38,7 +43,11 @@ export default async function EditReviewPage({
         (до 3), ссылка Instagram, фото и порядковый номер.
       </p>
 
-      <ReviewEditForm review={review} doctors={doctors} />
+      <ReviewEditForm
+        review={review}
+        doctors={doctors}
+        directions={directions}
+      />
     </div>
   );
 }

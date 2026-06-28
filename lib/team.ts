@@ -25,13 +25,19 @@ type TeamRow = {
   courses: string[] | null;
   diploma_image: string | null;
   name_genitive: string | null;
+  show_on_homepage: boolean | null;
 };
 
 const COLUMNS =
-  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order,stats,approach,focus_points,visit_points,quote,courses,diploma_image,name_genitive";
+  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order,stats,approach,focus_points,visit_points,quote,courses,diploma_image,name_genitive,show_on_homepage";
+
+// Сколько ведущих максимум показываем на главной.
+const HOMEPAGE_LIMIT = 5;
 
 function mapRow(row: TeamRow): TeamMember {
   const featured = row.is_chief || row.is_lead;
+  // Флаг «на главной»: по умолчанию (null) — включён, чтобы текущие не пропали.
+  const showOnHomepage = row.show_on_homepage ?? true;
   return {
     slug: row.slug,
     name: row.name,
@@ -56,7 +62,7 @@ function mapRow(row: TeamRow): TeamMember {
     diplomaImage: row.diploma_image ?? undefined,
     nameGenitive: row.name_genitive ?? undefined,
     featured,
-    showOnHomepage: featured,
+    showOnHomepage,
   };
 }
 
@@ -85,10 +91,16 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
   return sortTeam((data as TeamRow[]).map(mapRow));
 }
 
-/** Только ведущие (включая главного) — для блока команды на главной. */
+/**
+ * Для блока команды на главной: только отмеченные «показывать на главной».
+ * Главный врач всегда первый (он в начале sortTeam), затем остальные —
+ * всего не больше HOMEPAGE_LIMIT.
+ */
 export async function getFeaturedTeam(): Promise<TeamMember[]> {
   const all = await getTeamMembers();
-  return all.filter((member) => member.isChief || member.isLead);
+  return all
+    .filter((member) => member.showOnHomepage)
+    .slice(0, HOMEPAGE_LIMIT);
 }
 
 export async function getTeamMemberBySlug(

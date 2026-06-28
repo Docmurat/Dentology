@@ -1,6 +1,14 @@
+import { getDirections } from "@/lib/directions-db";
 import { TeamForm } from "@/components/admin/team-form";
 
-export default function NewTeamMemberPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewTeamMemberPage() {
+  const directions = (await getDirections()).map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-[var(--color-navy)]">
@@ -12,7 +20,7 @@ export default function NewTeamMemberPage() {
       </p>
 
       <div className="mt-8">
-        <TeamForm />
+        <TeamForm directions={directions} />
       </div>
     </div>
   );

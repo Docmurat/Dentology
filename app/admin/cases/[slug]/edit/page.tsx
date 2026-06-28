@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { CaseForm } from "@/components/admin/case-form";
 import { getCaseBySlugAuthed } from "@/lib/cases";
 import { getTeamMembers } from "@/lib/team";
+import { getDirections } from "@/lib/directions-db";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,10 @@ export default async function AdminEditCasePage({
     name: d.name,
     position: d.position,
   }));
+  const directions = (await getDirections()).map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
 
   return (
     <div>
@@ -30,7 +35,12 @@ export default async function AdminEditCasePage({
         Правки администратора. Статус публикации не меняется.
       </p>
 
-      <CaseForm doctors={doctors} initial={item} redirectTo="/admin/cases" />
+      <CaseForm
+        doctors={doctors}
+        directions={directions}
+        initial={item}
+        redirectTo="/admin/cases"
+      />
     </div>
   );
 }

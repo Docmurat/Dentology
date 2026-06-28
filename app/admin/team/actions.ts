@@ -73,6 +73,7 @@ function readFields(formData: FormData) {
     courses: parseLines(String(formData.get("courses") || "")),
     diploma_image: String(formData.get("diplomaImage") || "") || null,
     name_genitive: String(formData.get("nameGenitive") || "").trim() || null,
+    show_on_homepage: formData.get("showOnHomepage") === "on",
   };
 }
 

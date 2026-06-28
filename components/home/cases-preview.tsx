@@ -2,10 +2,14 @@ import { Section } from "@/components/layout/section";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
 import { getAllCases } from "@/lib/cases";
+import { getDirections } from "@/lib/directions-db";
 import { CasesCarousel } from "@/components/cases/cases-carousel";
 
 export async function CasesPreview() {
   const previewCases = (await getAllCases()).slice(0, 9);
+  const dirLabel = Object.fromEntries(
+    (await getDirections()).map((d) => [d.slug, d.title])
+  );
 
   return (
     <Section id="cases" className="py-20 md:py-28">
@@ -23,7 +27,7 @@ export async function CasesPreview() {
 
       {previewCases.length ? (
         <div className="mt-12">
-          <CasesCarousel cases={previewCases} />
+          <CasesCarousel cases={previewCases} dirLabel={dirLabel} />
         </div>
       ) : (
         <p className="mt-10 text-sm text-[var(--color-gray-500)]">
