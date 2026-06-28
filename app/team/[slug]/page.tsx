@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getTeamMemberBySlug } from "@/lib/team";
 import { getAllCases } from "@/lib/cases";
 import { getReviewsByDoctor } from "@/lib/reviews";
-import { directionsData } from "@/lib/directions-data";
+import { getDirections } from "@/lib/directions-db";
 import { directionLabel } from "@/lib/directions";
 import { CaseExcerpt } from "@/components/cases/case-excerpt";
 import { ReviewCard } from "@/components/reviews/review-card";
@@ -45,10 +45,16 @@ export default async function DoctorPage({ params }: Props) {
     notFound();
   }
 
-  const [allCases, doctorReviews] = await Promise.all([
+  const [allCases, doctorReviews, allDirections] = await Promise.all([
     getAllCases(),
     getReviewsByDoctor(doctor.slug),
+    getDirections(),
   ]);
+
+  // Карта slug → название (включая направления, добавленные через админку).
+  const dirLabel = Object.fromEntries(
+    allDirections.map((d) => [d.slug, d.title])
+  );
 
   const doctorCases = allCases.filter((item) => item.doctorSlug === doctor.slug);
 
@@ -57,7 +63,7 @@ export default async function DoctorPage({ params }: Props) {
     ...(doctor.directionSlugs ?? []),
     ...(doctor.leadDirectionSlug ? [doctor.leadDirectionSlug] : []),
   ]);
-  const doctorDirections = directionsData.filter((direction) =>
+  const doctorDirections = allDirections.filter((direction) =>
     profileDirectionSlugs.has(direction.slug)
   );
 
@@ -218,7 +224,7 @@ export default async function DoctorPage({ params }: Props) {
                       </div>
 
                       <p className="mt-5 text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                        {directionLabel(item.directionSlug)}
+                        {directionLabel(item.directionSlug, dirLabel)}
                       </p>
 
                       <h3 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
@@ -286,9 +292,19 @@ export default async function DoctorPage({ params }: Props) {
             reviewsBeside={
               doctorReviews.length ? (
                 <div>
-                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-                    Отзывы о враче
-                  </h2>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                      Отзывы о враче
+                    </h2>
+
+                    <Button
+                      href={`/reviews?doctor=${doctor.slug}`}
+                      variant="secondary"
+                    >
+                      Смотреть все отзывы
+                    </Button>
+                  </div>
+
                   <div className="mt-6 grid gap-6">
                     {doctorReviews.slice(0, 3).map((review) => (
                       <ReviewCard
@@ -298,35 +314,27 @@ export default async function DoctorPage({ params }: Props) {
                       />
                     ))}
                   </div>
-
-                  <div className="mt-8">
-                    <Button
-                      href={`/reviews?doctor=${doctor.slug}`}
-                      variant="secondary"
-                    >
-                      Смотреть все отзывы
-                    </Button>
-                  </div>
                 </div>
               ) : null
             }
             reviewsWide={
               doctorReviews.length ? (
                 <div>
-                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-                    Отзывы о враче
-                  </h2>
-                  <div className="mt-6">
-                    <ReviewsCarousel reviews={doctorReviews.slice(0, 9)} />
-                  </div>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                      Отзывы о враче
+                    </h2>
 
-                  <div className="mt-8">
                     <Button
                       href={`/reviews?doctor=${doctor.slug}`}
                       variant="secondary"
                     >
                       Смотреть все отзывы
                     </Button>
+                  </div>
+
+                  <div className="mt-6">
+                    <ReviewsCarousel reviews={doctorReviews.slice(0, 9)} />
                   </div>
                 </div>
               ) : null

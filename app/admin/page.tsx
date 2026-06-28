@@ -70,6 +70,18 @@ export default function AdminHomePage() {
             Модерация отзывов от пациентов с сайта.
           </p>
         </Link>
+
+        <Link
+          href="/admin/directions"
+          className="rounded-2xl border border-[var(--color-gray-200)] bg-white p-6 transition hover:shadow-[0_8px_28px_rgba(0,0,0,0.06)]"
+        >
+          <p className="text-lg font-semibold text-[var(--color-navy)]">
+            Направления
+          </p>
+          <p className="mt-1 text-sm text-[var(--color-gray-600)]">
+            Виды лечения, коллаж на главной и привязка кейсов и отзывов.
+          </p>
+        </Link>
       </div>
     </div>
   );

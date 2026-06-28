@@ -2,18 +2,15 @@ import Link from "next/link";
 import { Section } from "@/components/layout/section";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Card } from "@/components/ui/card";
-import { directionsData } from "@/lib/directions-data";
+import { getDirections } from "@/lib/directions-db";
 
-export function Directions() {
-  const featured = directionsData.find((item) => item.featured);
+export async function Directions() {
+  const directions = await getDirections();
 
-  const restoration = directionsData.find(
-    (item) => item.slug === "restoration"
-  );
-
-  const others = directionsData.filter(
-    (item) => !item.featured && item.slug !== "restoration"
-  );
+  // Позиция в коллаже задаётся в админке (collageRole).
+  const featured = directions.find((item) => item.collageRole === "featured");
+  const large = directions.filter((item) => item.collageRole === "large");
+  const small = directions.filter((item) => item.collageRole === "small");
 
   return (
     <Section id="directions" className="py-20 md:py-28">
@@ -52,32 +49,32 @@ export function Directions() {
             </Card>
           ) : null}
 
-          {restoration ? (
-            <Card className="p-6">
+          {large.map((item) => (
+            <Card key={item.slug} className="p-6">
               <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                {restoration.short}
+                {item.short}
               </p>
 
               <h3 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
-                {restoration.title}
+                {item.title}
               </h3>
 
               <p className="mt-3 text-sm leading-6 text-[var(--color-gray-700)]">
-                {restoration.description}
+                {item.description}
               </p>
 
               <Link
-                href={`/directions/${restoration.slug}`}
+                href={`/directions/${item.slug}`}
                 className="mt-4 inline-flex text-sm font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
               >
                 Подробнее о направлении
               </Link>
             </Card>
-          ) : null}
+          ))}
         </div>
 
         <div className="grid gap-6">
-          {others.map((item) => (
+          {small.map((item) => (
             <Card key={item.slug} className="p-6">
               <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
                 {item.short}

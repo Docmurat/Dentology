@@ -4,7 +4,7 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
-import { directionsData } from "@/lib/directions-data";
+import { getDirections } from "@/lib/directions-db";
 
 export const metadata: Metadata = {
   title: "Направления лечения",
@@ -12,9 +12,12 @@ export const metadata: Metadata = {
     "Клинические направления Dentology: эндодонтия, имплантация, гнатология, ортопедия и реставрации в рамках единого диагностического подхода.",
 };
 
-export default function DirectionsPage() {
-  const featured = directionsData.find((item) => item.featured);
-  const others = directionsData.filter((item) => !item.featured);
+export const revalidate = 60;
+
+export default async function DirectionsPage() {
+  const directions = await getDirections();
+  const featured = directions.find((item) => item.featured);
+  const others = directions.filter((item) => !item.featured);
 
   return (
     <SiteShell>

@@ -6,7 +6,7 @@ import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { directionsData } from "@/lib/directions-data";
+import { getDirectionBySlug } from "@/lib/directions-db";
 import { getLeadByDirection } from "@/lib/team";
 import { getAllCases } from "@/lib/cases";
 import { reviewsData } from "@/lib/reviews-data";
@@ -22,7 +22,7 @@ type Props = {
 export default async function DirectionPage({ params }: Props) {
   const { slug } = await params;
 
-  const direction = directionsData.find((d) => d.slug === slug);
+  const direction = await getDirectionBySlug(slug);
 
   if (!direction) {
     notFound();
@@ -61,7 +61,7 @@ const relatedReviews = reviewsData
       </p>
     </Card>
 
-    {direction.problems ? (
+    {direction.problems.length ? (
       <Card>
         <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
           С какими проблемами приходят
@@ -130,7 +130,7 @@ const relatedReviews = reviewsData
   ) : null}
 </div>
 
-          {direction.fears ? (
+          {direction.fears.length ? (
   <Card className="bg-[var(--color-gray-50)]">
 
     <h2 className="mt-3 text-2xl font-semibold text-[var(--color-navy)]">
@@ -152,11 +152,11 @@ const relatedReviews = reviewsData
     </div>
   </Card>
 ) : null}
-         {direction.approach || (direction.insightTitle && direction.insightText?.length) ? (
+         {direction.approach.length || (direction.insightTitle && direction.insightText.length) ? (
   <div className="grid gap-8 lg:grid-cols-2">
 
     {/* ЛЕВАЯ КОЛОНКА — подход */}
-    {direction.approach ? (
+    {direction.approach.length ? (
       <Card>
         <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
           Как мы подходим к лечению
@@ -183,7 +183,7 @@ const relatedReviews = reviewsData
     ) : null}
 
     {/* ПРАВАЯ КОЛОНКА — смысловой блок */}
-    {direction.insightTitle && direction.insightText?.length ? (
+    {direction.insightTitle && direction.insightText.length ? (
       <Card className="bg-[var(--color-gray-50)]">
         <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
           {direction.insightTitle}
