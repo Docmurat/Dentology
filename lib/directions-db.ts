@@ -78,7 +78,10 @@ function sortDirections(items: DirectionItem[]): DirectionItem[] {
 /** Все направления в правильном порядке — для главной, /directions и пикеров. */
 export async function getDirections(): Promise<DirectionItem[]> {
   const supabase = createPublicClient();
-  const { data, error } = await supabase.from("directions").select(COLUMNS);
+  const { data, error } = await supabase
+    .from("directions")
+    .select(COLUMNS)
+    .eq("archived", false);
   if (error) throw error;
   return sortDirections((data as DirectionRow[]).map(mapRow));
 }

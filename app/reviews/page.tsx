@@ -2,7 +2,7 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { getApprovedReviews, getReviewsByDoctor } from "@/lib/reviews";
-import { getDirections } from "@/lib/directions-db";
+import { getDirections, getDirectionLabelMap } from "@/lib/directions-db";
 import { getTeamMembers, getTeamMemberBySlug } from "@/lib/team";
 import { ReviewsPageContent } from "@/components/reviews/reviews-page-content";
 import { ReviewForm } from "@/components/reviews/review-form";
@@ -16,17 +16,33 @@ export default async function ReviewsPage({
 }) {
   const { doctor: doctorSlug } = await searchParams;
 
-  const [reviews, team, doctor, allDirections] = await Promise.all([
+  const [reviews, team, doctor, allDirections, labelMap] = await Promise.all([
     doctorSlug ? getReviewsByDoctor(doctorSlug) : getApprovedReviews(),
     getTeamMembers(),
     doctorSlug ? getTeamMemberBySlug(doctorSlug) : Promise.resolve(null),
     getDirections(),
+    getDirectionLabelMap(),
   ]);
 
-  const directions = allDirections.map((d) => ({
-    slug: d.slug,
-    label: d.title,
-  }));
+  // Какие направления реально встречаются в отзывах
+  // (у отзыва направления хранятся массивом directionSlugs).
+  const usedSlugs = new Set<string>();
+  for (const r of reviews) {
+    for (const slug of r.directionSlugs ?? []) usedSlugs.add(slug);
+  }
+
+  // Активные направления (из БД) — только те, по которым есть отзывы.
+  const activeDirections = allDirections
+    .filter((d) => usedSlugs.has(d.slug))
+    .map((d) => ({ slug: d.slug, label: d.title }));
+
+  // Архивные направления, по которым есть отзывы, — в конец фильтра.
+  const activeSlugs = new Set(allDirections.map((d) => d.slug));
+  const archivedDirections = Array.from(usedSlugs)
+    .filter((slug) => !activeSlugs.has(slug))
+    .map((slug) => ({ slug, label: labelMap[slug] ?? slug }));
+
+  const directions = [...activeDirections, ...archivedDirections];
 
   const doctors = team
     .filter((m) => m.category === "doctor")

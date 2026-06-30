@@ -5,7 +5,7 @@ import { Section } from "@/components/layout/section";
 import { CasesPageContent } from "@/components/cases/cases-page-content";
 import { getAllCases } from "@/lib/cases";
 import { getTeamMemberBySlug } from "@/lib/team";
-import { getDirections } from "@/lib/directions-db";
+import { getDirections, getDirectionLabelMap } from "@/lib/directions-db";
 
 export const metadata: Metadata = {
   title: "Клинические случаи",
@@ -23,16 +23,30 @@ export default async function CasesPage({
 }) {
   const { doctor: doctorSlug } = await searchParams;
 
-  const [allCases, doctor, allDirections] = await Promise.all([
+  const [allCases, doctor, allDirections, labelMap] = await Promise.all([
     getAllCases(),
     doctorSlug ? getTeamMemberBySlug(doctorSlug) : Promise.resolve(null),
     getDirections(),
+    getDirectionLabelMap(),
   ]);
 
-  const directions = allDirections.map((d) => ({
-    slug: d.slug,
-    label: d.title,
-  }));
+  // Какие направления реально встречаются в кейсах.
+  const usedSlugs = new Set(
+    allCases.map((c) => c.directionSlug).filter(Boolean)
+  );
+
+  // Активные направления (из БД) — только те, по которым есть кейсы.
+  const activeDirections = allDirections
+    .filter((d) => usedSlugs.has(d.slug))
+    .map((d) => ({ slug: d.slug, label: d.title }));
+
+  // Архивные направления, по которым есть кейсы, — в конец фильтра.
+  const activeSlugs = new Set(allDirections.map((d) => d.slug));
+  const archivedDirections = Array.from(usedSlugs)
+    .filter((slug) => !activeSlugs.has(slug))
+    .map((slug) => ({ slug, label: labelMap[slug] ?? slug }));
+
+  const directions = [...activeDirections, ...archivedDirections];
 
   const cases = doctor
     ? allCases.filter((item) => item.doctorSlug === doctor.slug)

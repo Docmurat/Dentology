@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getTeamMemberBySlug } from "@/lib/team";
 import { getAllCases } from "@/lib/cases";
 import { getReviewsByDoctor } from "@/lib/reviews";
-import { getDirections } from "@/lib/directions-db";
+import { getDirections, getDirectionLabelMap } from "@/lib/directions-db";
 import { directionLabel } from "@/lib/directions";
 import { CaseExcerpt } from "@/components/cases/case-excerpt";
 import { ReviewCard } from "@/components/reviews/review-card";
@@ -45,16 +45,12 @@ export default async function DoctorPage({ params }: Props) {
     notFound();
   }
 
-  const [allCases, doctorReviews, allDirections] = await Promise.all([
+  const [allCases, doctorReviews, allDirections, dirLabel] = await Promise.all([
     getAllCases(),
     getReviewsByDoctor(doctor.slug),
     getDirections(),
+    getDirectionLabelMap(),
   ]);
-
-  // Карта slug → название (включая направления, добавленные через админку).
-  const dirLabel = Object.fromEntries(
-    allDirections.map((d) => [d.slug, d.title])
-  );
 
   const doctorCases = allCases.filter((item) => item.doctorSlug === doctor.slug);
 

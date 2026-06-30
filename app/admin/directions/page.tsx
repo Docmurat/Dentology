@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
-import { deleteDirection } from "./actions";
+import { deleteDirection, restoreDirection } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +17,15 @@ type Row = {
   collage_role: string;
   sort_order: number;
   featured: boolean;
+  archived: boolean;
 };
 
 export default async function AdminDirectionsPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("directions")
-    .select("slug, title, short, collage_role, sort_order, featured")
+    .select("slug, title, short, collage_role, sort_order, featured, archived")
+    .order("archived", { ascending: true })
     .order("featured", { ascending: false })
     .order("sort_order", { ascending: true });
 
@@ -46,7 +48,9 @@ export default async function AdminDirectionsPage() {
 
       <p className="mt-2 text-sm text-[var(--color-gray-600)]">
         Направления формируют коллаж на главной и доступны в фильтрах кейсов,
-        отзывов и в профиле врача.
+        отзывов и в профиле врача. Архивные скрыты с сайта, но название
+        сохраняется — и остаётся кнопкой в фильтре, пока есть связанные кейсы
+        или отзывы.
       </p>
 
       <div className="mt-8 overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white">
@@ -55,14 +59,23 @@ export default async function AdminDirectionsPage() {
             {rows.map((item) => (
               <li
                 key={item.slug}
-                className="flex items-center justify-between px-5 py-4"
+                className={
+                  "flex items-center justify-between px-5 py-4 " +
+                  (item.archived ? "opacity-60" : "")
+                }
               >
                 <div>
                   <p className="font-medium text-[var(--color-navy)]">
                     {item.title}
-                    <span className="ml-2 rounded-full bg-[var(--color-gray-100)] px-2 py-0.5 text-xs text-[var(--color-navy)]">
-                      {ROLE_LABEL[item.collage_role] ?? item.collage_role}
-                    </span>
+                    {item.archived ? (
+                      <span className="ml-2 rounded-full bg-[var(--color-gray-200)] px-2 py-0.5 text-xs text-[var(--color-gray-600)]">
+                        в архиве
+                      </span>
+                    ) : (
+                      <span className="ml-2 rounded-full bg-[var(--color-gray-100)] px-2 py-0.5 text-xs text-[var(--color-navy)]">
+                        {ROLE_LABEL[item.collage_role] ?? item.collage_role}
+                      </span>
+                    )}
                   </p>
                   <p className="text-xs text-[var(--color-gray-500)]">
                     {item.short ? `${item.short} · ` : ""}/{item.slug}
@@ -76,12 +89,22 @@ export default async function AdminDirectionsPage() {
                   >
                     Изменить
                   </Link>
-                  <form action={deleteDirection}>
-                    <input type="hidden" name="slug" value={item.slug} />
-                    <button className="text-sm font-medium text-red-600 hover:text-red-700">
-                      Удалить
-                    </button>
-                  </form>
+
+                  {item.archived ? (
+                    <form action={restoreDirection}>
+                      <input type="hidden" name="slug" value={item.slug} />
+                      <button className="text-sm font-medium text-[var(--color-teal)] hover:text-[var(--color-navy)]">
+                        Восстановить
+                      </button>
+                    </form>
+                  ) : (
+                    <form action={deleteDirection}>
+                      <input type="hidden" name="slug" value={item.slug} />
+                      <button className="text-sm font-medium text-red-600 hover:text-red-700">
+                        Архивировать
+                      </button>
+                    </form>
+                  )}
                 </div>
               </li>
             ))}

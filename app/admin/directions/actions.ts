@@ -106,7 +106,9 @@ export async function createDirection(
 
   if (fields.featured) await demoteOtherFeatured(supabase, slug);
 
-  const { error } = await supabase.from("directions").insert({ slug, ...fields });
+  const { error } = await supabase
+    .from("directions")
+    .insert({ slug, ...fields, archived: false });
   if (error) {
     if (error.code === "23505")
       return { error: "Направление с таким slug уже существует" };
@@ -141,13 +143,31 @@ export async function updateDirection(
   return {};
 }
 
+// «Мягкое удаление»: направление архивируется, а не стирается.
+// Строка остаётся в БД (поэтому название сохраняется навсегда), но
+// уходит из пикеров, коллажа и списка /directions. Снимаем флаг
+// «главное», чтобы освободить место в коллаже.
 export async function deleteDirection(formData: FormData) {
   const supabase = await requireStaff();
   const slug = String(formData.get("slug") || "");
   if (!slug) return;
 
-  // Кейсы/отзывы не трогаем: их direction_slug — просто строка без FK,
-  // поэтому удаление направления не рушит их структуру.
-  await supabase.from("directions").delete().eq("slug", slug);
+  await supabase
+    .from("directions")
+    .update({ archived: true, featured: false, collage_role: "small" })
+    .eq("slug", slug);
+  revalidateDirections(slug);
+}
+
+// Вернуть направление из архива.
+export async function restoreDirection(formData: FormData) {
+  const supabase = await requireStaff();
+  const slug = String(formData.get("slug") || "");
+  if (!slug) return;
+
+  await supabase
+    .from("directions")
+    .update({ archived: false })
+    .eq("slug", slug);
   revalidateDirections(slug);
 }
