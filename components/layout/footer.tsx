@@ -30,7 +30,7 @@ export function Footer() {
               <Link href="/cases">Клинические случаи</Link>
               <Link href="/team">Команда</Link>
               <Link href="/about">О враче</Link>
-              <Link href="/education">Education</Link>
+              <Link href="/education">Обучение</Link>
               <Link href="/contacts">Контакты</Link>
             </div>
           </div>

@@ -25,7 +25,7 @@ export function Header() {
             <a href="/#directions">Направления</a>
             <Link href="/cases">Клинические случаи</Link>
             <Link href="/team">Команда</Link>
-            <Link href="/education">Education</Link>
+            <Link href="/education">Обучение</Link>
             <Link href="/contacts">Контакты</Link>
           </nav>
 

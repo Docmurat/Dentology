@@ -42,3 +42,9 @@ img {
     text-decoration: none;
   }
 }
+/* Золотой билет: блик */
+@keyframes gold-sheen {
+  0%   { transform: translateX(-160%) skewX(-20deg); }
+  60%  { transform: translateX(260%) skewX(-20deg); }
+  100% { transform: translateX(260%) skewX(-20deg); }
+}

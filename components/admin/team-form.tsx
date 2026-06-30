@@ -45,10 +45,15 @@ export function TeamForm({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [isLead, setIsLead] = useState<boolean>(initial?.isLead ?? false);
+  const [isChief, setIsChief] = useState<boolean>(initial?.isChief ?? false);
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null);
   const [photoRemoved, setPhotoRemoved] = useState(false);
   const [diplomaBlob, setDiplomaBlob] = useState<Blob | null>(null);
   const [diplomaRemoved, setDiplomaRemoved] = useState(false);
+  const [leadPhotoBlob, setLeadPhotoBlob] = useState<Blob | null>(null);
+  const [leadPhotoRemoved, setLeadPhotoRemoved] = useState(false);
+  const [homePhotoBlob, setHomePhotoBlob] = useState<Blob | null>(null);
+  const [homePhotoRemoved, setHomePhotoRemoved] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -79,6 +84,24 @@ export function TeamForm({
         ? ""
         : uploadedDiploma ?? initial?.diplomaImage ?? "";
       formData.set("diplomaImage", diploma);
+
+      // Фото ведущего специалиста для страницы направления (кроп 3:4).
+      const uploadedLead = leadPhotoBlob
+        ? await uploadBlob(supabase, slug, "lead", leadPhotoBlob)
+        : null;
+      const leadImage = leadPhotoRemoved
+        ? ""
+        : uploadedLead ?? initial?.leadImage ?? "";
+      formData.set("leadImage", leadImage);
+
+      // Фото для главной страницы (кроп 3:4, вертикальная).
+      const uploadedHome = homePhotoBlob
+        ? await uploadBlob(supabase, slug, "home", homePhotoBlob)
+        : null;
+      const homeImage = homePhotoRemoved
+        ? ""
+        : uploadedHome ?? initial?.homeImage ?? "";
+      formData.set("homeImage", homeImage);
 
       const action = initial ? updateTeamMember : createTeamMember;
       const result = await action(formData);
@@ -193,29 +216,123 @@ export function TeamForm({
         </div>
       </div>
 
-      {/* Фото с кропом 4:3 — превью/миниатюра как в кейсах */}
+      {/* Фотографии — каждый контекст со своим кропом */}
       <div className={cardCls}>
-        <div className="max-w-[180px]">
-          <CropField
-            label="Фотография (3:4, вертикальная)"
-            aspect={3 / 4}
-            existingUrl={initial?.image}
-            onCropped={(blob) => setPhotoBlob(blob)}
-            onRemovedToggle={setPhotoRemoved}
-          />
+        <p className="text-sm font-semibold text-[var(--color-navy)]">
+          Фотографии
+        </p>
+
+        <div>
+          <label className={labelCls}>
+            Основное фото — страница «Команда» и страница врача (3:4)
+          </label>
+          <div className="mt-2 max-w-[180px]">
+            <CropField
+              label="Основное фото (3:4, вертикальная)"
+              aspect={3 / 4}
+              existingUrl={initial?.image}
+              onCropped={(blob) => setPhotoBlob(blob)}
+              onRemovedToggle={setPhotoRemoved}
+            />
+          </div>
         </div>
+
+        {isChief ? (
+          <div>
+            <label className={labelCls}>
+              Фото для главной страницы (3:4, вертикальная)
+            </label>
+            <div className="mt-2 max-w-[180px]">
+              <CropField
+                label="Фото для главной (3:4)"
+                aspect={3 / 4}
+                existingUrl={initial?.homeImage}
+                onCropped={(blob) => setHomePhotoBlob(blob)}
+                onRemovedToggle={setHomePhotoRemoved}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {isLead ? (
+          <div>
+            <label className={labelCls}>
+              Фото для страницы направления (4:3, горизонтальная)
+            </label>
+            <div className="mt-2 max-w-[260px]">
+              <CropField
+                label="Фото для направления (4:3)"
+                aspect={4 / 3}
+                existingUrl={initial?.leadImage}
+                onCropped={(blob) => setLeadPhotoBlob(blob)}
+                onRemovedToggle={setLeadPhotoRemoved}
+              />
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      {/* Цитата врача */}
+      {/* Цитаты — каждый контекст отдельно, чтобы не путаться */}
       <div className={cardCls}>
-        <label className={labelCls}>Цитата врача (под фото)</label>
-        <textarea
-          name="quote"
-          rows={3}
-          defaultValue={initial?.quote ?? ""}
-          className={inputCls}
-          placeholder="Короткая цитата, которая покажется под фотографией"
-        />
+        <p className="text-sm font-semibold text-[var(--color-navy)]">
+          Цитаты
+        </p>
+
+        {isChief ? (
+          <div>
+            <label className={labelCls}>
+              Цитата на главной странице (только главный врач)
+            </label>
+            <textarea
+              name="homeQuote"
+              rows={3}
+              defaultValue={initial?.homeQuote ?? ""}
+              className={inputCls}
+              placeholder="Показывается в блоке главного врача на главной странице"
+            />
+          </div>
+        ) : null}
+
+        {isChief ? (
+          <div>
+            <label className={labelCls}>
+              Цитата на странице «Команда» (только главный врач)
+            </label>
+            <textarea
+              name="quote"
+              rows={3}
+              defaultValue={initial?.quote ?? ""}
+              className={inputCls}
+              placeholder="Показывается в блоке главного врача на странице «Команда»"
+            />
+          </div>
+        ) : null}
+
+        <div>
+          <label className={labelCls}>Цитата на странице врача</label>
+          <textarea
+            name="doctorQuote"
+            rows={3}
+            defaultValue={initial?.doctorQuote ?? ""}
+            className={inputCls}
+            placeholder="Показывается на личной странице врача /team/…"
+          />
+        </div>
+
+        {isLead ? (
+          <div>
+            <label className={labelCls}>
+              Цитата на странице направления (ведущий специалист)
+            </label>
+            <textarea
+              name="leadQuote"
+              rows={3}
+              defaultValue={initial?.leadQuote ?? ""}
+              className={inputCls}
+              placeholder="Показывается под фото на странице направления /directions/…"
+            />
+          </div>
+        ) : null}
       </div>
 
       {/* Дополнительное образование */}
@@ -341,7 +458,8 @@ export function TeamForm({
           <input
             type="checkbox"
             name="isChief"
-            defaultChecked={initial?.isChief}
+            checked={isChief}
+            onChange={(e) => setIsChief(e.target.checked)}
           />
           Главный врач (всегда первый, может быть только один)
         </label>
@@ -398,6 +516,8 @@ export function TeamForm({
           </div>
         </div>
       </div>
+
+
 
       {error ? (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">

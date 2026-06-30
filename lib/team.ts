@@ -22,6 +22,11 @@ type TeamRow = {
   focus_points: string[] | null;
   visit_points: string[] | null;
   quote: string | null;
+  lead_image: string | null;
+  lead_quote: string | null;
+  home_image: string | null;
+  home_quote: string | null;
+  doctor_quote: string | null;
   courses: string[] | null;
   diploma_image: string | null;
   name_genitive: string | null;
@@ -29,7 +34,7 @@ type TeamRow = {
 };
 
 const COLUMNS =
-  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order,stats,approach,focus_points,visit_points,quote,courses,diploma_image,name_genitive,show_on_homepage";
+  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order,stats,approach,focus_points,visit_points,quote,lead_image,lead_quote,home_image,home_quote,doctor_quote,courses,diploma_image,name_genitive,show_on_homepage";
 
 // Сколько ведущих максимум показываем на главной.
 const HOMEPAGE_LIMIT = 5;
@@ -58,6 +63,11 @@ function mapRow(row: TeamRow): TeamMember {
     focusPoints: row.focus_points ?? undefined,
     visitPoints: row.visit_points ?? undefined,
     quote: row.quote ?? undefined,
+    leadImage: row.lead_image ?? undefined,
+    leadQuote: row.lead_quote ?? undefined,
+    homeImage: row.home_image ?? undefined,
+    homeQuote: row.home_quote ?? undefined,
+    doctorQuote: row.doctor_quote ?? undefined,
     courses: row.courses ?? undefined,
     diplomaImage: row.diploma_image ?? undefined,
     nameGenitive: row.name_genitive ?? undefined,

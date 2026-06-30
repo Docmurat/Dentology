@@ -82,7 +82,7 @@ const relatedReviews = reviewsData
       <div className="flex h-full flex-col">
         <div className="h-[360px] overflow-hidden bg-[var(--color-gray-100)] md:h-[420px]">
           <Image
-            src={relatedDoctor.image}
+            src={relatedDoctor.leadImage || relatedDoctor.image}
             alt={relatedDoctor.name}
             width={900}
             height={1200}
@@ -109,20 +109,21 @@ const relatedReviews = reviewsData
 
           <div className="mt-4 border-l-2 border-[var(--color-teal)] pl-4">
   <p className="text-sm leading-7 text-[var(--color-gray-700)]">
-    {slug === "endodontics"
-      ? "В ряде случаев зуб можно сохранить даже тогда, когда ранее рекомендовано удаление. Для этого требуется не шаблонное решение, а точная диагностика и клиническое понимание ситуации."
-      : slug === "restoration"
-  ? "Композитные виниры — это не универсальное решение и не альтернатива керамике. Это инструмент, который работает только при соблюдении протокола и внимательной детализации. При правильном выполнении они не вредят зубам и позволяют быстро изменить эстетику. Но при неправильном подходе действительно могут привести к проблемам."
-  : relatedDoctor.description}
+    {relatedDoctor.leadQuote?.trim() || relatedDoctor.description}
   </p>
 
-  <p className="mt-3 text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-    Цитата
-  </p>
+  <Link
+    href={`/team/${relatedDoctor.slug}`}
+    className="mt-3 inline-flex text-xs uppercase tracking-[0.14em] text-[var(--color-teal)] hover:text-[var(--color-navy)]"
+  >
+    Подробнее о враче
+  </Link>
 </div>
 
           <div className="mt-8">
-            <Button href="/contacts">Записаться</Button>
+            <Button href="/contacts" className="w-full justify-center">
+              Записаться на консультацию
+            </Button>
           </div>
         </div>
       </div>

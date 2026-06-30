@@ -27,6 +27,11 @@ export type TeamMember = {
   /** Цитата под hero (в стиле кейсов). */
   quote?: string;
   /** Счётчики (показатели): значение + подпись. */
+  homeImage?: string;
+  homeQuote?: string;
+  doctorQuote?: string;
+  leadImage?: string;
+  leadQuote?: string;
   stats?: { value: string; label: string }[];
   /** Текст мини-карточки «Подход». */
   approach?: string;

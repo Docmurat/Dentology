@@ -44,13 +44,30 @@ export function Hero() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[var(--color-gold)] bg-[var(--color-gold)]/10 px-4 py-5">
-              <p className="text-sm font-medium text-[var(--color-gold)]">
-                Education
-              </p>
-              <p className="mt-2 text-sm font-medium leading-6 text-[var(--color-navy)]">
-                Обучение врачей по эндодонтии
-              </p>
+            <div className="relative overflow-hidden rounded-2xl border border-[var(--color-gold)] bg-[var(--color-gold)]/10 px-4 py-5">
+              <div className="relative z-10">
+                <p className="text-sm font-medium text-[var(--color-gold)]">
+                  Обучение
+                </p>
+                <p className="mt-2 text-sm font-medium leading-6 text-[var(--color-navy)]">
+                  Курсы для врачей стоматологов
+                </p>
+              </div>
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  width: "45%",
+                  background:
+                    "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 100%)",
+                  transform: "translateX(-160%) skewX(-20deg)",
+                  animation: "gold-sheen 4.5s ease-in-out infinite",
+                  pointerEvents: "none",
+                }}
+              />
             </div>
           </div>
         </div>

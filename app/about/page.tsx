@@ -59,7 +59,7 @@ export default function AboutPage() {
 
             <Card>
               <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-                Education
+                Обучение
               </h2>
               <p className="mt-4 text-base leading-7 text-[var(--color-gray-700)]">
                 Образовательное направление позволяет передавать клинический
