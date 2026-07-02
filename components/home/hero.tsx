@@ -1,23 +1,26 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Section } from "@/components/layout/section";
+import { getHeroContent } from "@/lib/homepage";
 
-export function Hero() {
+export async function Hero() {
+  const hero = await getHeroContent();
+
   return (
     <Section className="pt-10 pb-20 md:pt-14 md:pb-28">
       <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
           <p className="mb-6 text-sm uppercase tracking-[0.22em] text-[var(--color-gray-500)]">
-            Экспертная стоматологическая практика
+            {hero.eyebrow}
           </p>
 
           <h1 className="max-w-4xl text-4xl font-semibold leading-[1.06] text-[var(--color-navy)] md:text-6xl">
-            Сохранение зубов в ситуациях, где часто рекомендуют удаление
+            {hero.title}
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--color-gray-700)]">
-            Ведущая экспертиза в сложной эндодонтии, дополненная имплантацией,
-            ортодонтией и гнатологией как частью комплексного подхода к лечению.
+            {hero.subtitle}
           </p>
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -30,21 +33,26 @@ export function Hero() {
           <div className="mt-10 grid max-w-2xl gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] px-4 py-5">
               <p className="text-sm text-[var(--color-gray-500)]">
-                Основной фокус
+                {hero.card1Label}
               </p>
               <p className="mt-2 text-sm font-medium leading-6 text-[var(--color-navy)]">
-                Сложная эндодонтия
+                {hero.card1Value}
               </p>
             </div>
 
             <div className="rounded-2xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] px-4 py-5">
-              <p className="text-sm text-[var(--color-gray-500)]">Подход</p>
+              <p className="text-sm text-[var(--color-gray-500)]">
+                {hero.card2Label}
+              </p>
               <p className="mt-2 text-sm font-medium leading-6 text-[var(--color-navy)]">
-                Диагностика и системное лечение
+                {hero.card2Value}
               </p>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-[var(--color-gold)] bg-[var(--color-gold)]/10 px-4 py-5">
+            <Link
+              href="/education"
+              className="relative block overflow-hidden rounded-2xl border border-[var(--color-gold)] bg-[var(--color-gold)]/10 px-4 py-5 transition hover:bg-[var(--color-gold)]/20"
+            >
               <div className="relative z-10">
                 <p className="text-sm font-medium text-[var(--color-gold)]">
                   Обучение
@@ -68,7 +76,7 @@ export function Hero() {
                   pointerEvents: "none",
                 }}
               />
-            </div>
+            </Link>
           </div>
         </div>
 
@@ -76,8 +84,8 @@ export function Hero() {
           <div className="rounded-[32px] bg-[var(--color-gray-100)] shadow-[0_12px_36px_rgba(0,0,0,0.06)]">
             <div className="overflow-hidden rounded-[32px]">
               <Image
-                src="/hero-doctor.jpg"
-                alt="Dentology — врач"
+                src={hero.photo}
+                alt={hero.quoteCaption || "Dentology"}
                 width={1000}
                 height={1300}
                 priority
@@ -86,20 +94,23 @@ export function Hero() {
             </div>
           </div>
 
-          <div className="absolute bottom-6 left-6 right-6">
-            <div className="rounded-2xl border border-white/30 bg-white/60 p-6 shadow-[0_10px_30px_rgba(0,0,0,0.08)] backdrop-blur-md">
-              <p className="text-[32px] leading-none text-white/40">“</p>
+          {hero.quote ? (
+            <div className="absolute bottom-6 left-6 right-6">
+              <div className="rounded-2xl border border-white/30 bg-white/60 p-6 shadow-[0_10px_30px_rgba(0,0,0,0.08)] backdrop-blur-md">
+                <p className="text-[32px] leading-none text-white/40">“</p>
 
-              <p className="mt-2 text-base leading-7 text-[var(--color-navy)]">
-                В ряде случаев зуб можно сохранить, даже если ранее
-                рекомендовано удаление
-              </p>
+                <p className="mt-2 text-base leading-7 text-[var(--color-navy)]">
+                  {hero.quote}
+                </p>
 
-              <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[var(--color-gray-600)]">
-                Курджиев Мурат
-              </p>
+                {hero.quoteCaption ? (
+                  <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[var(--color-gray-600)]">
+                    {hero.quoteCaption}
+                  </p>
+                ) : null}
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
     </Section>

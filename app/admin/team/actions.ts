@@ -72,8 +72,6 @@ function readFields(formData: FormData) {
     quote: String(formData.get("quote") || "").trim() || null,
     lead_image: String(formData.get("leadImage") || "") || null,
     lead_quote: String(formData.get("leadQuote") || "").trim() || null,
-    home_image: String(formData.get("homeImage") || "") || null,
-    home_quote: String(formData.get("homeQuote") || "").trim() || null,
     doctor_quote: String(formData.get("doctorQuote") || "").trim() || null,
     courses: parseLines(String(formData.get("courses") || "")),
     diploma_image: String(formData.get("diplomaImage") || "") || null,

@@ -52,8 +52,6 @@ export function TeamForm({
   const [diplomaRemoved, setDiplomaRemoved] = useState(false);
   const [leadPhotoBlob, setLeadPhotoBlob] = useState<Blob | null>(null);
   const [leadPhotoRemoved, setLeadPhotoRemoved] = useState(false);
-  const [homePhotoBlob, setHomePhotoBlob] = useState<Blob | null>(null);
-  const [homePhotoRemoved, setHomePhotoRemoved] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -93,15 +91,6 @@ export function TeamForm({
         ? ""
         : uploadedLead ?? initial?.leadImage ?? "";
       formData.set("leadImage", leadImage);
-
-      // Фото для главной страницы (кроп 3:4, вертикальная).
-      const uploadedHome = homePhotoBlob
-        ? await uploadBlob(supabase, slug, "home", homePhotoBlob)
-        : null;
-      const homeImage = homePhotoRemoved
-        ? ""
-        : uploadedHome ?? initial?.homeImage ?? "";
-      formData.set("homeImage", homeImage);
 
       const action = initial ? updateTeamMember : createTeamMember;
       const result = await action(formData);
@@ -237,23 +226,6 @@ export function TeamForm({
           </div>
         </div>
 
-        {isChief ? (
-          <div>
-            <label className={labelCls}>
-              Фото для главной страницы (3:4, вертикальная)
-            </label>
-            <div className="mt-2 max-w-[180px]">
-              <CropField
-                label="Фото для главной (3:4)"
-                aspect={3 / 4}
-                existingUrl={initial?.homeImage}
-                onCropped={(blob) => setHomePhotoBlob(blob)}
-                onRemovedToggle={setHomePhotoRemoved}
-              />
-            </div>
-          </div>
-        ) : null}
-
         {isLead ? (
           <div>
             <label className={labelCls}>
@@ -277,21 +249,6 @@ export function TeamForm({
         <p className="text-sm font-semibold text-[var(--color-navy)]">
           Цитаты
         </p>
-
-        {isChief ? (
-          <div>
-            <label className={labelCls}>
-              Цитата на главной странице (только главный врач)
-            </label>
-            <textarea
-              name="homeQuote"
-              rows={3}
-              defaultValue={initial?.homeQuote ?? ""}
-              className={inputCls}
-              placeholder="Показывается в блоке главного врача на главной странице"
-            />
-          </div>
-        ) : null}
 
         {isChief ? (
           <div>

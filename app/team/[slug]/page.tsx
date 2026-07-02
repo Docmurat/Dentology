@@ -148,11 +148,11 @@ export default async function DoctorPage({ params }: Props) {
         </div>
       </Section>
 
-      {doctor.quote ? (
+      {doctor.doctorQuote?.trim() ? (
         <Section className="pb-12 md:pb-16">
           <figure className="border-l-2 border-[var(--color-teal)] pl-6">
             <blockquote className="whitespace-pre-line font-serif text-xl italic leading-8 text-[var(--color-navy)]">
-              {doctor.quote}
+              {doctor.doctorQuote}
             </blockquote>
           </figure>
         </Section>

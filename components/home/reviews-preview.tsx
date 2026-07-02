@@ -3,6 +3,7 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
 import { getApprovedReviews } from "@/lib/reviews";
 import { getTeamMembers } from "@/lib/team";
+import { getSectionHeadingContent } from "@/lib/homepage";
 import { ReviewsCarousel } from "@/components/reviews/reviews-carousel";
 import { ReviewForm } from "@/components/reviews/review-form";
 
@@ -11,6 +12,7 @@ export async function ReviewsPreview() {
     getApprovedReviews(),
     getTeamMembers(),
   ]);
+  const heading = await getSectionHeadingContent("reviews");
 
   const latest = approved.slice(0, 9);
   const doctors = team
@@ -21,9 +23,9 @@ export async function ReviewsPreview() {
     <Section id="reviews" className="py-20 md:py-28">
       <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
         <SectionHeading
-          eyebrow="Отзывы"
-          title="Что говорят пациенты после лечения"
-          description="Отзывы дополняют клинические случаи и помогают понять, как пациенты воспринимают процесс лечения, диагностику и коммуникацию."
+          eyebrow={heading.eyebrow}
+          title={heading.title}
+          description={heading.description}
         />
 
         <div className="flex flex-wrap items-center gap-3">

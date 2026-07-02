@@ -70,6 +70,12 @@ export default async function AdminLayout({
   Направления
 </Link>
               <Link
+                href="/admin/homepage"
+                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
+              >
+                Главная
+              </Link>
+              <Link
                 href="/admin/cases/new"
                 className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
               >

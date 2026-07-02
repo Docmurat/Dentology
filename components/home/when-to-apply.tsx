@@ -1,38 +1,26 @@
 import { Section } from "@/components/layout/section";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Card } from "@/components/ui/card";
+import { getWhenContent } from "@/lib/homepage";
 
-const situations = [
-  {
-    title: "Рекомендовано удаление",
-    text: "Вам уже предложили удалить зуб, но вы хотите рассмотреть возможность его сохранения.",
-  },
-  {
-    title: "Боль после лечения",
-    text: "После лечения корневых каналов боль сохраняется или возвращается.",
-  },
-  {
-    title: "Хроническое воспаление",
-    text: "Воспаление не проходит длительное время или периодически обостряется.",
-  },
-  {
-    title: "Сложный случай",
-    text: "Ранее вам говорили, что случай сложный или отказывались от лечения.",
-  },
-];
+export async function WhenToApply() {
+  const when = await getWhenContent();
 
-export function WhenToApply() {
   return (
     <Section id="when-to-apply" className="py-20 md:py-28">
       <SectionHeading
-        eyebrow="Когда стоит обратиться"
-        title="Ситуации, с которыми чаще всего приходят пациенты"
-        description="Большинство обращений связано с уже существующими проблемами после лечения или сложными клиническими случаями."
+        eyebrow={when.eyebrow}
+        title={when.title}
+        description={when.description}
       />
 
-      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {situations.map((item) => (
-          <Card key={item.title} className="p-6">
+      {/* Карточки растягиваются на ширину; максимум 4 в ряд, далее — новый ряд. */}
+      <div className="mt-12 flex flex-wrap gap-6">
+        {when.items.map((item, index) => (
+          <Card
+            key={index}
+            className="grow basis-[calc(50%-0.75rem)] p-6 lg:basis-[calc(25%-1.125rem)]"
+          >
             <h3 className="text-lg font-semibold text-[var(--color-navy)]">
               {item.title}
             </h3>
