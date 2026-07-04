@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { directionLabel } from "@/lib/directions";
 import { getTeamMembers } from "@/lib/team";
 import { approveCase, deleteCase } from "./actions";
+import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ export default async function AdminCasesPage() {
           Добавить кейс
         </Link>
       </div>
-
+<PageHeadingEditor pageKey="cases" />
       {/* --- На модерации --- */}
       {pending.length ? (
         <section>

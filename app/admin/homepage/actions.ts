@@ -254,3 +254,22 @@ export async function saveCtaContent(formData: FormData) {
 
   revalidateHomepage();
 }
+
+
+// Сохранить контент блока «Информационная плашка».
+export async function savePromoContent(formData: FormData) {
+  const supabase = await requireStaff();
+
+  const content = {
+    eyebrow: String(formData.get("eyebrow") || "").trim(),
+    text: String(formData.get("text") || "").trim(),
+    linkLabel: String(formData.get("linkLabel") || "").trim(),
+    linkHref: String(formData.get("linkHref") || "").trim(),
+  };
+
+  await supabase
+    .from("homepage_content")
+    .upsert({ block_key: "promo", content }, { onConflict: "block_key" });
+
+  revalidateHomepage();
+}

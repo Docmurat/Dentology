@@ -6,6 +6,7 @@ import { getDirections, getDirectionLabelMap } from "@/lib/directions-db";
 import { getTeamMembers, getTeamMemberBySlug } from "@/lib/team";
 import { ReviewsPageContent } from "@/components/reviews/reviews-page-content";
 import { ReviewForm } from "@/components/reviews/review-form";
+import { getPageHeading } from "@/lib/page-content";
 
 export const revalidate = 60;
 
@@ -23,6 +24,8 @@ export default async function ReviewsPage({
     getDirections(),
     getDirectionLabelMap(),
   ]);
+
+  const heading = await getPageHeading("reviews");
 
   // Какие направления реально встречаются в отзывах
   // (у отзыва направления хранятся массивом directionSlugs).
@@ -51,16 +54,16 @@ export default async function ReviewsPage({
   return (
     <SiteShell>
       <PageHero
-        eyebrow="Отзывы"
+        eyebrow={heading.eyebrow}
         title={
           doctor
             ? `Все отзывы ${doctor.nameGenitive || doctor.name}`
-            : "Отзывы пациентов"
+            : heading.title
         }
         description={
           doctor
             ? "Отзывы пациентов, относящиеся к этому врачу."
-            : "Реальные впечатления пациентов после консультации и лечения. Можно отфильтровать отзывы по направлениям."
+            : heading.description
         }
       />
 

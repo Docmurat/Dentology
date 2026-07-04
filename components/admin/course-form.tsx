@@ -63,38 +63,6 @@ export function CourseForm({
         </p>
       </div>
 
-      <div className="rounded-xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] p-4">
-        <p className="text-sm font-semibold text-[var(--color-navy)]">
-          Метрика по зубам (на странице курса)
-        </p>
-        <p className="mt-1 text-xs text-[var(--color-gray-500)]">
-          Оставьте «Пролечено» пустым, чтобы скрыть блок. «Сохранено, %»
-          считается автоматически как 100 − радикальный подход.
-        </p>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelCls}>Пролечено зубов</label>
-            <input
-              name="metricTreated"
-              defaultValue={initial ? initial.metricTreated : "5 000+"}
-              className={inputCls}
-              placeholder="5 000+"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Радикальный подход, % (удаление/резекция)</label>
-            <input
-              type="number"
-              name="metricRadical"
-              min={0}
-              max={100}
-              defaultValue={initial ? initial.metricRadical : 2}
-              className={inputCls}
-            />
-          </div>
-        </div>
-      </div>
-
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelCls}>Порядок (меньше — выше)</label>

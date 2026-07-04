@@ -9,7 +9,11 @@ export type HomepageBlock = {
 
 // Единый источник правды по ключам и названиям блоков.
 // Только блоки из этого списка могут показываться на главной.
-export const HOMEPAGE_BLOCK_DEFS: { key: string; title: string }[] = [
+export const HOMEPAGE_BLOCK_DEFS: {
+  key: string;
+  title: string;
+  enabledByDefault?: boolean;
+}[] = [
   { key: "hero", title: "Hero — первый экран" },
   { key: "about", title: "О Dentology" },
   { key: "when_to_apply", title: "Когда стоит обратиться" },
@@ -20,13 +24,18 @@ export const HOMEPAGE_BLOCK_DEFS: { key: string; title: string }[] = [
   { key: "reviews", title: "Отзывы" },
   { key: "education", title: "Обучение" },
   { key: "cta", title: "Призыв к действию" },
+  {
+    key: "promo",
+    title: "Информационная плашка (акция / новость)",
+    enabledByDefault: false,
+  },
 ];
 
 function defaults(): HomepageBlock[] {
   return HOMEPAGE_BLOCK_DEFS.map((d, i) => ({
     key: d.key,
     title: d.title,
-    enabled: true,
+    enabled: d.enabledByDefault ?? true,
     sortOrder: i + 1,
   }));
 }
@@ -54,7 +63,7 @@ export async function getHomepageBlocks(): Promise<HomepageBlock[]> {
       return {
         key: d.key,
         title: d.title,
-        enabled: row?.enabled ?? true,
+        enabled: row?.enabled ?? d.enabledByDefault ?? true,
         sortOrder: row?.sort_order ?? i + 1,
       };
     }).sort((a, b) => a.sortOrder - b.sortOrder);
@@ -442,5 +451,44 @@ export async function getCtaContent(): Promise<CtaContent> {
     };
   } catch {
     return CTA_DEFAULTS;
+  }
+}
+
+
+// ── Контент блока «Информационная плашка» (акция / новость) ──────────
+export type PromoContent = {
+  eyebrow: string;
+  text: string;
+  linkLabel: string;
+  linkHref: string;
+};
+
+export const PROMO_DEFAULTS: PromoContent = {
+  eyebrow: "Важно",
+  text: "Здесь может быть информация об акции или срочная новость для пациентов.",
+  linkLabel: "Подробнее",
+  linkHref: "/contacts",
+};
+
+/** Контент блока «Информационная плашка»: из БД поверх дефолтов. */
+export async function getPromoContent(): Promise<PromoContent> {
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("homepage_content")
+      .select("content")
+      .eq("block_key", "promo")
+      .maybeSingle();
+
+    if (error || !data?.content) return PROMO_DEFAULTS;
+    const c = data.content as Partial<PromoContent>;
+    return {
+      eyebrow: c.eyebrow ?? PROMO_DEFAULTS.eyebrow,
+      text: c.text ?? PROMO_DEFAULTS.text,
+      linkLabel: c.linkLabel ?? PROMO_DEFAULTS.linkLabel,
+      linkHref: c.linkHref ?? PROMO_DEFAULTS.linkHref,
+    };
+  } catch {
+    return PROMO_DEFAULTS;
   }
 }

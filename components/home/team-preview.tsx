@@ -5,9 +5,11 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { Card } from "@/components/ui/card";
 import { getFeaturedTeam } from "@/lib/team";
 import { Button } from "@/components/ui/button";
+import { getSectionHeadingContent } from "@/lib/homepage";
 
 export async function TeamPreview() {
   const featuredMembers = await getFeaturedTeam();
+  const heading = await getSectionHeadingContent("team");
   const leadMember = featuredMembers[0];
   const otherFeaturedMembers = featuredMembers.slice(1);
 
@@ -20,9 +22,9 @@ export async function TeamPreview() {
       <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
         <div className="flex-1">
           <SectionHeading
-            eyebrow="Клиническая команда"
-            title="Сложные случаи требуют междисциплинарного подхода"
-            description="Dentology объединяет ведущих специалистов разных направлений, работающих в рамках единой системы клинического мышления и принятия решений."
+            eyebrow={heading.eyebrow}
+            title={heading.title}
+            description={heading.description}
           />
         </div>
 

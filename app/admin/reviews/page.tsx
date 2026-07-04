@@ -7,6 +7,7 @@ import {
   unpublishReview,
   deleteReview,
 } from "./actions";
+import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -190,7 +191,7 @@ export default async function AdminReviewsPage() {
   return (
     <div className="space-y-10">
       <h1 className="text-2xl font-semibold text-[var(--color-navy)]">Отзывы</h1>
-
+<PageHeadingEditor pageKey="reviews" />
       <section>
         <div className="mb-3 flex items-center gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-amber-700">

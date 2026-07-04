@@ -94,6 +94,18 @@ export default function AdminHomePage() {
             Конструктор: какие блоки показывать и в каком порядке.
           </p>
         </Link>
+
+        <Link
+          href="/admin/education"
+          className="rounded-2xl border border-[var(--color-gray-200)] bg-white p-6 transition hover:shadow-[0_8px_28px_rgba(0,0,0,0.06)]"
+        >
+          <p className="text-lg font-semibold text-[var(--color-navy)]">
+            Обучение
+          </p>
+          <p className="mt-1 text-sm text-[var(--color-gray-600)]">
+            Страница обучения: заголовок и (позже) список курсов.
+          </p>
+        </Link>
       </div>
     </div>
   );

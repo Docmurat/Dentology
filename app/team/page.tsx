@@ -5,6 +5,7 @@ import { Section } from "@/components/layout/section";
 import { TeamCard } from "@/components/team/team-card";
 import { TeamChiefHero } from "@/components/team/team-chief-hero";
 import { getTeamMembers } from "@/lib/team";
+import { getPageHeading } from "@/lib/page-content";
 
 export const metadata: Metadata = {
   title: "Команда",
@@ -16,15 +17,16 @@ export const revalidate = 60;
 
 export default async function TeamPage() {
   const members = await getTeamMembers();
+  const heading = await getPageHeading("team");
   const chief = members.find((member) => member.isChief) ?? null;
   const rest = members.filter((member) => !member.isChief);
 
   return (
     <SiteShell>
       <PageHero
-        eyebrow="Команда"
-        title="Клиническая команда Dentology"
-        description="Сложные случаи требуют междисциплинарного подхода. Над планом лечения работают специалисты разных направлений в рамках единой системы принятия решений."
+        eyebrow={heading.eyebrow}
+        title={heading.title}
+        description={heading.description}
       />
 
       <Section className="pb-20 md:pb-28">

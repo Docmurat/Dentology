@@ -3,9 +3,11 @@ import { Section } from "@/components/layout/section";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Card } from "@/components/ui/card";
 import { getDirections } from "@/lib/directions-db";
+import { getSectionHeadingContent } from "@/lib/homepage";
 
 export async function Directions() {
   const directions = await getDirections();
+  const heading = await getSectionHeadingContent("directions");
 
   // Позиция в коллаже задаётся в админке (collageRole).
   const featured = directions.find((item) => item.collageRole === "featured");
@@ -15,9 +17,9 @@ export async function Directions() {
   return (
     <Section id="directions" className="py-20 md:py-28">
       <SectionHeading
-        eyebrow="Клинические направления"
-        title="Система лечения, а не отдельные услуги"
-        description="Эндодонтия является ключевым направлением, но лечение всегда рассматривается в контексте общей клинической картины."
+        eyebrow={heading.eyebrow}
+        title={heading.title}
+        description={heading.description}
       />
 
       <div className="mt-12 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">

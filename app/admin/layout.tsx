@@ -76,6 +76,12 @@ export default async function AdminLayout({
                 Главная
               </Link>
               <Link
+                href="/admin/education"
+                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
+              >
+                Обучение
+              </Link>
+              <Link
                 href="/admin/cases/new"
                 className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
               >

@@ -6,6 +6,7 @@ import { CasesPageContent } from "@/components/cases/cases-page-content";
 import { getAllCases } from "@/lib/cases";
 import { getTeamMemberBySlug } from "@/lib/team";
 import { getDirections, getDirectionLabelMap } from "@/lib/directions-db";
+import { getPageHeading } from "@/lib/page-content";
 
 export const metadata: Metadata = {
   title: "Клинические случаи",
@@ -29,6 +30,8 @@ export default async function CasesPage({
     getDirections(),
     getDirectionLabelMap(),
   ]);
+
+  const heading = await getPageHeading("cases");
 
   // Какие направления реально встречаются в кейсах.
   const usedSlugs = new Set(
@@ -57,16 +60,10 @@ export default async function CasesPage({
   return (
     <SiteShell>
       <PageHero
-        eyebrow="Клинические случаи"
-        title={
-          doctor
-            ? `Все кейсы ${genitive}`
-            : "Реальные кейсы, в которых стандартного подхода было недостаточно"
-        }
+        eyebrow={heading.eyebrow}
+        title={doctor ? `Все кейсы ${genitive}` : heading.title}
         description={
-          doctor
-            ? "Клинические случаи этого врача."
-            : "Клинические разборы, показывающие не рекламный результат, а логику принятия решений, диагностику и возможность сохранения зубов в сложных ситуациях."
+          doctor ? "Клинические случаи этого врача." : heading.description
         }
       />
 

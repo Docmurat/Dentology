@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { deleteTeamMember } from "./actions";
+import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,8 @@ export default async function AdminTeamPage() {
           Добавить сотрудника
         </Link>
       </div>
+
+<PageHeadingEditor pageKey="team" />
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white">
         {members && members.length ? (

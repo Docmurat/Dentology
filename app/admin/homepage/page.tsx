@@ -1,4 +1,4 @@
-import { getHomepageBlocks, getHeroContent, getAboutContent, getWhenContent, getWhyContent, getSectionHeadingContent, getEducationContent, getCtaContent } from "@/lib/homepage";
+import { getHomepageBlocks, getHeroContent, getAboutContent, getWhenContent, getWhyContent, getSectionHeadingContent, getEducationContent, getCtaContent, getPromoContent } from "@/lib/homepage";
 import { toggleHomepageBlock, moveHomepageBlock } from "./actions";
 import { HeroEditor } from "@/components/admin/hero-editor";
 import { AboutEditor } from "@/components/admin/about-editor";
@@ -7,6 +7,7 @@ import { WhyEditor } from "@/components/admin/why-editor";
 import { SectionHeadingEditor } from "@/components/admin/section-heading-editor";
 import { EducationEditor } from "@/components/admin/education-editor";
 import { CtaEditor } from "@/components/admin/cta-editor";
+import { PromoEditor } from "@/components/admin/promo-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function AdminHomepagePage() {
   const whyContent = await getWhyContent();
   const educationContent = await getEducationContent();
   const ctaContent = await getCtaContent();
+  const promoContent = await getPromoContent();
 
   // Заголовки блоков с собственной механикой (карточки — из своих разделов).
   const headings: Record<string, Awaited<ReturnType<typeof getSectionHeadingContent>>> = {
@@ -185,6 +187,17 @@ export default async function AdminHomepagePage() {
                   </summary>
                   <div className="mt-4">
                     <CtaEditor initial={ctaContent} />
+                  </div>
+                </details>
+              ) : null}
+
+              {block.key === "promo" ? (
+                <details className="mt-4 rounded-xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] p-4">
+                  <summary className="cursor-pointer text-sm font-medium text-[var(--color-navy-secondary)]">
+                    Редактировать содержимое
+                  </summary>
+                  <div className="mt-4">
+                    <PromoEditor initial={promoContent} />
                   </div>
                 </details>
               ) : null}

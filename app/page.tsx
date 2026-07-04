@@ -12,6 +12,7 @@ import { TeamPreview } from "@/components/home/team-preview";
 import { EducationPreview } from "@/components/home/education-preview";
 import { CtaSection } from "@/components/home/cta-section";
 import { ReviewsPreview } from "@/components/home/reviews-preview";
+import { PromoBanner } from "@/components/home/promo-banner";
 import { getEnabledHomepageBlocks } from "@/lib/homepage";
 
 export const revalidate = 60;
@@ -35,6 +36,7 @@ const BLOCKS = {
   reviews: ReviewsPreview,
   education: EducationPreview,
   cta: CtaSection,
+  promo: PromoBanner,
 } as unknown as Record<string, ComponentType>;
 
 export default async function HomePage() {

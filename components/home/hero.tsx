@@ -8,7 +8,7 @@ export async function Hero() {
   const hero = await getHeroContent();
 
   return (
-    <Section className="pt-10 pb-20 md:pt-14 md:pb-28">
+    <Section className="pt-6 pb-20 md:pt-8 md:pb-28">
       <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
           <p className="mb-6 text-sm uppercase tracking-[0.22em] text-[var(--color-gray-500)]">
