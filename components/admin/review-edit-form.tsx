@@ -26,6 +26,11 @@ export function ReviewEditForm({
     review_date: string | null;
     sort_order: number | null;
     image: string | null;
+    course_slug: string | null;
+    course_title: string | null;
+    pros: string | null;
+    cons: string | null;
+    wishes: string | null;
   };
   doctors: { slug: string; name: string }[];
   directions: { slug: string; label: string }[];
@@ -36,6 +41,8 @@ export function ReviewEditForm({
     {}
   );
   const [dirs, setDirs] = useState<string[]>(review.direction_slugs ?? []);
+
+  const isCourse = Boolean(review.course_slug);
 
   useEffect(() => {
     if (state.ok) {
@@ -57,6 +64,15 @@ export function ReviewEditForm({
     <form action={action} className="max-w-xl space-y-4">
       <input type="hidden" name="id" value={review.id} />
 
+      {isCourse ? (
+        <div className="rounded-lg bg-[var(--color-gold)]/10 px-3 py-2 text-sm text-[var(--color-navy)]">
+          Отзыв о курсе:{" "}
+          <span className="font-medium">
+            {review.course_title || review.course_slug}
+          </span>
+        </div>
+      ) : null}
+
       <div>
         <label className={labelCls}>Фамилия и имя *</label>
         <input
@@ -77,51 +93,56 @@ export function ReviewEditForm({
         />
       </div>
 
-      <div>
-        <label className={labelCls}>Врач</label>
-        <select
-          name="doctorSlug"
-          defaultValue={review.doctor_slug ?? ""}
-          className={inputCls}
-        >
-          <option value="">— не выбран —</option>
-          {doctors.map((d) => (
-            <option key={d.slug} value={d.slug}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Врач и направления — только для пациентских отзывов. */}
+      {isCourse ? null : (
+        <>
+          <div>
+            <label className={labelCls}>Врач</label>
+            <select
+              name="doctorSlug"
+              defaultValue={review.doctor_slug ?? ""}
+              className={inputCls}
+            >
+              <option value="">— не выбран —</option>
+              {doctors.map((d) => (
+                <option key={d.slug} value={d.slug}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <div>
-        <label className={labelCls}>Направления (до 3) *</label>
-        <div className="mt-2 flex flex-wrap gap-3">
-          {directions.map((d) => {
-            const isOn = dirs.includes(d.slug);
-            return (
-              <label
-                key={d.slug}
-                className={
-                  "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm " +
-                  (isOn
-                    ? "border-[var(--color-teal)] bg-[var(--color-teal)]/10 text-[var(--color-navy)]"
-                    : "border-[var(--color-gray-200)] text-[var(--color-navy)]")
-                }
-              >
-                <input
-                  type="checkbox"
-                  name="directionSlug"
-                  value={d.slug}
-                  checked={isOn}
-                  onChange={() => toggle(d.slug)}
-                  disabled={!isOn && dirs.length >= 3}
-                />
-                {d.label}
-              </label>
-            );
-          })}
-        </div>
-      </div>
+          <div>
+            <label className={labelCls}>Направления (до 3) *</label>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {directions.map((d) => {
+                const isOn = dirs.includes(d.slug);
+                return (
+                  <label
+                    key={d.slug}
+                    className={
+                      "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm " +
+                      (isOn
+                        ? "border-[var(--color-teal)] bg-[var(--color-teal)]/10 text-[var(--color-navy)]"
+                        : "border-[var(--color-gray-200)] text-[var(--color-navy)]")
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      name="directionSlug"
+                      value={d.slug}
+                      checked={isOn}
+                      onChange={() => toggle(d.slug)}
+                      disabled={!isOn && dirs.length >= 3}
+                    />
+                    {d.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -156,6 +177,42 @@ export function ReviewEditForm({
           className={inputCls}
         />
       </div>
+
+      {/* Разделы курс-отзыва — сплошной текст, каждая строка станет пунктом. */}
+      {isCourse ? (
+        <>
+          <div>
+            <label className={labelCls}>Плюсы</label>
+            <textarea
+              name="pros"
+              rows={3}
+              defaultValue={review.pros ?? ""}
+              className={inputCls}
+              placeholder="Каждый пункт — с новой строки"
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Минусы</label>
+            <textarea
+              name="cons"
+              rows={3}
+              defaultValue={review.cons ?? ""}
+              className={inputCls}
+              placeholder="Каждый пункт — с новой строки"
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Что бы я добавил</label>
+            <textarea
+              name="wishes"
+              rows={3}
+              defaultValue={review.wishes ?? ""}
+              className={inputCls}
+              placeholder="Каждый пункт — с новой строки"
+            />
+          </div>
+        </>
+      ) : null}
 
       <div>
         <label className={labelCls}>Фото</label>

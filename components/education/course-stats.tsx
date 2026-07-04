@@ -25,7 +25,7 @@ export function CourseStats({
         </div>
 
         <div>
-          <p className="text-4xl font-semibold text-[var(--color-teal)] md:text-5xl">
+          <p className="text-4xl font-semibold text-[var(--color-gold)] md:text-5xl">
             {saved}%
           </p>
           <p className="mt-1 text-sm text-[var(--color-gray-600)]">
@@ -41,13 +41,6 @@ export function CourseStats({
             радикальный подход — удаление или резекция
           </p>
         </div>
-      </div>
-
-      <div className="mt-6 h-2 w-full overflow-hidden rounded-full bg-[var(--color-gray-100)]">
-        <div
-          className="h-full rounded-full bg-[var(--color-teal)]"
-          style={{ width: `${saved}%` }}
-        />
       </div>
     </div>
   );

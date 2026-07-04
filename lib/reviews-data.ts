@@ -6,6 +6,11 @@ export type ReviewItem = {
   image?: string | null;
   instagramUrl?: string | null;
   directionSlugs?: string[];
+  courseSlug?: string | null;
+  courseTitle?: string | null;
+  pros?: string;
+  cons?: string;
+  wishes?: string;
   featured?: boolean;
 };
 

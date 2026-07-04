@@ -3,6 +3,7 @@ import { CourseForm } from "@/components/admin/course-form";
 import { updateCourse } from "../../actions";
 import { getCourseBySlug } from "@/lib/courses";
 import { getTeamMembers } from "@/lib/team";
+import { getDirections } from "@/lib/directions-db";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,10 @@ export default async function EditCoursePage({
   const doctors = team
     .filter((m) => m.category === "doctor")
     .map((m) => ({ slug: m.slug, name: m.name }));
+  const directions = (await getDirections()).map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
 
   async function action(formData: FormData) {
     "use server";
@@ -37,6 +42,7 @@ export default async function EditCoursePage({
 
       <CourseForm
         doctors={doctors}
+        directions={directions}
         initial={course}
         action={action}
         submitLabel="Сохранить"

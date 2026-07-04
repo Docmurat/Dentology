@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "gold"
+  | "gold-outline";
 
 type ButtonProps = {
   children: React.ReactNode;
@@ -16,6 +21,11 @@ const variantClasses: Record<ButtonVariant, string> = {
     "border border-[var(--color-navy)] text-[var(--color-navy)] hover:bg-[var(--color-gray-50)]",
   ghost:
     "text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]",
+  // Золотые варианты — используются в разделе «Обучение».
+  gold:
+    "bg-[var(--color-gold)] text-white hover:bg-[var(--color-gold)]/90",
+  "gold-outline":
+    "border border-[var(--color-gold)] text-[var(--color-gold)] hover:bg-[var(--color-gold)]/10",
 };
 
 export function Button({

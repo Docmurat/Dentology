@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { CourseForm } from "@/components/admin/course-form";
 import { createCourse } from "../actions";
 import { getTeamMembers } from "@/lib/team";
+import { getDirections } from "@/lib/directions-db";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,10 @@ export default async function NewCoursePage() {
   const doctors = team
     .filter((m) => m.category === "doctor")
     .map((m) => ({ slug: m.slug, name: m.name }));
+  const directions = (await getDirections()).map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
 
   async function action(formData: FormData) {
     "use server";
@@ -26,7 +31,12 @@ export default async function NewCoursePage() {
         Заполните данные курса. Ведущего врача выберите из списка команды.
       </p>
 
-      <CourseForm doctors={doctors} action={action} submitLabel="Создать курс" />
+      <CourseForm
+        doctors={doctors}
+        directions={directions}
+        action={action}
+        submitLabel="Создать курс"
+      />
     </div>
   );
 }

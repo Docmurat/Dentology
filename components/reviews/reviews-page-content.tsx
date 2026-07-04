@@ -5,9 +5,13 @@ import Link from "next/link";
 import { ReviewCard } from "@/components/reviews/review-card";
 import type { ReviewItem } from "@/lib/reviews-data";
 
+type FilterOption = { slug: string; label: string };
+
 type ReviewsPageContentProps = {
   reviews: ReviewItem[];
-  directions?: { slug: string; label: string }[];
+  directions?: FilterOption[];
+  // Фильтр по курсам (для страницы «Отзывы курсов»). Если задан — фильтруем по курсам.
+  courses?: FilterOption[];
   doctorFilter?: { slug: string; name: string } | null;
 };
 
@@ -16,19 +20,23 @@ const ITEMS_PER_PAGE = 6;
 export function ReviewsPageContent({
   reviews,
   directions = [],
+  courses = [],
   doctorFilter = null,
 }: ReviewsPageContentProps) {
   const [activeFilter, setActiveFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Кнопки фильтра — из направлений БД.
+  // Режим курсов имеет приоритет: кнопки — из курсов, иначе из направлений.
+  const byCourse = courses.length > 0;
+  const source = byCourse ? courses : directions;
+
   const filterOptions = useMemo(
     () => [
       { value: "all", label: "Все отзывы" },
-      ...directions.map((d) => ({ value: d.slug, label: d.label })),
+      ...source.map((d) => ({ value: d.slug, label: d.label })),
     ],
-    [directions]
+    [source]
   );
 
   useEffect(() => {
@@ -44,8 +52,11 @@ export function ReviewsPageContent({
   const filteredReviews = useMemo(() => {
     if (doctorFilter) return reviews;
     if (activeFilter === "all") return reviews;
+    if (byCourse) {
+      return reviews.filter((item) => item.courseSlug === activeFilter);
+    }
     return reviews.filter((item) => item.directionSlugs?.includes(activeFilter));
-  }, [activeFilter, reviews, doctorFilter]);
+  }, [activeFilter, reviews, doctorFilter, byCourse]);
 
   const totalPages = Math.ceil(filteredReviews.length / ITEMS_PER_PAGE);
 

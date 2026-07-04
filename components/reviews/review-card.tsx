@@ -31,6 +31,54 @@ function InstagramIcon() {
   );
 }
 
+type SectionTone = "pos" | "neg" | "neutral";
+
+function toLines(text: string): string[] {
+  return text
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function ReviewSection({
+  title,
+  text,
+  tone,
+}: {
+  title: string;
+  text: string;
+  tone: SectionTone;
+}) {
+  const dot =
+    tone === "pos"
+      ? "bg-green-500"
+      : tone === "neg"
+        ? "bg-red-500"
+        : "bg-[var(--color-gold)]";
+
+  const items = toLines(text);
+  if (!items.length) return null;
+
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-gray-500)]">
+        {title}
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {items.map((item, i) => (
+          <li
+            key={i}
+            className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
+          >
+            <span className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function ReviewCard({ review, compact = false, date }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -81,6 +129,16 @@ export function ReviewCard({ review, compact = false, date }: ReviewCardProps) {
       <p className="mt-5 text-sm leading-7 text-[var(--color-gray-700)]">
         {visibleText}
       </p>
+
+      {review.pros ? (
+        <ReviewSection title="Плюсы" text={review.pros} tone="pos" />
+      ) : null}
+      {review.cons ? (
+        <ReviewSection title="Минусы" text={review.cons} tone="neg" />
+      ) : null}
+      {review.wishes ? (
+        <ReviewSection title="Что бы я добавил" text={review.wishes} tone="neutral" />
+      ) : null}
 
       <div className="mt-5 flex items-center justify-between gap-4">
         {isLong || compact ? (

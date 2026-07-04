@@ -28,6 +28,7 @@ function readFields(formData: FormData) {
     title: String(formData.get("title") || "").trim(),
     description: String(formData.get("description") || "").trim(),
     doctor_slug: String(formData.get("doctorSlug") || "") || null,
+    direction_slugs: formData.getAll("directionSlug").map(String).filter(Boolean),
     metric_treated: String(formData.get("metricTreated") || "").trim() || null,
     metric_radical: Number(formData.get("metricRadical") || 0) || 0,
     published: formData.get("published") === "on",

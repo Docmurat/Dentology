@@ -37,6 +37,19 @@ function revalidateReviews() {
   revalidatePath("/");
 }
 
+// Курс-отзыв определяется по course_slug в БД, а не по полям формы.
+async function isCourseReview(
+  supabase: Awaited<ReturnType<typeof requireStaff>>,
+  id: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("reviews")
+    .select("course_slug")
+    .eq("id", id)
+    .maybeSingle();
+  return Boolean(data?.course_slug);
+}
+
 export async function approveReview(formData: FormData) {
   const supabase = await requireStaff();
   const id = String(formData.get("id") || "");
@@ -45,11 +58,16 @@ export async function approveReview(formData: FormData) {
     .map(String)
     .filter(Boolean)
     .slice(0, 3);
-  // Без выбранного направления отзыв не публикуется.
-  if (!dirs.length) return;
+
+  const isCourse = await isCourseReview(supabase, id);
+
+  // Пациентский отзыв без направления не публикуется.
+  // Курс-отзыв публикуется без направлений.
+  if (!isCourse && !dirs.length) return;
+
   await supabase
     .from("reviews")
-    .update({ status: "approved", direction_slugs: dirs })
+    .update({ status: "approved", direction_slugs: isCourse ? [] : dirs })
     .eq("id", id);
   revalidateReviews();
 }
@@ -126,9 +144,13 @@ export async function updateReview(
   const parsed = sortRaw ? Number.parseInt(sortRaw, 10) : null;
   const sortOrder = parsed !== null && !Number.isNaN(parsed) ? parsed : null;
 
+  const isCourse = await isCourseReview(supabase, id);
+
   if (!author) return { error: "Укажите имя" };
   if (text.length < 5) return { error: "Текст слишком короткий" };
-  if (!dirs.length) return { error: "Выберите хотя бы одно направление" };
+  // Направление обязательно только для пациентских отзывов.
+  if (!isCourse && !dirs.length)
+    return { error: "Выберите хотя бы одно направление" };
 
   // Освобождаем номер у другого отзыва, если он уже занят (номер уникален).
   if (sortOrder !== null) {
@@ -142,12 +164,20 @@ export async function updateReview(
   const patch: Record<string, unknown> = {
     author,
     text,
-    direction_slugs: dirs,
+    direction_slugs: isCourse ? [] : dirs,
     instagram,
     doctor_slug: doctorSlug,
     sort_order: sortOrder,
   };
   if (reviewDate) patch.review_date = reviewDate;
+
+  // Разделы курс-отзыва — сохраняем как есть (trim), только для курс-отзыва.
+  if (isCourse) {
+    const trimOrNull = (v: string) => v.trim() || null;
+    patch.pros = trimOrNull(String(formData.get("pros") || ""));
+    patch.cons = trimOrNull(String(formData.get("cons") || ""));
+    patch.wishes = trimOrNull(String(formData.get("wishes") || ""));
+  }
 
   const { error } = await supabase.from("reviews").update(patch).eq("id", id);
   if (error) return { error: error.message };

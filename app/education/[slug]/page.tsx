@@ -9,6 +9,11 @@ import { Button } from "@/components/ui/button";
 import { getCourseBySlug } from "@/lib/courses";
 import { getTeamMemberBySlug } from "@/lib/team";
 import { getCourseDetail, DEMO_COURSE_DETAIL } from "@/lib/course-content";
+import { CourseStats } from "@/components/education/course-stats";
+import { CourseReviews } from "@/components/reviews/course-reviews";
+import { getAllCases } from "@/lib/cases";
+import { getDirectionLabelMap } from "@/lib/directions-db";
+import { CasesCarousel } from "@/components/cases/cases-carousel";
 
 export const revalidate = 60;
 
@@ -43,6 +48,27 @@ export default async function CoursePage({
   // Этап 1: если нет структурированного контента, показываем демо-пример.
   const detail = getCourseDetail(slug) ?? DEMO_COURSE_DETAIL;
 
+  // Кейсы: только ведущего врача и по выбранным в настройках курса направлениям.
+  const showCases = Boolean(doctor && course.directionSlugs.length);
+  let courseCases: Awaited<ReturnType<typeof getAllCases>> = [];
+  let dirLabel: Record<string, string> = {};
+  if (showCases) {
+    const [allCases, labels] = await Promise.all([
+      getAllCases(),
+      getDirectionLabelMap(),
+    ]);
+    const dirSet = new Set(course.directionSlugs);
+    courseCases = allCases
+      .filter(
+        (c) =>
+          c.doctorSlug === course.doctorSlug &&
+          c.directionSlug &&
+          dirSet.has(c.directionSlug)
+      )
+      .slice(0, 9);
+    dirLabel = labels;
+  }
+
   return (
     <SiteShell>
       {/* Hero */}
@@ -73,7 +99,7 @@ export default async function CoursePage({
             </div>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <Button href="/contacts">Оставить заявку</Button>
+              <Button href="/contacts" variant="gold">Оставить заявку</Button>
               <p className="text-sm text-[var(--color-gray-500)]">
                 Консультация от{" "}
                 <span className="font-semibold text-[var(--color-navy)]">
@@ -107,6 +133,16 @@ export default async function CoursePage({
         </div>
       </Section>
 
+      {/* Метрика по зубам (под фото, над «Для кого») */}
+      {course.metricTreated ? (
+        <Section className="pt-0 pb-4 md:pb-6">
+          <CourseStats
+            treated={course.metricTreated}
+            radicalPercent={course.metricRadical}
+          />
+        </Section>
+      ) : null}
+
       {/* Для кого + Результат */}
       <Section className="py-12 md:py-16">
         <div className="grid gap-10 lg:grid-cols-2">
@@ -120,7 +156,7 @@ export default async function CoursePage({
                   key={item}
                   className="flex gap-3 text-base leading-7 text-[var(--color-gray-700)]"
                 >
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-teal)]" />
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)]" />
                   {item}
                 </li>
               ))}
@@ -167,7 +203,7 @@ export default async function CoursePage({
                     key={p}
                     className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
                   >
-                    <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--color-teal)]" />
+                    <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--color-gold)]" />
                     {p}
                   </li>
                 ))}
@@ -183,7 +219,7 @@ export default async function CoursePage({
               </div>
 
               <div className="mt-5">
-                <Button href="/contacts" variant="secondary">
+                <Button href="/contacts" variant="gold-outline">
                   {f.ctaLabel}
                 </Button>
               </div>
@@ -310,9 +346,38 @@ export default async function CoursePage({
         </div>
       </Section>
 
+      {/* Клинические случаи ведущего по направлениям курса */}
+      {showCases && courseCases.length ? (
+        <Section className="py-12 md:py-16">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-gold)]">
+                Клинические случаи
+              </p>
+              <h2 className="mt-3 text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
+                Клинические случаи ведущего
+              </h2>
+            </div>
+            <Button
+              href={`/cases?doctor=${course.doctorSlug}&direction=${course.directionSlugs.join(",")}`}
+              variant="gold-outline"
+            >
+              Смотреть все случаи
+            </Button>
+          </div>
+
+          <div className="mt-10">
+            <CasesCarousel cases={courseCases} dirLabel={dirLabel} />
+          </div>
+        </Section>
+      ) : null}
+
+      {/* Отзывы участников курса */}
+      <CourseReviews courseSlug={course.slug} />
+
       {/* Финальный CTA */}
       <Section className="pb-28 pt-4 md:pb-28">
-        <div className="rounded-[32px] bg-[var(--color-teal)]/10 px-6 py-12 text-center md:px-12">
+        <div className="rounded-[32px] bg-[var(--color-gold)]/10 px-6 py-12 text-center md:px-12">
           <h2 className="text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
             Готовы начать?
           </h2>
@@ -320,7 +385,7 @@ export default async function CoursePage({
             {detail.ctaNote}
           </p>
           <div className="mt-8 flex justify-center">
-            <Button href="/contacts">Оставить заявку</Button>
+            <Button href="/contacts" variant="gold">Оставить заявку</Button>
           </div>
         </div>
       </Section>
@@ -330,7 +395,7 @@ export default async function CoursePage({
         <Link
           href="/contacts"
           style={{ color: "#ffffff" }}
-          className="block w-full rounded-xl bg-[var(--color-navy)] py-3 text-center text-sm font-medium"
+          className="block w-full rounded-xl bg-[var(--color-gold)] py-3 text-center text-sm font-medium"
         >
           Оставить заявку
         </Link>

@@ -12,9 +12,11 @@ const inputCls =
 
 function ReviewModal({
   doctors,
+  courseSlug,
   onClose,
 }: {
   doctors: DoctorOption[];
+  courseSlug?: string;
   onClose: () => void;
 }) {
   const [state, action, pending] = useActionState<State, FormData>(
@@ -64,6 +66,11 @@ function ReviewModal({
                 aria-hidden="true"
               />
 
+              {/* Режим курса: отзыв привязывается к курсу, выбор врача не нужен. */}
+              {courseSlug ? (
+                <input type="hidden" name="courseSlug" value={courseSlug} />
+              ) : null}
+
               <div>
                 <label className={labelCls}>Как вас зовут *</label>
                 <input
@@ -74,17 +81,19 @@ function ReviewModal({
                 />
               </div>
 
-              <div>
-                <label className={labelCls}>Врач</label>
-                <select name="doctorSlug" defaultValue="" className={inputCls}>
-                  <option value="">— не выбирать —</option>
-                  {doctors.map((d) => (
-                    <option key={d.slug} value={d.slug}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {courseSlug ? null : (
+                <div>
+                  <label className={labelCls}>Врач</label>
+                  <select name="doctorSlug" defaultValue="" className={inputCls}>
+                    <option value="">— не выбирать —</option>
+                    {doctors.map((d) => (
+                      <option key={d.slug} value={d.slug}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className={labelCls}>Instagram</label>
@@ -119,9 +128,46 @@ function ReviewModal({
                   minLength={20}
                   maxLength={4000}
                   className={inputCls}
-                  placeholder="Расскажите о вашем опыте лечения…"
+                  placeholder="Расскажите о вашем опыте…"
                 />
               </div>
+
+              {courseSlug ? (
+                <>
+                  <div>
+                    <label className={labelCls}>Плюсы</label>
+                    <textarea
+                      name="pros"
+                      rows={3}
+                      maxLength={2000}
+                      className={inputCls}
+                      placeholder="Что понравилось (по желанию)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Минусы</label>
+                    <textarea
+                      name="cons"
+                      rows={3}
+                      maxLength={2000}
+                      className={inputCls}
+                      placeholder="Что можно улучшить (по желанию)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Что бы я добавил</label>
+                    <textarea
+                      name="wishes"
+                      rows={3}
+                      maxLength={2000}
+                      className={inputCls}
+                      placeholder="Чего не хватило (по желанию)"
+                    />
+                  </div>
+                </>
+              ) : null}
 
               <div>
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[var(--color-gray-300)] px-3 py-2 text-sm text-[var(--color-navy)] hover:bg-[var(--color-gray-50)]">
@@ -162,21 +208,38 @@ function ReviewModal({
   );
 }
 
-export function ReviewForm({ doctors = [] }: { doctors?: DoctorOption[] }) {
+export function ReviewForm({
+  doctors = [],
+  courseSlug,
+  variant = "teal",
+}: {
+  doctors?: DoctorOption[];
+  courseSlug?: string;
+  variant?: "teal" | "gold";
+}) {
   const [open, setOpen] = useState(false);
+
+  const triggerClass =
+    variant === "gold"
+      ? "bg-[var(--color-gold)] hover:opacity-90"
+      : "bg-[var(--color-teal)] hover:opacity-90";
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center justify-center rounded-full bg-[var(--color-teal)] px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+        className={`inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-medium text-white transition ${triggerClass}`}
       >
         + Оставить отзыв
       </button>
 
       {open ? (
-        <ReviewModal doctors={doctors} onClose={() => setOpen(false)} />
+        <ReviewModal
+          doctors={doctors}
+          courseSlug={courseSlug}
+          onClose={() => setOpen(false)}
+        />
       ) : null}
     </>
   );

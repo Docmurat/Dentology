@@ -38,6 +38,11 @@ type Row = {
   review_date: string | null;
   status: "pending" | "approved" | "rejected";
   created_at: string;
+  course_slug: string | null;
+  course_title: string | null;
+  pros: string | null;
+  cons: string | null;
+  wishes: string | null;
 };
 
 function fmtDate(value: string | null) {
@@ -60,6 +65,46 @@ function EditLink({ id }: { id: string }) {
     >
       Изменить
     </Link>
+  );
+}
+
+// Раздел курс-отзыва — серый подзаголовок + список строк с цветным маркером.
+function toLines(text: string): string[] {
+  return text
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function Section({
+  title,
+  text,
+  dot,
+}: {
+  title: string;
+  text: string;
+  dot: string;
+}) {
+  const items = toLines(text);
+  if (!items.length) return null;
+
+  return (
+    <div className="mt-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-gray-500)]">
+        {title}
+      </p>
+      <ul className="mt-1.5 space-y-1">
+        {items.map((item, i) => (
+          <li
+            key={i}
+            className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
+          >
+            <span className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -104,8 +149,30 @@ function Card({
         {row.text}
       </p>
 
+      {/* Разделы курс-отзыва — по мере заполнения */}
+      {row.pros ? (
+        <Section title="Плюсы" text={row.pros} dot="bg-green-500" />
+      ) : null}
+      {row.cons ? (
+        <Section title="Минусы" text={row.cons} dot="bg-red-500" />
+      ) : null}
+      {row.wishes ? (
+        <Section
+          title="Что бы я добавил"
+          text={row.wishes}
+          dot="bg-[var(--color-gold)]"
+        />
+      ) : null}
+
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-[var(--color-gray-500)]">
-        {dirs.length ? (
+        {row.course_slug ? (
+          <span>
+            Курс:{" "}
+            <span className="text-[var(--color-navy)]">
+              {row.course_title || row.course_slug}
+            </span>
+          </span>
+        ) : dirs.length ? (
           <span>Направления: {dirs.map(labelOf).join(", ")}</span>
         ) : null}
         {row.instagram ? (
@@ -132,6 +199,21 @@ function Card({
 }
 
 function ApproveForm({ row }: { row: Row }) {
+  // Курс-отзыв публикуется без направлений.
+  if (row.course_slug) {
+    return (
+      <form action={approveReview} className="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="id" value={row.id} />
+        <span className="rounded-full bg-[var(--color-gold)]/15 px-2 py-0.5 text-xs font-medium text-[var(--color-navy)]">
+          Курс: {row.course_title || row.course_slug}
+        </span>
+        <button className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">
+          Опубликовать
+        </button>
+      </form>
+    );
+  }
+
   const checked = new Set(row.direction_slugs ?? []);
   return (
     <form action={approveReview} className="flex flex-wrap items-center gap-2">
@@ -166,7 +248,7 @@ export default async function AdminReviewsPage() {
   const { data } = await supabase
     .from("reviews")
     .select(
-      "id, author, text, image, doctor_slug, direction_slugs, instagram, review_date, sort_order, status, created_at"
+      "id, author, text, image, doctor_slug, direction_slugs, course_slug, course_title, pros, cons, wishes, instagram, review_date, sort_order, status, created_at"
     )
     .order("created_at", { ascending: false });
 
@@ -191,7 +273,7 @@ export default async function AdminReviewsPage() {
   return (
     <div className="space-y-10">
       <h1 className="text-2xl font-semibold text-[var(--color-navy)]">Отзывы</h1>
-<PageHeadingEditor pageKey="reviews" />
+      <PageHeadingEditor pageKey="reviews" />
       <section>
         <div className="mb-3 flex items-center gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-amber-700">

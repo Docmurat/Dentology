@@ -83,7 +83,7 @@ export default async function EducationPage() {
                     <div className="mt-auto pt-6">
                       <Button
                         href={`/education/${course.slug}`}
-                        variant="secondary"
+                        variant="gold-outline"
                       >
                         Подробнее
                       </Button>

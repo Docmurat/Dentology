@@ -20,9 +20,9 @@ export const revalidate = 60;
 export default async function CasesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ doctor?: string }>;
+  searchParams: Promise<{ doctor?: string; direction?: string }>;
 }) {
-  const { doctor: doctorSlug } = await searchParams;
+  const { doctor: doctorSlug, direction: directionParam } = await searchParams;
 
   const [allCases, doctor, allDirections, labelMap] = await Promise.all([
     getAllCases(),
@@ -33,17 +33,20 @@ export default async function CasesPage({
 
   const heading = await getPageHeading("cases");
 
+  // Направления из URL (через запятую) — для комбинированного фильтра «врач + направление».
+  const directionSet = directionParam
+    ? new Set(directionParam.split(",").map((s) => s.trim()).filter(Boolean))
+    : null;
+
   // Какие направления реально встречаются в кейсах.
   const usedSlugs = new Set(
     allCases.map((c) => c.directionSlug).filter(Boolean)
   );
 
-  // Активные направления (из БД) — только те, по которым есть кейсы.
   const activeDirections = allDirections
     .filter((d) => usedSlugs.has(d.slug))
     .map((d) => ({ slug: d.slug, label: d.title }));
 
-  // Архивные направления, по которым есть кейсы, — в конец фильтра.
   const activeSlugs = new Set(allDirections.map((d) => d.slug));
   const archivedDirections = Array.from(usedSlugs)
     .filter((slug) => !activeSlugs.has(slug))
@@ -51,17 +54,36 @@ export default async function CasesPage({
 
   const directions = [...activeDirections, ...archivedDirections];
 
-  const cases = doctor
-    ? allCases.filter((item) => item.doctorSlug === doctor.slug)
-    : allCases;
+  // Комбинированный фильтр: врач И (если задано) направления.
+  const cases = allCases.filter((item) => {
+    if (doctor && item.doctorSlug !== doctor.slug) return false;
+    if (
+      directionSet &&
+      (!item.directionSlug || !directionSet.has(item.directionSlug))
+    )
+      return false;
+    return true;
+  });
 
   const genitive = doctor ? doctor.nameGenitive || doctor.name : null;
+
+  // Заголовок направления (если один) — для контекста.
+  const dirTitle =
+    directionSet && directionSet.size === 1
+      ? labelMap[Array.from(directionSet)[0]] ?? null
+      : null;
+
+  const title = doctor
+    ? dirTitle
+      ? `Кейсы ${genitive}: ${dirTitle}`
+      : `Все кейсы ${genitive}`
+    : heading.title;
 
   return (
     <SiteShell>
       <PageHero
         eyebrow={heading.eyebrow}
-        title={doctor ? `Все кейсы ${genitive}` : heading.title}
+        title={title}
         description={
           doctor ? "Клинические случаи этого врача." : heading.description
         }
@@ -71,9 +93,8 @@ export default async function CasesPage({
         <CasesPageContent
           cases={cases}
           directions={directions}
-          doctorFilter={
-            doctor ? { slug: doctor.slug, name: doctor.name } : null
-          }
+          doctorFilter={doctor ? { slug: doctor.slug, name: doctor.name } : null}
+          hideFilters={Boolean(directionSet)}
         />
 
         <div className="mt-8 border-t border-[var(--color-gray-200)] pt-4">

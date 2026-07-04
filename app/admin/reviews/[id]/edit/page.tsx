@@ -17,7 +17,7 @@ export default async function EditReviewPage({
   const { data: review } = await supabase
     .from("reviews")
     .select(
-      "id, author, text, doctor_slug, direction_slugs, instagram, review_date, sort_order, image"
+      "id, author, text, doctor_slug, direction_slugs, instagram, review_date, sort_order, image, course_slug, course_title, pros, cons, wishes"
     )
     .eq("id", id)
     .maybeSingle();
@@ -39,8 +39,8 @@ export default async function EditReviewPage({
         Изменить отзыв
       </h1>
       <p className="mt-2 mb-6 text-sm text-[var(--color-gray-600)]">
-        Доступно и для опубликованных отзывов. Здесь же — врач, направления
-        (до 3), ссылка Instagram, фото и порядковый номер.
+        Доступно и для опубликованных отзывов. Для отзывов о курсе —
+        плюсы/минусы/пожелания (без направлений).
       </p>
 
       <ReviewEditForm

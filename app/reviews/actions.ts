@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { getCourseBySlug } from "@/lib/courses";
 
 type Result = { error?: string; ok?: boolean };
 
@@ -24,7 +25,28 @@ export async function submitReview(
   const author = String(formData.get("author") || "").trim();
   const text = String(formData.get("text") || "").trim();
   const doctorSlug = String(formData.get("doctorSlug") || "") || null;
+  const courseSlug = String(formData.get("courseSlug") || "") || null;
   const instagram = normalizeInstagram(String(formData.get("instagram") || ""));
+
+  // Разделы курс-отзыва (по пункту в строке). Только для курс-отзыва.
+  const trimOrNull = (v: string) => v.trim() || null;
+  const pros = courseSlug ? trimOrNull(String(formData.get("pros") || "")) : null;
+  const cons = courseSlug ? trimOrNull(String(formData.get("cons") || "")) : null;
+  const wishes = courseSlug
+    ? trimOrNull(String(formData.get("wishes") || ""))
+    : null;
+
+  // Курс-отзыв: фиксируем слепок — ведущего врача и название курса.
+  // Так отзыв остаётся полноценным даже после удаления курса.
+  let courseTitle: string | null = null;
+  let courseDoctorSlug: string | null = null;
+  if (courseSlug) {
+    const course = await getCourseBySlug(courseSlug);
+    if (course) {
+      courseTitle = course.title;
+      courseDoctorSlug = course.doctorSlug;
+    }
+  }
   const phone = String(formData.get("phone") || "").trim() || null;
 
   if (!author) return { error: "Укажите фамилию и имя" };
@@ -66,7 +88,12 @@ export async function submitReview(
     id,
     author,
     text,
-    doctor_slug: doctorSlug,
+    doctor_slug: courseSlug ? courseDoctorSlug : doctorSlug,
+    course_slug: courseSlug,
+    course_title: courseTitle,
+    pros,
+    cons,
+    wishes,
     instagram,
     image,
     status: "pending",
