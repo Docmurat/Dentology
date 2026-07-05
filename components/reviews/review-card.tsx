@@ -79,6 +79,13 @@ function ReviewSection({
   );
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? "";
+  const b = parts[1]?.[0] ?? "";
+  return (a + b).toUpperCase() || "—";
+}
+
 export function ReviewCard({ review, compact = false, date }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -106,8 +113,8 @@ export function ReviewCard({ review, compact = false, date }: ReviewCardProps) {
             />
           </div>
         ) : (
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-gray-100)] text-sm text-[var(--color-gray-500)]">
-            —
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-gray-100)] text-sm font-semibold text-[var(--color-navy-secondary)]">
+            {getInitials(review.author)}
           </div>
         )}
 

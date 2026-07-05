@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { getCourseBySlug } from "@/lib/courses";
 import { getTeamMemberBySlug } from "@/lib/team";
 import { getCourseDetail, DEMO_COURSE_DETAIL } from "@/lib/course-content";
-import { CourseStats } from "@/components/education/course-stats";
+import { CourseStats, CourseEffectiveness } from "@/components/education/course-stats";
 import { CourseReviews } from "@/components/reviews/course-reviews";
 import { getAllCases } from "@/lib/cases";
 import { getDirectionLabelMap } from "@/lib/directions-db";
@@ -38,6 +38,7 @@ export default async function CoursePage({
 }) {
   const { slug } = await params;
   const course = await getCourseBySlug(slug);
+  console.log("RENDER metrics >>>", slug, JSON.stringify(course?.metrics));
   if (!course || !course.published) notFound();
 
   const doctor = course.doctorSlug
@@ -73,8 +74,8 @@ export default async function CoursePage({
     <SiteShell>
       {/* Hero */}
       <Section className="pt-10 pb-12 md:pt-14 md:pb-16">
-        <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr]">
-          <div>
+        <div className="grid items-center gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+          <div className="order-1 lg:order-2">
             <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-gold)]">
               Dentology Обучение
             </p>
@@ -109,15 +110,15 @@ export default async function CoursePage({
             </div>
           </div>
 
-          <div className="mx-auto w-full max-w-[360px] lg:ml-auto">
-            <div className="overflow-hidden rounded-[24px] bg-[var(--color-gray-100)]">
-              <div className="relative aspect-[3/4]">
+          <div className="order-2 mx-auto w-full max-w-[380px] lg:order-1 lg:mx-0">
+            <div className="mx-auto w-full max-w-[300px] overflow-hidden rounded-full bg-[var(--color-gray-100)]">
+              <div className="relative aspect-square">
                 {photo ? (
                   <Image
                     src={photo}
                     alt={doctor?.name || course.title}
                     fill
-                    sizes="(max-width: 1024px) 100vw, 360px"
+                    sizes="(max-width: 1024px) 300px, 300px"
                     className="object-cover"
                     priority
                   />
@@ -125,23 +126,24 @@ export default async function CoursePage({
               </div>
             </div>
             {doctor ? (
-              <p className="mt-3 text-center text-sm font-medium text-[var(--color-navy)]">
-                {doctor.name}
+              <p className="mt-5 text-center text-base font-semibold text-[var(--color-navy)]">
+                Спикер — {doctor.name}
+              </p>
+            ) : null}
+            {detail.instructorBio ? (
+              <p className="mt-2 text-center text-sm leading-7 text-[var(--color-gray-700)]">
+                {detail.instructorBio}
               </p>
             ) : null}
           </div>
         </div>
       </Section>
 
-      {/* Метрика по зубам (под фото, над «Для кого») */}
-      {course.metricTreated ? (
-        <Section className="pt-0 pb-4 md:pb-6">
-          <CourseStats
-            treated={course.metricTreated}
-            radicalPercent={course.metricRadical}
-          />
-        </Section>
-      ) : null}
+     {course.metrics.length ? (
+  <Section className="pt-0 pb-4 md:pb-6">
+    <CourseStats metrics={course.metrics} />
+  </Section>
+) : null}
 
       {/* Для кого + Результат */}
       <Section className="py-12 md:py-16">
@@ -250,6 +252,16 @@ export default async function CoursePage({
         </div>
       </Section>
 
+      {/* Эффективность (перед программой) */}
+      {course.effectivenessPercent ? (
+        <Section className="py-12 md:py-16">
+          <CourseEffectiveness
+            percent={course.effectivenessPercent}
+            text={course.effectivenessText}
+          />
+        </Section>
+      ) : null}
+
       {/* Программа */}
       <Section className="py-12 md:py-16">
         <h2 className="text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
@@ -311,7 +323,7 @@ export default async function CoursePage({
             </div>
             <div>
               <p className="text-sm uppercase tracking-[0.18em] text-[var(--color-gray-500)]">
-                Ведущий
+                Спикер
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-[var(--color-navy)]">
                 {doctor.name}
@@ -355,7 +367,7 @@ export default async function CoursePage({
                 Клинические случаи
               </p>
               <h2 className="mt-3 text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
-                Клинические случаи ведущего
+                Клинические случаи спикера
               </h2>
             </div>
             <Button

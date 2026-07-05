@@ -28,7 +28,7 @@ export default async function NewCoursePage() {
         Новый курс
       </h1>
       <p className="mb-8 mt-2 text-sm text-[var(--color-gray-600)]">
-        Заполните данные курса. Ведущего врача выберите из списка команды.
+        Заполните данные курса. Спикера выберите из списка команды.
       </p>
 
       <CourseForm

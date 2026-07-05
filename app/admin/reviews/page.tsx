@@ -21,12 +21,6 @@ const DIRECTIONS = [
 const labelOf = (slug: string) =>
   DIRECTIONS.find((d) => d.slug === slug)?.label ?? slug;
 
-function instagramHandle(url: string | null): string | null {
-  if (!url) return null;
-  const m = url.match(/instagram\.com\/([^/?#]+)/i);
-  return m ? m[1] : null;
-}
-
 type Row = {
   id: string;
   author: string;
@@ -51,10 +45,15 @@ function fmtDate(value: string | null) {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("ru-RU");
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? "";
+  const b = parts[1]?.[0] ?? "";
+  return (a + b).toUpperCase() || "—";
+}
+
 function avatarSrc(row: Row): string | null {
-  if (row.image) return row.image;
-  const h = instagramHandle(row.instagram);
-  return h ? `https://unavatar.io/instagram/${h}` : null;
+  return row.image || null;
 }
 
 function EditLink({ id }: { id: string }) {
@@ -132,8 +131,8 @@ function Card({
             className="h-12 w-12 shrink-0 rounded-full object-cover"
           />
         ) : (
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-gray-100)] text-xs text-[var(--color-gray-400)]">
-            —
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-gray-100)] text-xs font-semibold text-[var(--color-navy-secondary)]">
+            {getInitials(row.author)}
           </div>
         )}
         <div className="min-w-0">

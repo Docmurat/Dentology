@@ -1,4 +1,5 @@
 import type { Course } from "@/lib/courses";
+import { CourseMetricsEditor } from "@/components/admin/course-metrics-editor";
 
 const labelCls = "text-sm font-medium text-[var(--color-navy)]";
 const inputCls =
@@ -49,7 +50,7 @@ export function CourseForm({
       </div>
 
       <div>
-        <label className={labelCls}>Ведущий врач</label>
+        <label className={labelCls}>Спикер</label>
         <select
           name="doctorSlug"
           defaultValue={initial?.doctorSlug ?? ""}
@@ -93,31 +94,43 @@ export function CourseForm({
 
       <div className="rounded-xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] p-4">
         <p className="text-sm font-semibold text-[var(--color-navy)]">
-          Метрика по зубам (на странице курса)
+          Метрика на странице курса
+        </p>
+        <p className="mt-1 mb-3 text-xs text-[var(--color-gray-500)]">
+          Добавьте показатели: цифра + название. Порядок — как добавите. Пустые
+          строки не показываются.
+        </p>
+        <CourseMetricsEditor initial={initial?.metrics} />
+      </div>
+
+      <div className="rounded-xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] p-4">
+        <p className="text-sm font-semibold text-[var(--color-navy)]">
+          Блок «Эффективность» (крупная цифра перед программой)
         </p>
         <p className="mt-1 text-xs text-[var(--color-gray-500)]">
-          Оставьте «Пролечено» пустым, чтобы скрыть блок. «Сохранено, %»
-          считается автоматически как 100 − радикальный подход.
+          Оставьте процент 0, чтобы скрыть блок.
         </p>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        <div className="mt-3 grid gap-4 sm:grid-cols-[140px_1fr]">
           <div>
-            <label className={labelCls}>Пролечено зубов</label>
+            <label className={labelCls}>Эффективность, %</label>
             <input
-              name="metricTreated"
-              defaultValue={initial?.metricTreated || "5 000+"}
+              type="number"
+              name="effectivenessPercent"
+              min={0}
+              max={100}
+              defaultValue={initial?.effectivenessPercent || ""}
               className={inputCls}
-              placeholder="5 000+"
+              placeholder="98"
             />
           </div>
           <div>
-            <label className={labelCls}>Радикальный подход, % (удаление/резекция)</label>
-            <input
-              type="number"
-              name="metricRadical"
-              min={0}
-              max={100}
-              defaultValue={initial?.metricRadical || 2}
+            <label className={labelCls}>Текст рядом с цифрой</label>
+            <textarea
+              name="effectivenessText"
+              rows={2}
+              defaultValue={initial?.effectivenessText || ""}
               className={inputCls}
+              placeholder="напр. эффективность лечения по доказательному протоколу"
             />
           </div>
         </div>

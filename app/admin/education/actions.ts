@@ -29,8 +29,9 @@ function readFields(formData: FormData) {
     description: String(formData.get("description") || "").trim(),
     doctor_slug: String(formData.get("doctorSlug") || "") || null,
     direction_slugs: formData.getAll("directionSlug").map(String).filter(Boolean),
-    metric_treated: String(formData.get("metricTreated") || "").trim() || null,
-    metric_radical: Number(formData.get("metricRadical") || 0) || 0,
+    metrics: parseMetricsInput(String(formData.get("metrics") || "[]")),
+    effectiveness_percent: Number(formData.get("effectivenessPercent") || 0) || 0,
+    effectiveness_text: String(formData.get("effectivenessText") || "").trim() || null,
     published: formData.get("published") === "on",
     sort_order: Number(formData.get("sortOrder") || 0) || 0,
   };
@@ -40,6 +41,23 @@ function revalidateCourses(slug?: string) {
   revalidatePath("/education");
   revalidatePath("/admin/education");
   if (slug) revalidatePath(`/education/${slug}`);
+}
+
+function parseMetricsInput(
+  raw: string
+): { value: string; label: string }[] {
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((m) => ({
+        value: String(m?.value ?? "").trim(),
+        label: String(m?.label ?? "").trim(),
+      }))
+      .filter((m) => m.value || m.label);
+  } catch {
+    return [];
+  }
 }
 
 export async function createCourse(formData: FormData) {
@@ -52,7 +70,10 @@ export async function createCourse(formData: FormData) {
     slugify(fields.title) ||
     `course-${Date.now()}`;
 
-  await supabase.from("courses").insert({ slug, ...fields });
+  const { error } = await supabase
+    .from("courses")
+    .insert({ slug, ...fields });
+  if (error) console.error("createCourse error:", error.message);
   revalidateCourses(slug);
 }
 
@@ -64,7 +85,11 @@ export async function updateCourse(formData: FormData) {
   const fields = readFields(formData);
   if (!fields.title) return;
 
-  await supabase.from("courses").update(fields).eq("slug", slug);
+  const { error } = await supabase
+    .from("courses")
+    .update(fields)
+    .eq("slug", slug);
+  if (error) console.error("updateCourse error:", error.message);
   revalidateCourses(slug);
 }
 

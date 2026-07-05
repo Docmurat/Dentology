@@ -6,12 +6,6 @@ export type ApprovedReview = ReviewItem & { date: string };
 const SELECT =
   "id, author, text, image, instagram, direction_slug, direction_slugs, course_slug, course_title, pros, cons, wishes, sort_order, review_date, created_at";
 
-function instagramHandle(url: string | null): string | null {
-  if (!url) return null;
-  const m = url.match(/instagram\.com\/([^/?#]+)/i);
-  return m ? m[1] : null;
-}
-
 function formatDate(value: string | null): string {
   if (!value) return "";
   const d = new Date(value);
@@ -21,10 +15,8 @@ function formatDate(value: string | null): string {
 
 function mapRow(r: Record<string, unknown>): ApprovedReview {
   const instagram = (r.instagram as string) ?? null;
-  const stored = (r.image as string) ?? null;
-  const handle = instagramHandle(instagram);
-  const image =
-    stored ?? (handle ? `https://unavatar.io/instagram/${handle}` : null);
+  // Только загруженное фото; внешние аватарки (unavatar) не используем.
+  const image = (r.image as string) ?? null;
 
   const arr = (r.direction_slugs as string[] | null) ?? [];
   const directionSlugs =
@@ -123,4 +115,4 @@ export async function getCourseReviewsByDoctor(
 
   if (error) throw error;
   return (data ?? []).map((r) => mapRow(r as Record<string, unknown>));
-}
+} 
