@@ -15,7 +15,7 @@ export default async function NewCasePage() {
     slug: d.slug,
     label: d.title,
   }));
-console.log("DIRECTIONS DEBUG:", directions);
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-[var(--color-navy)]">
@@ -27,9 +27,6 @@ console.log("DIRECTIONS DEBUG:", directions);
       </p>
 
       <div className="mt-8">
-        <pre style={{ fontSize: 12, background: "#f4f4f4", padding: 8 }}>
-  {JSON.stringify(directions, null, 2)}
-</pre>
         <CaseForm doctors={doctors} directions={directions} />
       </div>
     </div>

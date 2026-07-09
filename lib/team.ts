@@ -31,10 +31,11 @@ type TeamRow = {
   diploma_image: string | null;
   name_genitive: string | null;
   show_on_homepage: boolean | null;
+  is_speaker: boolean | null;
 };
 
 const COLUMNS =
-  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order,stats,approach,focus_points,visit_points,quote,lead_image,lead_quote,home_image,home_quote,doctor_quote,courses,diploma_image,name_genitive,show_on_homepage";
+  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order,stats,approach,focus_points,visit_points,quote,lead_image,lead_quote,home_image,home_quote,doctor_quote,courses,diploma_image,name_genitive,show_on_homepage,is_speaker";
 
 // Сколько ведущих максимум показываем на главной.
 const HOMEPAGE_LIMIT = 5;
@@ -73,6 +74,7 @@ function mapRow(row: TeamRow): TeamMember {
     nameGenitive: row.name_genitive ?? undefined,
     featured,
     showOnHomepage,
+    isSpeaker: row.is_speaker ?? false,
   };
 }
 

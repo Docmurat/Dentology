@@ -18,13 +18,24 @@ export default async function DoctorLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, full_name")
+    .select("role, full_name, doctor_slug")
     .eq("id", user.id)
     .maybeSingle();
 
   if (!profile) redirect("/admin/login");
   if (!["doctor", "admin"].includes(profile.role)) {
     redirect(roleHome(profile.role));
+  }
+
+  // Раздел «Мои курсы» доступен сотрудникам и спикерам (карточка is_speaker).
+  let canCourses = ["admin", "editor"].includes(profile.role);
+  if (!canCourses && profile.doctor_slug) {
+    const { data: card } = await supabase
+      .from("team_members")
+      .select("is_speaker")
+      .eq("slug", profile.doctor_slug)
+      .maybeSingle();
+    canCourses = Boolean(card?.is_speaker);
   }
 
   return (
@@ -42,12 +53,14 @@ export default async function DoctorLayout({
               >
                 Мои кейсы
               </Link>
-              <Link
-                href="/doctor/cases/new"
-                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
-              >
-                Добавить кейс
-              </Link>
+              {canCourses ? (
+                <Link
+                  href="/doctor/courses"
+                  className="font-medium text-[var(--color-gold)] hover:opacity-80"
+                >
+                  Мои курсы
+                </Link>
+              ) : null}
             </nav>
           </div>
 

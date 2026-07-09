@@ -414,6 +414,15 @@ export function TeamForm({
         <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
           <input
             type="checkbox"
+            name="isSpeaker"
+            defaultChecked={initial?.isSpeaker ?? false}
+          />
+          Спикер (может добавлять курсы в своём кабинете)
+        </label>
+
+        <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
+          <input
+            type="checkbox"
             name="isChief"
             checked={isChief}
             onChange={(e) => setIsChief(e.target.checked)}

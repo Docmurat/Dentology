@@ -45,7 +45,7 @@ export default async function EducationPage() {
 
               return (
                 <Card key={course.slug} className="flex flex-col gap-5 sm:flex-row">
-                  <div className="w-full shrink-0 overflow-hidden rounded-xl bg-[var(--color-gray-100)] sm:w-44">
+                  <div className="w-full shrink-0 self-start overflow-hidden rounded-xl bg-[var(--color-gray-100)] sm:w-44">
                     <div className="relative aspect-[3/4]">
                       {photo ? (
                         <Image
@@ -72,6 +72,19 @@ export default async function EducationPage() {
                       <p className="mt-1 text-sm font-medium text-[var(--color-navy-secondary)]">
                         {doctor.name}
                       </p>
+                    ) : null}
+
+                    {course.learningTypes?.length ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {course.learningTypes.map((t) => (
+                          <span
+                            key={t}
+                            className="rounded-full border border-[var(--color-gray-200)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-navy)]"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
                     ) : null}
 
                     {course.description ? (

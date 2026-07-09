@@ -77,6 +77,7 @@ function readFields(formData: FormData) {
     diploma_image: String(formData.get("diplomaImage") || "") || null,
     name_genitive: String(formData.get("nameGenitive") || "").trim() || null,
     show_on_homepage: formData.get("showOnHomepage") === "on",
+    is_speaker: formData.get("isSpeaker") === "on",
   };
 }
 

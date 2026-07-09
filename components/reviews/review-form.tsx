@@ -24,6 +24,7 @@ function ReviewModal({
     {}
   );
   const [photoName, setPhotoName] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
 
   // После успешной отправки окно закрывается само через 3 секунды.
   useEffect(() => {
@@ -189,13 +190,35 @@ function ReviewModal({
                 ) : null}
               </div>
 
+              <label className="flex items-start gap-2 text-xs leading-5 text-[var(--color-gray-600)]">
+                <input
+                  type="checkbox"
+                  name="consent"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  Я даю согласие на обработку персональных данных и подтверждаю
+                  ознакомление с{" "}
+                  <a
+                    href="/legal/privacy"
+                    target="_blank"
+                    className="underline hover:text-[var(--color-navy)]"
+                  >
+                    Политикой обработки персональных данных
+                  </a>
+                  .
+                </span>
+              </label>
+
               {state.error ? (
                 <p className="text-sm text-red-600">{state.error}</p>
               ) : null}
 
               <button
                 type="submit"
-                disabled={pending}
+                disabled={pending || !consent}
                 className="w-full rounded-lg bg-[var(--color-navy)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
               >
                 {pending ? "Отправляем…" : "Отправить отзыв"}

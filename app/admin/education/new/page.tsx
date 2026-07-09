@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { CourseForm } from "@/components/admin/course-form";
 import { createCourse } from "../actions";
 import { getTeamMembers } from "@/lib/team";
@@ -16,12 +15,6 @@ export default async function NewCoursePage() {
     label: d.title,
   }));
 
-  async function action(formData: FormData) {
-    "use server";
-    await createCourse(formData);
-    redirect("/admin/education");
-  }
-
   return (
     <div>
       <h1 className="text-2xl font-semibold text-[var(--color-navy)]">
@@ -34,7 +27,8 @@ export default async function NewCoursePage() {
       <CourseForm
         doctors={doctors}
         directions={directions}
-        action={action}
+        action={createCourse}
+        redirectTo="/admin/education"
         submitLabel="Создать курс"
       />
     </div>

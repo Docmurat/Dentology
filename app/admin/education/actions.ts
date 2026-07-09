@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { slugify } from "@/lib/slugify";
+import { readCourseFields } from "@/lib/course-fields";
 
 async function requireStaff() {
   const supabase = await createClient();
@@ -23,46 +24,15 @@ async function requireStaff() {
   return supabase;
 }
 
-function readFields(formData: FormData) {
-  return {
-    title: String(formData.get("title") || "").trim(),
-    description: String(formData.get("description") || "").trim(),
-    doctor_slug: String(formData.get("doctorSlug") || "") || null,
-    direction_slugs: formData.getAll("directionSlug").map(String).filter(Boolean),
-    metrics: parseMetricsInput(String(formData.get("metrics") || "[]")),
-    effectiveness_percent: Number(formData.get("effectivenessPercent") || 0) || 0,
-    effectiveness_text: String(formData.get("effectivenessText") || "").trim() || null,
-    published: formData.get("published") === "on",
-    sort_order: Number(formData.get("sortOrder") || 0) || 0,
-  };
-}
-
 function revalidateCourses(slug?: string) {
   revalidatePath("/education");
   revalidatePath("/admin/education");
   if (slug) revalidatePath(`/education/${slug}`);
 }
 
-function parseMetricsInput(
-  raw: string
-): { value: string; label: string }[] {
-  try {
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr
-      .map((m) => ({
-        value: String(m?.value ?? "").trim(),
-        label: String(m?.label ?? "").trim(),
-      }))
-      .filter((m) => m.value || m.label);
-  } catch {
-    return [];
-  }
-}
-
 export async function createCourse(formData: FormData) {
   const supabase = await requireStaff();
-  const fields = readFields(formData);
+  const fields = readCourseFields(formData);
   if (!fields.title) return;
 
   const slug =
@@ -70,9 +40,7 @@ export async function createCourse(formData: FormData) {
     slugify(fields.title) ||
     `course-${Date.now()}`;
 
-  const { error } = await supabase
-    .from("courses")
-    .insert({ slug, ...fields });
+  const { error } = await supabase.from("courses").insert({ slug, ...fields });
   if (error) console.error("createCourse error:", error.message);
   revalidateCourses(slug);
 }
@@ -82,7 +50,7 @@ export async function updateCourse(formData: FormData) {
   const slug = String(formData.get("originalSlug") || "");
   if (!slug) return;
 
-  const fields = readFields(formData);
+  const fields = readCourseFields(formData);
   if (!fields.title) return;
 
   const { error } = await supabase
@@ -91,6 +59,23 @@ export async function updateCourse(formData: FormData) {
     .eq("slug", slug);
   if (error) console.error("updateCourse error:", error.message);
   revalidateCourses(slug);
+}
+
+export async function setCourseArchived(slug: string, archived: boolean) {
+  const supabase = await requireStaff();
+  if (!slug) return;
+  const { error } = await supabase
+    .from("courses")
+    .update({ archived })
+    .eq("slug", slug);
+  if (error) console.error("setCourseArchived error:", error.message);
+  revalidateCourses(slug);
+}
+
+export async function toggleArchiveAction(formData: FormData) {
+  const slug = String(formData.get("slug") || "");
+  const archived = String(formData.get("archived") || "") === "true";
+  await setCourseArchived(slug, archived);
 }
 
 export async function deleteCourse(formData: FormData) {

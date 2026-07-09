@@ -7,6 +7,7 @@ export type CourseFormat = {
   points: string[];
   duration: string;
   price: string;
+  priceNote?: string;
   ctaLabel: string;
 };
 
@@ -67,7 +68,8 @@ const ENDO_COURSE: CourseDetail = {
         "Этап 3: приём вашего пациента под микроскопом, наставник — «вторые руки».",
       ],
       duration: "Индивидуально · очно",
-      price: "50% от прайса для пациента",
+      price: "150 000 ₽",
+      priceNote: "Приём пациентов — 50% от стоимости прайса.",
       ctaLabel: "Оставить заявку",
     },
     {

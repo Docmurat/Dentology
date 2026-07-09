@@ -48,6 +48,7 @@ export type TeamMember = {
   /** Совместимость со старыми компонентами: showcase на главной = chief || lead. */
   featured?: boolean;
   showOnHomepage?: boolean;
+  isSpeaker?: boolean;
 };
 
 export const teamData: TeamMember[] = [

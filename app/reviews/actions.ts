@@ -22,6 +22,13 @@ export async function submitReview(
     return { ok: true };
   }
 
+  // Согласие на обработку персональных данных (152-ФЗ) — обязательно.
+  if (formData.get("consent") !== "on") {
+    return {
+      error: "Необходимо согласие на обработку персональных данных",
+    };
+  }
+
   const author = String(formData.get("author") || "").trim();
   const text = String(formData.get("text") || "").trim();
   const doctorSlug = String(formData.get("doctorSlug") || "") || null;

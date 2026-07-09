@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { deleteTeamMember } from "./actions";
-import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +9,7 @@ export default async function AdminTeamPage() {
   const { data: members } = await supabase
     .from("team_members")
     .select(
-      "slug, name, position, image, category, is_chief, is_lead, lead_direction_slug, sort_order"
+      "slug, name, position, image, category, is_chief, is_lead, lead_direction_slug, sort_order, is_speaker"
     )
     .order("is_chief", { ascending: false })
     .order("is_lead", { ascending: false })
@@ -30,8 +29,6 @@ export default async function AdminTeamPage() {
           Добавить сотрудника
         </Link>
       </div>
-
-<PageHeadingEditor pageKey="team" />
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white">
         {members && members.length ? (
@@ -67,6 +64,11 @@ export default async function AdminTeamPage() {
                       ) : item.is_lead ? (
                         <span className="ml-2 rounded-full bg-[var(--color-gray-100)] px-2 py-0.5 text-xs text-[var(--color-navy)]">
                           ведущий · {item.lead_direction_slug}
+                        </span>
+                      ) : null}
+                      {item.is_speaker ? (
+                        <span className="ml-2 rounded-full bg-[var(--color-gold)] px-2 py-0.5 text-xs text-white">
+                          спикер
                         </span>
                       ) : null}
                     </p>

@@ -6,6 +6,7 @@ type ContactPayload = {
   phone: string;
   contactMethod?: string;
   message?: string;
+  consent?: boolean;
 };
 
 function isValidPayload(data: ContactPayload) {
@@ -14,14 +15,22 @@ function isValidPayload(data: ContactPayload) {
 
 export async function POST(request: Request) {
   try {
-    console.log("CONTACT_ROUTE_HIT");
-
     const body = (await request.json()) as ContactPayload;
-    console.log("CONTACT_BODY", body);
 
     if (!isValidPayload(body)) {
       return NextResponse.json(
         { ok: false, message: "Заполните имя и телефон." },
+        { status: 400 }
+      );
+    }
+
+    // Согласие на обработку персональных данных (152-ФЗ) — обязательно.
+    if (body.consent !== true) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Необходимо согласие на обработку персональных данных.",
+        },
         { status: 400 }
       );
     }
@@ -34,15 +43,6 @@ export async function POST(request: Request) {
       CONTACT_TO_EMAIL,
       CONTACT_FROM_EMAIL,
     } = process.env;
-
-    console.log("ENV_CHECK", {
-      SMTP_HOST: !!SMTP_HOST,
-      SMTP_PORT: !!SMTP_PORT,
-      SMTP_USER: !!SMTP_USER,
-      SMTP_PASS: !!SMTP_PASS,
-      CONTACT_TO_EMAIL: !!CONTACT_TO_EMAIL,
-      CONTACT_FROM_EMAIL: !!CONTACT_FROM_EMAIL,
-    });
 
     if (
       !SMTP_HOST ||
@@ -74,15 +74,13 @@ export async function POST(request: Request) {
       socketTimeout: 5000,
     });
 
-    console.log("SMTP_CONFIG_READY");
-    console.log("SENDMAIL_START");
-
     const subject = "Новая заявка с сайта Dentology";
     const text = [
       `Имя: ${body.name}`,
       `Телефон: ${body.phone}`,
       `Способ связи: ${body.contactMethod || "Не указан"}`,
       `Сообщение: ${body.message || "Не указано"}`,
+      `Согласие на обработку ПДн: да`,
     ].join("\n");
 
     const html = `
@@ -91,26 +89,28 @@ export async function POST(request: Request) {
       <p><strong>Телефон:</strong> ${body.phone}</p>
       <p><strong>Способ связи:</strong> ${body.contactMethod || "Не указан"}</p>
       <p><strong>Сообщение:</strong><br />${(body.message || "Не указано").replace(/\n/g, "<br />")}</p>
+      <p><strong>Согласие на обработку ПДн:</strong> да</p>
     `;
 
-    transporter.sendMail({
-  from: CONTACT_FROM_EMAIL,
-  to: CONTACT_TO_EMAIL,
-  subject,
-  text,
-  html,
-})
-  .then(() => {
-    console.log("EMAIL_SENT_SUCCESS");
-    transporter.close();
-  })
-  .catch((error) => {
-    console.error("EMAIL_SEND_ERROR", error);
-  });
-  return NextResponse.json({
-  ok: true,
-  message: "Запрос отправлен. Мы свяжемся с вами.",
-});
+    transporter
+      .sendMail({
+        from: CONTACT_FROM_EMAIL,
+        to: CONTACT_TO_EMAIL,
+        subject,
+        text,
+        html,
+      })
+      .then(() => {
+        transporter.close();
+      })
+      .catch((error) => {
+        console.error("EMAIL_SEND_ERROR", error);
+      });
+
+    return NextResponse.json({
+      ok: true,
+      message: "Запрос отправлен. Мы свяжемся с вами.",
+    });
   } catch (error) {
     console.error("CONTACT_FORM_ERROR", error);
 

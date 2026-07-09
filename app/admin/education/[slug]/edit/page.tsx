@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { CourseForm } from "@/components/admin/course-form";
 import { updateCourse } from "../../actions";
 import { getCourseBySlug } from "@/lib/courses";
@@ -25,26 +25,22 @@ export default async function EditCoursePage({
     label: d.title,
   }));
 
-  async function action(formData: FormData) {
-    "use server";
-    await updateCourse(formData);
-    redirect("/admin/education");
-  }
-
   return (
     <div>
       <h1 className="text-2xl font-semibold text-[var(--color-navy)]">
         Редактирование курса
       </h1>
       <p className="mb-8 mt-2 text-sm text-[var(--color-gray-600)]">
-        Изменения появятся на странице обучения после сохранения.
+        Изменения появятся на странице обучения после сохранения. Незаполненные
+        блоки на сайте не показываются.
       </p>
 
       <CourseForm
         doctors={doctors}
         directions={directions}
         initial={course}
-        action={action}
+        action={updateCourse}
+        redirectTo="/admin/education"
         submitLabel="Сохранить"
       />
     </div>

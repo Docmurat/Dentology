@@ -6,16 +6,38 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getCourseBySlug } from "@/lib/courses";
+import { getCourseBySlug, getCourseBySlugAdmin } from "@/lib/courses";
+import { createClient } from "@/utils/supabase/server";
 import { getTeamMemberBySlug } from "@/lib/team";
-import { getCourseDetail, DEMO_COURSE_DETAIL } from "@/lib/course-content";
-import { CourseStats, CourseEffectiveness } from "@/components/education/course-stats";
+import { CourseStats } from "@/components/education/course-stats";
+import { CourseQuote } from "@/components/education/course-quote";
 import { CourseReviews } from "@/components/reviews/course-reviews";
 import { getAllCases } from "@/lib/cases";
 import { getDirectionLabelMap } from "@/lib/directions-db";
 import { CasesCarousel } from "@/components/cases/cases-carousel";
+import { TicketButton } from "@/components/ui/ticket-button";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
+
+async function getViewer(): Promise<{
+  userId: string | null;
+  isStaff: boolean;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { userId: null, isStaff: false };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  return {
+    userId: user.id,
+    isStaff: ["admin", "editor"].includes(profile?.role ?? ""),
+  };
+}
 
 export async function generateMetadata({
   params,
@@ -37,17 +59,55 @@ export default async function CoursePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const course = await getCourseBySlug(slug);
-  console.log("RENDER metrics >>>", slug, JSON.stringify(course?.metrics));
-  if (!course || !course.published) notFound();
+  let course = await getCourseBySlug(slug);
+  let isDraftPreview = false;
+  let draftBackHref = "/admin/education";
+
+  if (!course || !course.published) {
+    // Черновик / недоступно публично — превью для staff или автора курса.
+    const viewer = await getViewer();
+    const draft = await getCourseBySlugAdmin(slug);
+    if (!draft) notFound();
+    const isAuthor =
+      draft.createdBy !== null && draft.createdBy === viewer.userId;
+    if (!viewer.isStaff && !isAuthor) notFound();
+    course = draft;
+    isDraftPreview = !course.published;
+    draftBackHref = viewer.isStaff ? "/admin/education" : "/doctor/courses";
+  }
 
   const doctor = course.doctorSlug
     ? await getTeamMemberBySlug(course.doctorSlug)
     : null;
   const photo = doctor?.image || null;
 
-  // Этап 1: если нет структурированного контента, показываем демо-пример.
-  const detail = getCourseDetail(slug) ?? DEMO_COURSE_DETAIL;
+
+  // Блоки «Для кого» / «Что получите»: из полей курса (построчно).
+  const toLines = (text: string) =>
+    text
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  const audienceTitle = course.audienceTitle || "Для кого этот курс";
+  const outcomesTitle = course.outcomesTitle || "Что вы получите";
+  const audienceItems = toLines(course.audienceText);
+  const outcomesItems = toLines(course.outcomesText);
+  const showAudienceBlock = course.showAudience && audienceItems.length > 0;
+  const showOutcomesBlock = course.showOutcomes && outcomesItems.length > 0;
+  const faqItems = course.faq;
+  const programItems = course.program;
+  const formatCards = course.formats
+    .filter((f) => f.enabled)
+    .map((f) => ({
+      title: f.type,
+      summary: f.summary,
+      points: f.points,
+      duration: f.duration,
+      price: f.price,
+      priceNote: f.priceNote,
+      ctaLabel: f.ctaLabel,
+      recommended: f.recommended,
+    }));
 
   // Кейсы: только ведущего врача и по выбранным в настройках курса направлениям.
   const showCases = Boolean(doctor && course.directionSlugs.length);
@@ -72,6 +132,14 @@ export default async function CoursePage({
 
   return (
     <SiteShell>
+      {isDraftPreview ? (
+        <div className="flex items-center justify-between gap-4 bg-amber-100 px-4 py-2 text-sm text-amber-800">
+          <span>Предпросмотр · черновик — так курс будет выглядеть на сайте</span>
+          <Link href={draftBackHref} className="font-medium underline">
+            ← к списку
+          </Link>
+        </div>
+      ) : null}
       {/* Hero */}
       <Section className="pt-10 pb-12 md:pt-14 md:pb-16">
         <div className="grid items-center gap-10 lg:grid-cols-[0.8fr_1.2fr]">
@@ -84,29 +152,33 @@ export default async function CoursePage({
               {course.title}
             </h1>
 
-            <p className="mt-5 max-w-xl text-lg leading-8 text-[var(--color-gray-700)]">
-              {detail.valueProp}
-            </p>
+            {course.learningTypes?.length ? (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {course.learningTypes.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full border border-[var(--color-gray-200)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-navy)]"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            ) : null}
 
-            <div className="mt-6 flex flex-wrap gap-2">
-              {detail.formats.map((f) => (
-                <span
-                  key={f.name}
-                  className="rounded-full border border-[var(--color-gray-200)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-navy)]"
-                >
-                  {f.name}
-                </span>
-              ))}
-            </div>
+            {course.description ? (
+              <p className="mt-5 max-w-xl text-lg leading-8 text-[var(--color-gray-700)]">
+                {course.description}
+              </p>
+            ) : null}
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <Button href="/contacts" variant="gold">Оставить заявку</Button>
-              <p className="text-sm text-[var(--color-gray-500)]">
-                Консультация от{" "}
-                <span className="font-semibold text-[var(--color-navy)]">
-                  5 000 ₽
-                </span>
-              </p>
+              <TicketButton href="/contacts">Оставить заявку</TicketButton>
+              <Button
+                href={`/reviews?course=${course.slug}`}
+                variant="gold-outline"
+              >
+                Отзывы
+              </Button>
             </div>
           </div>
 
@@ -130,233 +202,241 @@ export default async function CoursePage({
                 Спикер — {doctor.name}
               </p>
             ) : null}
-            {detail.instructorBio ? (
+            {course.showBio && course.instructorBio ? (
               <p className="mt-2 text-center text-sm leading-7 text-[var(--color-gray-700)]">
-                {detail.instructorBio}
+                {course.instructorBio}
               </p>
             ) : null}
           </div>
         </div>
       </Section>
 
-     {course.metrics.length ? (
-  <Section className="pt-0 pb-4 md:pb-6">
-    <CourseStats metrics={course.metrics} />
-  </Section>
-) : null}
+      {/* Метрика (под фото, над «Для кого») */}
+      {course.showMetrics && course.metrics.length ? (
+        <Section className="pt-0 pb-4 md:pb-6">
+          <CourseStats metrics={course.metrics} />
+        </Section>
+      ) : null}
 
       {/* Для кого + Результат */}
-      <Section className="py-12 md:py-16">
-        <div className="grid gap-10 lg:grid-cols-2">
-          <div>
-            <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-              Для кого этот курс
-            </h2>
-            <ul className="mt-6 space-y-3">
-              {detail.audience.map((item) => (
-                <li
-                  key={item}
-                  className="flex gap-3 text-base leading-7 text-[var(--color-gray-700)]"
-                >
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)]" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-              Что вы получите
-            </h2>
-            <ul className="mt-6 space-y-3">
-              {detail.outcomes.map((item) => (
-                <li
-                  key={item}
-                  className="flex gap-3 text-base leading-7 text-[var(--color-gray-700)]"
-                >
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)]" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </Section>
-
-      {/* Форматы обучения */}
-      <Section className="py-12 md:py-16">
-        <h2 className="text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
-          Форматы обучения
-        </h2>
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          {detail.formats.map((f) => (
-            <Card key={f.name} className="flex flex-col">
-              <h3 className="text-lg font-semibold text-[var(--color-navy)]">
-                {f.name}
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--color-gray-700)]">
-                {f.summary}
-              </p>
-
-              <ul className="mt-4 space-y-2">
-                {f.points.map((p) => (
-                  <li
-                    key={p}
-                    className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
-                  >
-                    <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--color-gold)]" />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-6 border-t border-[var(--color-gray-200)] pt-4">
-                <p className="text-xs text-[var(--color-gray-500)]">
-                  {f.duration}
-                </p>
-                <p className="mt-1 text-xl font-semibold text-[var(--color-navy)]">
-                  {f.price}
-                </p>
-              </div>
-
-              <div className="mt-5">
-                <Button href="/contacts" variant="gold-outline">
-                  {f.ctaLabel}
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      {/* Практика */}
-      <Section className="py-12 md:py-16">
-        <div className="rounded-[24px] bg-[var(--color-navy)] px-6 py-10 text-white md:px-10 md:py-12">
-          <h2 className="text-2xl font-semibold md:text-3xl">
-            Практика под микроскопом
-          </h2>
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
-            {detail.practiceStages.map((stage, i) => (
-              <div
-                key={stage}
-                className="rounded-2xl border border-white/15 bg-white/5 p-5"
-              >
-                <p className="text-sm font-semibold text-[var(--color-gold)]">
-                  Этап {i + 1}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-white/85">{stage}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Section>
-
-      {/* Эффективность (перед программой) */}
-      {course.effectivenessPercent ? (
+      {showAudienceBlock || showOutcomesBlock ? (
         <Section className="py-12 md:py-16">
-          <CourseEffectiveness
-            percent={course.effectivenessPercent}
-            text={course.effectivenessText}
-          />
+          <div
+            className={`grid items-start gap-6 ${
+              showAudienceBlock && showOutcomesBlock ? "lg:grid-cols-2" : ""
+            }`}
+          >
+            {showAudienceBlock ? (
+              <Card>
+                <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                  {audienceTitle}
+                </h2>
+                <ul className="mt-6 space-y-3">
+                  {audienceItems.map((item) => (
+                    <li
+                      key={item}
+                      className="flex gap-3 text-base leading-7 text-[var(--color-gray-700)]"
+                    >
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)]" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            ) : null}
+
+            {showOutcomesBlock ? (
+              <Card>
+                <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                  {outcomesTitle}
+                </h2>
+                <ul className="mt-6 space-y-3">
+                  {outcomesItems.map((item) => (
+                    <li
+                      key={item}
+                      className="flex gap-3 text-base leading-7 text-[var(--color-gray-700)]"
+                    >
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)]" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            ) : null}
+          </div>
+        </Section>
+      ) : null}
+
+      {/* Цитата спикера + фото 3:4 (под метрикой) */}
+      {course.showQuote && (course.quote || course.quoteImage) ? (
+        <Section className="py-8 md:py-12">
+          <div
+            className={`grid items-center gap-8 md:gap-12 ${
+              course.quote && course.quoteImage ? "lg:grid-cols-2" : ""
+            }`}
+          >
+            {course.quote ? (
+              <div>
+                <CourseQuote quote={course.quote} author={doctor?.name} />
+              </div>
+            ) : null}
+            {course.quoteImage ? (
+              <div className="mx-auto w-full max-w-[340px] lg:ml-auto">
+                <div className="overflow-hidden rounded-[24px] bg-[var(--color-gray-100)]">
+                  <div className="relative aspect-[3/4]">
+                    <Image
+                      src={course.quoteImage}
+                      alt={doctor?.name || course.title}
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 340px"
+                      className="object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </Section>
       ) : null}
 
       {/* Программа */}
-      <Section className="py-12 md:py-16">
-        <h2 className="text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
-          Программа курса
-        </h2>
-        <p className="mt-2 text-sm text-[var(--color-gray-500)]">
-          Полная программа разбирается на всех форматах. Нажмите на раздел, чтобы
-          раскрыть.
-        </p>
-        <div className="mt-8 divide-y divide-[var(--color-gray-200)] overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white">
-          {detail.program.map((mod, i) => (
-            <details key={mod.title} className="group">
-              <summary className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 hover:bg-[var(--color-gray-50)]">
-                <span className="flex items-center gap-3">
-                  <span className="w-6 text-sm text-[var(--color-gray-400)]">
+      {course.showProgram && programItems.length ? (
+        <Section className="py-12 md:py-16">
+          <h2 className="text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
+            Программа курса
+          </h2>
+          <div className="mt-8 grid gap-5 md:grid-cols-2">
+            {programItems.map((mod, i) => (
+              <div
+                key={mod.title}
+                className="rounded-2xl border border-[var(--color-gray-200)] bg-white p-5"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-gold)]/10 text-xs font-semibold text-[var(--color-gold)]">
                     {i + 1}
                   </span>
-                  <span className="font-medium text-[var(--color-navy)]">
+                  <h3 className="font-semibold text-[var(--color-navy)]">
                     {mod.title}
-                  </span>
-                </span>
-                <span className="text-[var(--color-gray-400)] transition group-open:rotate-180">
-                  ⌄
-                </span>
-              </summary>
-              <ul className="space-y-2 px-5 pb-5 pl-14">
-                {mod.items.map((item) => (
-                  <li
-                    key={item}
-                    className="text-sm leading-6 text-[var(--color-gray-700)]"
-                  >
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ))}
-        </div>
-      </Section>
-
-      {/* Об эксперте */}
-      {doctor ? (
-        <Section className="py-12 md:py-16">
-          <div className="grid gap-8 rounded-[24px] border border-[var(--color-gray-200)] bg-white p-6 md:grid-cols-[0.4fr_1fr] md:p-8">
-            <div className="mx-auto w-full max-w-[220px]">
-              <div className="overflow-hidden rounded-2xl bg-[var(--color-gray-100)]">
-                <div className="relative aspect-[3/4]">
-                  {photo ? (
-                    <Image
-                      src={photo}
-                      alt={doctor.name}
-                      fill
-                      sizes="220px"
-                      className="object-cover"
-                    />
-                  ) : null}
+                  </h3>
                 </div>
+                <ul className="mt-3 space-y-2 pl-9">
+                  {mod.items.map((item) => (
+                    <li
+                      key={item}
+                      className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
+                    >
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--color-gold)]" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-            <div>
-              <p className="text-sm uppercase tracking-[0.18em] text-[var(--color-gray-500)]">
-                Спикер
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-[var(--color-navy)]">
-                {doctor.name}
-              </h2>
-              <p className="mt-4 max-w-2xl text-base leading-8 text-[var(--color-gray-700)]">
-                {detail.instructorBio}
-              </p>
-            </div>
+            ))}
           </div>
         </Section>
       ) : null}
 
-      {/* FAQ */}
-      <Section className="py-12 md:py-16">
-        <h2 className="text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
-          Частые вопросы
-        </h2>
-        <div className="mt-8 max-w-3xl divide-y divide-[var(--color-gray-200)] overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white">
-          {detail.faq.map((item) => (
-            <details key={item.q} className="group">
-              <summary className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 font-medium text-[var(--color-navy)] hover:bg-[var(--color-gray-50)]">
-                {item.q}
-                <span className="text-[var(--color-gray-400)] transition group-open:rotate-180">
-                  ⌄
-                </span>
-              </summary>
-              <p className="px-5 pb-5 text-sm leading-7 text-[var(--color-gray-700)]">
-                {item.a}
-              </p>
-            </details>
-          ))}
+      {/* Форматы обучения */}
+      {formatCards.length ? (
+        <Section className="py-12 md:py-16">
+          <h2 className="text-center text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
+            Форматы обучения
+          </h2>
+          <div className="mt-8 flex flex-wrap items-start justify-center gap-6">
+          {formatCards.map((f) => {
+            const highlight = f.recommended;
+            return (
+              <Card
+                key={f.title}
+                className={`flex w-full flex-col sm:w-[320px] ${
+                  highlight
+                    ? "!border-[var(--color-gold)] !bg-[var(--color-gold)]/10"
+                    : ""
+                }`}
+              >
+                <h3 className="text-lg font-semibold text-[var(--color-navy)]">
+                  {f.title}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--color-gray-700)]">
+                  {f.summary}
+                </p>
+
+                <ul className="mt-4 space-y-2">
+                  {f.points.map((p) => (
+                    <li
+                      key={p}
+                      className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
+                    >
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--color-gold)]" />
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-6 border-t border-[var(--color-gray-200)] pt-4">
+                  <p className="text-xs text-[var(--color-gray-500)]">
+                    {f.duration}
+                  </p>
+                  <p className="mt-1 text-xl font-semibold text-[var(--color-navy)]">
+                    {f.price}
+                  </p>
+                  {f.priceNote ? (
+                    <p className="mt-2 text-xs leading-5 text-[var(--color-gray-600)]">
+                      {f.priceNote}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="mt-5">
+                  <Button
+                    href="/contacts"
+                    variant={highlight ? "gold" : "gold-outline"}
+                  >
+                    {f.ctaLabel}
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
-      </Section>
+        </Section>
+      ) : null}
+
+      {/* FAQ */}
+      {course.showFaq && faqItems.length ? (
+        <Section className="py-12 md:py-16">
+          <Card>
+            <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+              Частые вопросы
+            </h2>
+
+            <div className="mt-6 space-y-4">
+              {faqItems.map((item) => (
+                <details
+                  key={item.q}
+                  className="group rounded-2xl border border-[var(--color-gray-200)] bg-white px-5 py-4"
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left">
+                    <span className="text-base font-medium leading-7 text-[var(--color-navy)]">
+                      {item.q}
+                    </span>
+
+                    <span className="shrink-0 text-[var(--color-gray-400)] transition group-open:rotate-45">
+                      +
+                    </span>
+                  </summary>
+
+                  <div className="pt-4">
+                    <p className="leading-7 text-[var(--color-gray-700)]">
+                      {item.a}
+                    </p>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </Card>
+        </Section>
+      ) : null}
 
       {/* Клинические случаи ведущего по направлениям курса */}
       {showCases && courseCases.length ? (
@@ -393,9 +473,11 @@ export default async function CoursePage({
           <h2 className="text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
             Готовы начать?
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-[var(--color-gray-700)]">
-            {detail.ctaNote}
-          </p>
+          {course.showCta && course.ctaNote ? (
+            <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-[var(--color-gray-700)]">
+              {course.ctaNote}
+            </p>
+          ) : null}
           <div className="mt-8 flex justify-center">
             <Button href="/contacts" variant="gold">Оставить заявку</Button>
           </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Section } from "@/components/layout/section";
+import { COMPANY } from "@/lib/company";
 
 export function Footer() {
   return (
@@ -59,8 +60,34 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 border-t border-white/10 pt-6 text-xs text-white/50">
-          © Dentology. Все права защищены.
+        {/* Реквизиты и правовая информация */}
+        <div className="mt-12 space-y-1 border-t border-white/10 pt-6 text-xs leading-6 text-white/50">
+          <p>{COMPANY.fullName}</p>
+          <p>
+            ОГРН {COMPANY.ogrn} · ИНН {COMPANY.inn} · КПП {COMPANY.kpp}
+          </p>
+          <p>Адрес: {COMPANY.address}</p>
+
+          <div className="flex flex-wrap gap-x-5 gap-y-1 pt-3">
+            <Link
+              href="/legal/license"
+              className="underline transition hover:text-white/80"
+            >
+              Лицензия
+            </Link>
+            <Link
+              href="/legal/privacy"
+              className="underline transition hover:text-white/80"
+            >
+              Политика обработки персональных данных
+            </Link>
+          </div>
+
+          <p className="pt-3">
+            © {new Date().getFullYear()} {COMPANY.shortName}. Все права
+            защищены. Имеются противопоказания, необходима консультация
+            специалиста.
+          </p>
         </div>
       </Section>
     </footer>

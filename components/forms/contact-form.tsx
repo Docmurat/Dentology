@@ -23,6 +23,7 @@ const initialState: FormState = {
 
 export function ContactForm() {
   const [form, setForm] = useState<FormState>(initialState);
+  const [consent, setConsent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverMessage, setServerMessage] = useState("");
   const [serverError, setServerError] = useState("");
@@ -40,6 +41,13 @@ export function ContactForm() {
       return;
     }
 
+    if (!consent) {
+      setServerError(
+        "Необходимо согласие на обработку персональных данных."
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     const controller = new AbortController();
@@ -51,7 +59,7 @@ export function ContactForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, consent }),
         signal: controller.signal,
       });
 
@@ -70,6 +78,7 @@ export function ContactForm() {
 
       setServerMessage(result.message || "Запрос успешно отправлен.");
       setForm(initialState);
+      setConsent(false);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         setServerError(
@@ -126,9 +135,30 @@ export function ContactForm() {
         className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-sm outline-none transition focus:border-[var(--color-teal)]"
       />
 
+      <label className="flex items-start gap-2 text-xs leading-5 text-[var(--color-gray-600)]">
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+          className="mt-0.5"
+        />
+        <span>
+          Я даю согласие на обработку персональных данных и подтверждаю
+          ознакомление с{" "}
+          <a
+            href="/legal/privacy"
+            target="_blank"
+            className="underline hover:text-[var(--color-navy)]"
+          >
+            Политикой обработки персональных данных
+          </a>
+          .
+        </span>
+      </label>
+
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || !consent}
         className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--color-teal)] px-6 py-4 text-sm font-medium text-white transition-colors duration-200 hover:bg-[var(--color-teal-hover)] disabled:cursor-not-allowed disabled:opacity-70"
       >
         {isSubmitting ? "Отправка..." : "Отправить запрос"}

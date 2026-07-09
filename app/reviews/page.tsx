@@ -23,16 +23,26 @@ export default async function ReviewsPage({
 }) {
   const { doctor: doctorSlug, course: courseSlug } = await searchParams;
 
-  // Режим курсов: определяем ведущего врача по курсу (для группировки всех его курсов).
+  // Режим курса: спикер курса — для группировки всех его курс-отзывов.
   const courseObj = courseSlug ? await getCourseBySlug(courseSlug) : null;
   const courseDoctorSlug = courseObj?.doctorSlug ?? null;
 
-  const [reviews, team, doctor, allDirections, labelMap, courseDoctor] =
-    await Promise.all([
+  const [
+    courseOwn,
+    courseByDoctor,
+    patientReviews,
+    team,
+    doctor,
+    allDirections,
+    labelMap,
+    courseDoctor,
+  ] = await Promise.all([
+    courseSlug ? getReviewsByCourse(courseSlug) : Promise.resolve([]),
+    courseSlug && courseDoctorSlug
+      ? getCourseReviewsByDoctor(courseDoctorSlug)
+      : Promise.resolve([]),
     courseSlug
-      ? courseDoctorSlug
-        ? getCourseReviewsByDoctor(courseDoctorSlug)
-        : getReviewsByCourse(courseSlug)
+      ? Promise.resolve([])
       : doctorSlug
         ? getReviewsByDoctor(doctorSlug)
         : getApprovedReviews(),
@@ -44,6 +54,19 @@ export default async function ReviewsPage({
       ? getTeamMemberBySlug(courseDoctorSlug)
       : Promise.resolve(null),
   ]);
+
+  // Режим курса: объединяем отзывы этого курса (course_slug — надёжно, все 3)
+  // и все курс-отзывы спикера (doctor_slug — для кнопки «Все отзывы»), без дублей.
+  const reviews = courseSlug
+    ? (() => {
+        const seen = new Set<string>();
+        return [...courseOwn, ...courseByDoctor].filter((r) => {
+          if (seen.has(r.slug)) return false;
+          seen.add(r.slug);
+          return true;
+        });
+      })()
+    : patientReviews;
 
   const heading = await getPageHeading("reviews");
 
@@ -90,7 +113,7 @@ export default async function ReviewsPage({
       : heading.title;
 
   const description = courseSlug
-    ? "Отзывы участников курсов этого преподавателя. Можно отфильтровать по курсу."
+    ? "Отзывы участников курсов этого спикера. Можно отфильтровать по курсу."
     : doctor
       ? "Отзывы пациентов, относящиеся к этому врачу."
       : heading.description;
@@ -101,18 +124,24 @@ export default async function ReviewsPage({
 
       <Section className="pt-8 pb-20 md:pt-10 md:pb-28">
         <div className="mb-8 flex justify-end">
-          <ReviewForm doctors={doctors} courseSlug={courseSlug} />
+          <ReviewForm
+            doctors={doctors}
+            courseSlug={courseSlug}
+            variant={courseSlug ? "gold" : "teal"}
+          />
         </div>
 
         <ReviewsPageContent
           reviews={reviews}
           directions={courseSlug ? [] : directions}
           courses={courseSlug ? courseOptions : []}
+          initialFilter={courseSlug ?? undefined}
           doctorFilter={
             !courseSlug && doctor
               ? { slug: doctor.slug, name: doctor.name }
               : null
           }
+          variant={courseSlug ? "gold" : "default"}
         />
       </Section>
     </SiteShell>

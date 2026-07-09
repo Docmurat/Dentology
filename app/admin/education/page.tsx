@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
 import { getTeamMembers } from "@/lib/team";
-import { deleteCourse } from "./actions";
+import { deleteCourse, toggleArchiveAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +11,7 @@ type Row = {
   title: string;
   doctor_slug: string | null;
   published: boolean;
+  archived?: boolean | null;
   sort_order: number | null;
 };
 
@@ -18,7 +19,7 @@ export default async function AdminEducationPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("courses")
-    .select("slug, title, doctor_slug, published, sort_order")
+    .select("*")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -60,6 +61,11 @@ export default async function AdminEducationPage() {
                         черновик
                       </span>
                     )}
+                    {row.archived ? (
+                      <span className="ml-2 rounded-full bg-[var(--color-gold)]/15 px-2 py-0.5 text-xs font-medium text-[var(--color-gold)]">
+                        в архиве
+                      </span>
+                    ) : null}
                   </p>
                   <p className="text-xs text-[var(--color-gray-500)]">
                     {row.doctor_slug
@@ -82,6 +88,17 @@ export default async function AdminEducationPage() {
                   >
                     Изменить
                   </Link>
+                  <form action={toggleArchiveAction}>
+                    <input type="hidden" name="slug" value={row.slug} />
+                    <input
+                      type="hidden"
+                      name="archived"
+                      value={row.archived ? "false" : "true"}
+                    />
+                    <button className="text-[var(--color-gold)] hover:opacity-80">
+                      {row.archived ? "Вернуть из архива" : "Архивировать"}
+                    </button>
+                  </form>
                   <form action={deleteCourse}>
                     <input type="hidden" name="slug" value={row.slug} />
                     <button className="text-red-600 hover:text-red-700">
