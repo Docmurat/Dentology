@@ -19,7 +19,7 @@ export const PAGE_HEADING_DEFAULTS: Record<PageHeadingKey, PageHeading> = {
   },
   team: {
     eyebrow: "Команда",
-    title: "Клиническая команда Dentology",
+    title: "Клиническая команда Lucenta",
     description:
       "Сложные случаи требуют междисциплинарного подхода. Над планом лечения работают специалисты разных направлений в рамках единой системы принятия решений.",
   },
@@ -31,7 +31,7 @@ export const PAGE_HEADING_DEFAULTS: Record<PageHeadingKey, PageHeading> = {
   },
   education: {
     eyebrow: "Обучение",
-    title: "Образовательное направление Dentology",
+    title: "Образовательное направление Lucenta",
     description: "Курсы для врачей стоматологов",
   },
 };

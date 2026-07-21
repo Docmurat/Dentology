@@ -15,10 +15,10 @@ export const HOMEPAGE_BLOCK_DEFS: {
   enabledByDefault?: boolean;
 }[] = [
   { key: "hero", title: "Hero — первый экран" },
-  { key: "about", title: "О Dentology" },
+  { key: "about", title: "О Lucenta" },
   { key: "when_to_apply", title: "Когда стоит обратиться" },
   { key: "directions", title: "Клинические направления" },
-  { key: "why", title: "Почему Dentology" },
+  { key: "why", title: "Почему Lucenta" },
   { key: "cases", title: "Клинические случаи" },
   { key: "team", title: "Команда" },
   { key: "reviews", title: "Отзывы" },
@@ -137,7 +137,7 @@ export async function getHeroContent(): Promise<HeroContent> {
 }
 
 
-// ── Контент блока «О Dentology» ──────────────────────────────────────
+// ── Контент блока «О Lucenta» ──────────────────────────────────────
 export type AboutContent = {
   eyebrow: string;
   text1: string;
@@ -145,14 +145,14 @@ export type AboutContent = {
 };
 
 export const ABOUT_DEFAULTS: AboutContent = {
-  eyebrow: "Dentology",
+  eyebrow: "Lucenta",
   text1:
-    "Dentology — это команда врачей и система клинического мышления, где решение принимается не по шаблону, а на основе диагностики и реальной клинической картины.",
+    "Lucenta — это команда врачей и система клинического мышления, где решение принимается не по шаблону, а на основе диагностики и реальной клинической картины.",
   text2:
     "В основе — стремление сохранить зуб и минимизировать вмешательство.",
 };
 
-/** Контент блока «О Dentology»: из БД поверх дефолтов. */
+/** Контент блока «О Lucenta»: из БД поверх дефолтов. */
 export async function getAboutContent(): Promise<AboutContent> {
   try {
     const supabase = createPublicClient();
@@ -234,7 +234,7 @@ export async function getWhenContent(): Promise<WhenContent> {
 }
 
 
-// ── Контент блока «Почему Dentology» ─────────────────────────────────
+// ── Контент блока «Почему Lucenta» ─────────────────────────────────
 export type WhyItem = { title: string; text: string; icon: string };
 export type WhyContent = {
   eyebrow: string;
@@ -244,7 +244,7 @@ export type WhyContent = {
 };
 
 export const WHY_DEFAULTS: WhyContent = {
-  eyebrow: "Почему Dentology",
+  eyebrow: "Почему Lucenta",
   title:
     "Основа подхода — точная диагностика, клиническое мышление и системное лечение",
   description: "",
@@ -272,7 +272,7 @@ export const WHY_DEFAULTS: WhyContent = {
   ],
 };
 
-/** Контент блока «Почему Dentology»: из БД поверх дефолтов. */
+/** Контент блока «Почему Lucenta»: из БД поверх дефолтов. */
 export async function getWhyContent(): Promise<WhyContent> {
   try {
     const supabase = createPublicClient();
@@ -322,7 +322,7 @@ export const SECTION_HEADING_DEFAULTS: Record<string, SectionHeadingContent> = {
     eyebrow: "Клиническая команда",
     title: "Сложные случаи требуют междисциплинарного подхода",
     description:
-      "Dentology объединяет ведущих специалистов разных направлений, работающих в рамках единой системы клинического мышления и принятия решений.",
+      "Lucenta объединяет ведущих специалистов разных направлений, работающих в рамках единой системы клинического мышления и принятия решений.",
   },
   reviews: {
     eyebrow: "Отзывы",
@@ -374,7 +374,7 @@ export const EDUCATION_DEFAULTS: EducationContent = {
   eyebrow: "Обучение",
   title: "Образовательное направление для врачей",
   description: "Курсы для врачей стоматологов",
-  badge: "Dentology Обучение",
+  badge: "Lucenta Обучение",
   bullets: [
     "смешанный формат обучения",
     "клинические кейсы и реальная практика",

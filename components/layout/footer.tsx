@@ -1,6 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Section } from "@/components/layout/section";
 import { COMPANY } from "@/lib/company";
+import { AccessibilityWidget } from "@/components/a11y/accessibility-widget";
 
 export function Footer() {
   return (
@@ -8,14 +10,19 @@ export function Footer() {
       <Section className="py-16">
         <div className="grid gap-12 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
           <div>
-            <h3 className="text-2xl font-semibold">Dentology</h3>
+            <Image
+              src="/logo-master.png"
+              alt="Lucenta"
+              width={200}
+              height={64}
+              className="h-16 w-auto brightness-0 invert"
+            />
             <p className="mt-4 max-w-sm text-sm leading-7 text-white/75">
               Стоматологическая практика с ведущей экспертизой в сложной
               эндодонтии и комплексным подходом к лечению.
             </p>
 
             <div className="mt-6 space-y-2 text-sm leading-7 text-white/70">
-              <p>Москва</p>
               <p>Пациенты обращаются также из других регионов.</p>
             </div>
           </div>
@@ -53,9 +60,26 @@ export function Footer() {
               Контакты
             </h4>
             <div className="mt-5 space-y-3 text-sm leading-7 text-white/80">
-              <p>Телефон: +7 (___) ___-__-__</p>
-              <p>Email: hello@dentology.ru</p>
-              <p>Telegram / WhatsApp</p>
+              <p>
+                {COMPANY.displayAddress}
+                <br />
+                <span className="text-white/60">{COMPANY.metro}</span>
+              </p>
+              <p>
+                Телефон:{" "}
+                <a
+                  href={`tel:${COMPANY.phone.replace(/[^\d+]/g, "")}`}
+                  className="hover:text-white"
+                >
+                  {COMPANY.phone}
+                </a>
+              </p>
+              <p>
+                Email:{" "}
+                <a href={`mailto:${COMPANY.email}`} className="hover:text-white">
+                  {COMPANY.email}
+                </a>
+              </p>
             </div>
           </div>
         </div>
@@ -81,6 +105,13 @@ export function Footer() {
             >
               Политика обработки персональных данных
             </Link>
+            <Link
+              href="/sitemap"
+              className="underline transition hover:text-white/80"
+            >
+              Карта сайта
+            </Link>
+            <AccessibilityWidget className="underline transition hover:text-white/80" />
           </div>
 
           <p className="pt-3">

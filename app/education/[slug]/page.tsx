@@ -15,7 +15,7 @@ import { CourseReviews } from "@/components/reviews/course-reviews";
 import { getAllCases } from "@/lib/cases";
 import { getDirectionLabelMap } from "@/lib/directions-db";
 import { CasesCarousel } from "@/components/cases/cases-carousel";
-import { TicketButton } from "@/components/ui/ticket-button";
+import { ContactButton } from "@/components/contact/contact-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -145,7 +145,7 @@ export default async function CoursePage({
         <div className="grid items-center gap-10 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="order-1 lg:order-2">
             <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-gold)]">
-              Dentology Обучение
+              Lucenta Обучение
             </p>
 
             <h1 className="mt-4 text-3xl font-semibold leading-[1.1] text-[var(--color-navy)] md:text-5xl">
@@ -172,7 +172,12 @@ export default async function CoursePage({
             ) : null}
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <TicketButton href="/contacts">Оставить заявку</TicketButton>
+              <ContactButton
+                label="Оставить заявку"
+                variant="ticket"
+                context={`Курс «${course.title}»`}
+                title="Заявка на курс"
+              />
               <Button
                 href={`/reviews?course=${course.slug}`}
                 variant="gold-outline"
@@ -388,12 +393,13 @@ export default async function CoursePage({
                 </div>
 
                 <div className="mt-5">
-                  <Button
-                    href="/contacts"
+                  <ContactButton
+                    label={f.ctaLabel}
                     variant={highlight ? "gold" : "gold-outline"}
-                  >
-                    {f.ctaLabel}
-                  </Button>
+                    context={`Курс «${course.title}» — ${f.title}`}
+                    title="Заявка на курс"
+                    className="w-full"
+                  />
                 </div>
               </Card>
             );
@@ -479,20 +485,25 @@ export default async function CoursePage({
             </p>
           ) : null}
           <div className="mt-8 flex justify-center">
-            <Button href="/contacts" variant="gold">Оставить заявку</Button>
+            <ContactButton
+              label="Оставить заявку"
+              variant="gold"
+              context={`Курс «${course.title}»`}
+              title="Заявка на курс"
+            />
           </div>
         </div>
       </Section>
 
       {/* Липкая кнопка на мобильном */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-gray-200)] bg-white/95 p-3 backdrop-blur md:hidden">
-        <Link
-          href="/contacts"
-          style={{ color: "#ffffff" }}
-          className="block w-full rounded-xl bg-[var(--color-gold)] py-3 text-center text-sm font-medium"
-        >
-          Оставить заявку
-        </Link>
+        <ContactButton
+          label="Оставить заявку"
+          variant="gold"
+          context={`Курс «${course.title}»`}
+          title="Заявка на курс"
+          className="w-full py-3"
+        />
       </div>
     </SiteShell>
   );

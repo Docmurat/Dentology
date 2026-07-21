@@ -96,7 +96,7 @@ export async function saveHeroContent(formData: FormData) {
 }
 
 
-// Сохранить контент блока «О Dentology».
+// Сохранить контент блока «О Lucenta».
 export async function saveAboutContent(formData: FormData) {
   const supabase = await requireStaff();
 
@@ -149,7 +149,7 @@ export async function saveWhenContent(formData: FormData) {
 }
 
 
-// Сохранить контент блока «Почему Dentology».
+// Сохранить контент блока «Почему Lucenta».
 export async function saveWhyContent(formData: FormData) {
   const supabase = await requireStaff();
 

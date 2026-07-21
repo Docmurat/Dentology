@@ -5,6 +5,7 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ContactButton } from "@/components/contact/contact-modal";
 import { getTeamMemberBySlug } from "@/lib/team";
 import { getAllCases } from "@/lib/cases";
 import { getReviewsByDoctor } from "@/lib/reviews";
@@ -127,7 +128,11 @@ export default async function DoctorPage({ params }: Props) {
             ) : null}
 
             <div className="mt-8">
-              <Button href="/contacts">Записаться на консультацию</Button>
+              <ContactButton
+                label="Записаться на консультацию"
+                variant="teal"
+                context={`Врач: ${doctor.name}`}
+              />
             </div>
           </div>
 
@@ -349,7 +354,11 @@ export default async function DoctorPage({ params }: Props) {
               </p>
 
               <div className="mt-8">
-                <Button href="/contacts">Записаться</Button>
+                <ContactButton
+                  label="Записаться на консультацию"
+                  variant="teal"
+                  context={`Врач: ${doctor.name}`}
+                />
               </div>
             </div>
           </div>

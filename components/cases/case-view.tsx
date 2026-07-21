@@ -4,9 +4,9 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { CaseContentBlocks } from "@/components/cases/case-content-blocks";
 import { BeforeAfter } from "@/components/cases/before-after";
+import { ContactButton } from "@/components/contact/contact-modal";
 import type { CaseItem } from "@/lib/cases-data";
 import type { TeamMember } from "@/lib/team-data";
 
@@ -116,7 +116,11 @@ export function CaseView({
                   определить возможные варианты лечения.
                 </p>
                 <div className="mt-8">
-                  <Button href="/contacts">Записаться на консультацию</Button>
+                  <ContactButton
+                    label="Записаться на консультацию"
+                    variant="teal"
+                    context={`Клинический случай: ${item.title}`}
+                  />
                 </div>
               </div>
             </div>

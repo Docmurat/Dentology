@@ -3,20 +3,21 @@ import Image from "next/image";
 import { Section } from "@/components/layout/section";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { AuthNav } from "@/components/layout/auth-nav";
+import { ContactButton } from "@/components/contact/contact-modal";
 
 export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--color-gray-200)] bg-white/80 backdrop-blur">
-      <Section className="py-4">
-        <div className="flex items-center justify-between gap-6">
-          <Link href="/" className="flex shrink-0 items-center">
+      <Section className="py-0">
+        <div className="flex h-20 items-center justify-between gap-6">
+          <Link href="/" className="flex h-full shrink-0 items-center">
             <Image
               src="/logo-master.png"
-              alt="Dentology"
-              width={180}
-              height={48}
+              alt="Lucenta"
+              width={220}
+              height={72}
               priority
-              style={{ height: "auto" }}
+              className="h-16 w-auto md:h-18"
             />
           </Link>
 
@@ -31,12 +32,11 @@ export function Header() {
 
           <div className="hidden items-center gap-5 lg:flex">
             <AuthNav variant="desktop" />
-            <Link
-              href="/contacts"
-              className="inline-flex items-center justify-center rounded-xl bg-[var(--color-teal)] px-5 py-3 text-sm font-medium text-white"
-            >
-              Записаться
-            </Link>
+            <ContactButton
+              label="Записаться"
+              variant="teal"
+              className="px-5 py-3"
+            />
           </div>
 
           <MobileNav />

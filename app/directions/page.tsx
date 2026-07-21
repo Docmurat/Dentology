@@ -9,7 +9,7 @@ import { getDirections } from "@/lib/directions-db";
 export const metadata: Metadata = {
   title: "Направления лечения",
   description:
-    "Клинические направления Dentology: эндодонтия, имплантация, гнатология, ортопедия и реставрации в рамках единого диагностического подхода.",
+    "Клинические направления Lucenta: эндодонтия, имплантация, гнатология, ортопедия и реставрации в рамках единого диагностического подхода.",
 };
 
 export const revalidate = 60;
@@ -23,7 +23,7 @@ export default async function DirectionsPage() {
     <SiteShell>
       <PageHero
         eyebrow="Направления"
-        title="Клинические направления Dentology"
+        title="Клинические направления Lucenta"
         description="Эндодонтия является ключевым направлением, но лечение всегда рассматривается в контексте общей клинической картины."
       />
 

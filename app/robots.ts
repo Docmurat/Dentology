@@ -5,7 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
+      disallow: ["/admin", "/doctor", "/api"],
     },
-    sitemap: "https://dentology.ru/sitemap.xml",
+    sitemap: "https://lucenta.ru/sitemap.xml",
   };
 }

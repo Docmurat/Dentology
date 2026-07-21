@@ -1,4 +1,4 @@
-# Dentology — раздел «Команда»
+# Lucenta — раздел «Команда»
 
 Распакуй этот архив поверх КОРНЯ проекта (там, где лежат package.json, app/, lib/).
 Папки app, components, lib, scripts, supabase нужно СЛИТЬ с существующими,

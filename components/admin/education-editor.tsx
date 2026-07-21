@@ -82,15 +82,17 @@ export function EducationEditor({ initial }: { initial: EducationContent }) {
         </button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className={labelCls}>Кнопка 1 (текст)</label>
-          <input name="primaryLabel" defaultValue={initial.primaryLabel} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>Кнопка 2 (текст)</label>
-          <input name="secondaryLabel" defaultValue={initial.secondaryLabel} className={inputCls} />
-        </div>
+      <div>
+        <label className={labelCls}>Текст кнопки</label>
+        <input
+          name="primaryLabel"
+          defaultValue={initial.primaryLabel}
+          className={inputCls}
+          placeholder="напр. Смотреть курсы"
+        />
+        <p className="mt-1 text-xs text-[var(--color-gray-500)]">
+          Кнопка ведёт в каталог обучения (/education).
+        </p>
       </div>
 
       <button

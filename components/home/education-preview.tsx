@@ -1,7 +1,7 @@
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { Button } from "@/components/ui/button";
+import { TicketButton } from "@/components/ui/ticket-button";
 import { getEducationContent } from "@/lib/homepage";
 
 export async function EducationPreview() {
@@ -18,11 +18,8 @@ export async function EducationPreview() {
               description={edu.description}
             />
 
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Button href="/education">{edu.primaryLabel}</Button>
-              <Button href="#contacts" variant="secondary">
-                {edu.secondaryLabel}
-              </Button>
+            <div className="mt-8">
+              <TicketButton href="/education">{edu.primaryLabel}</TicketButton>
             </div>
           </div>
 

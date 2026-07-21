@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Section } from "@/components/layout/section";
 import { getCtaContent } from "@/lib/homepage";
+import { ContactButton } from "@/components/contact/contact-modal";
 
 export async function CtaSection() {
   const cta = await getCtaContent();
@@ -22,12 +23,7 @@ export async function CtaSection() {
           ) : null}
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-            <Link
-              href="/contacts"
-              className="inline-flex items-center justify-center rounded-xl bg-[var(--color-teal)] px-6 py-4 text-sm font-medium text-white transition-colors duration-200 hover:bg-[var(--color-teal-hover)]"
-            >
-              {cta.primaryLabel}
-            </Link>
+            <ContactButton label={cta.primaryLabel} variant="teal" />
 
             <Link
               href="/contacts"

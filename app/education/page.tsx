@@ -12,7 +12,7 @@ import { getTeamMembers } from "@/lib/team";
 export const metadata: Metadata = {
   title: "Обучение",
   description:
-    "Dentology Обучение — практико-ориентированные курсы для врачей стоматологов по эндодонтии, диагностике и сложным клиническим случаям.",
+    "Lucenta Обучение — практико-ориентированные курсы для врачей стоматологов по эндодонтии, диагностике и сложным клиническим случаям.",
 };
 
 export const revalidate = 60;
@@ -61,7 +61,7 @@ export default async function EducationPage() {
 
                   <div className="flex min-w-0 flex-col">
                     <p className="text-sm uppercase tracking-[0.16em] text-[var(--color-gold)]">
-                      Dentology Обучение
+                      Lucenta Обучение
                     </p>
 
                     <h2 className="mt-3 text-2xl font-semibold text-[var(--color-navy)]">

@@ -21,7 +21,15 @@ const initialState: FormState = {
   message: "",
 };
 
-export function ContactForm() {
+export function ContactForm({
+  context,
+  onSuccess,
+}: {
+  // Контекст заявки (напр. "Курс «Осознанная эндодонтия» — Индивидуальное").
+  context?: string;
+  // Вызывается после успешной отправки (для авто-закрытия модалки).
+  onSuccess?: () => void;
+}) {
   const [form, setForm] = useState<FormState>(initialState);
   const [consent, setConsent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,9 +50,7 @@ export function ContactForm() {
     }
 
     if (!consent) {
-      setServerError(
-        "Необходимо согласие на обработку персональных данных."
-      );
+      setServerError("Необходимо согласие на обработку персональных данных.");
       return;
     }
 
@@ -59,7 +65,7 @@ export function ContactForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ...form, consent }),
+        body: JSON.stringify({ ...form, consent, context: context ?? "" }),
         signal: controller.signal,
       });
 
@@ -79,6 +85,7 @@ export function ContactForm() {
       setServerMessage(result.message || "Запрос успешно отправлен.");
       setForm(initialState);
       setConsent(false);
+      onSuccess?.();
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         setServerError(
@@ -96,7 +103,13 @@ export function ContactForm() {
   }
 
   return (
-    <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+    <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+      {context ? (
+        <div className="rounded-xl bg-[var(--color-gray-50)] px-4 py-3 text-sm text-[var(--color-navy)]">
+          Заявка по: <span className="font-medium">{context}</span>
+        </div>
+      ) : null}
+
       <input
         type="text"
         placeholder="Имя"

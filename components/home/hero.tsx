@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ContactButton } from "@/components/contact/contact-modal";
 import { Section } from "@/components/layout/section";
 import { getHeroContent } from "@/lib/homepage";
 
@@ -24,7 +25,7 @@ export async function Hero() {
           </p>
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-            <Button href="/contacts">Записаться на консультацию</Button>
+            <ContactButton label="Записаться на консультацию" variant="teal" />
             <Button href="/cases" variant="secondary">
               Клинические случаи
             </Button>
@@ -85,7 +86,7 @@ export async function Hero() {
             <div className="overflow-hidden rounded-[32px]">
               <Image
                 src={hero.photo}
-                alt={hero.quoteCaption || "Dentology"}
+                alt={hero.quoteCaption || "Lucenta"}
                 width={1000}
                 height={1300}
                 priority

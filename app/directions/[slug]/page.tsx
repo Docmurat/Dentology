@@ -5,12 +5,13 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ContactButton } from "@/components/contact/contact-modal";
 import { getDirectionBySlug } from "@/lib/directions-db";
 import { getLeadByDirection } from "@/lib/team";
 import { getAllCases } from "@/lib/cases";
 import { reviewsData } from "@/lib/reviews-data";
 import { ReviewCard } from "@/components/reviews/review-card";
+import { ContraindicationsNote } from "@/components/legal/contraindications-note";
 export const revalidate = 60;
 
 type Props = {
@@ -121,9 +122,12 @@ const relatedReviews = reviewsData
 </div>
 
           <div className="mt-8">
-            <Button href="/contacts" className="w-full justify-center">
-              Записаться на консультацию
-            </Button>
+            <ContactButton
+              label="Записаться на консультацию"
+              variant="teal"
+              context={direction.title}
+              className="w-full"
+            />
           </div>
         </div>
       </div>
@@ -351,10 +355,16 @@ const relatedReviews = reviewsData
               </p>
 
               <div className="mt-8">
-                <Button href="/contacts">Записаться на консультацию</Button>
+                <ContactButton
+                  label="Записаться на консультацию"
+                  variant="teal"
+                  context={direction.title}
+                />
               </div>
             </div>
           </div>
+
+          <ContraindicationsNote className="text-center" />
         </div>
       </Section>
     </SiteShell>

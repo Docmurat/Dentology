@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sendTelegramMessage, tgEscape } from "@/lib/telegram";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { getCourseBySlug } from "@/lib/courses";
@@ -113,6 +114,28 @@ export async function submitReview(
   if (phone) {
     await supabase.from("review_contacts").insert({ review_id: id, phone });
   }
+
+  // Уведомление в Telegram (в ту же группу) — с пометкой о модерации.
+  const kind = courseSlug
+    ? `Курс: ${tgEscape(courseTitle || courseSlug)}`
+    : "Отзыв о клинике/враче";
+  const tgLines = [
+    "<b>Новый отзыв — требует модерации</b>",
+    "",
+    `<b>Тип:</b> ${kind}`,
+    `<b>Автор:</b> ${tgEscape(author)}`,
+    `<b>Телефон:</b> ${tgEscape(phone || "не указан")}`,
+    instagram ? `<b>Instagram:</b> ${tgEscape(instagram)}` : "",
+    "",
+    `<b>Отзыв:</b> ${tgEscape(text)}`,
+    pros ? `<b>Плюсы:</b> ${tgEscape(pros)}` : "",
+    cons ? `<b>Минусы:</b> ${tgEscape(cons)}` : "",
+    wishes ? `<b>Пожелания:</b> ${tgEscape(wishes)}` : "",
+    image ? "Фото: приложено" : "",
+    "",
+    "Подтвердить/отклонить: /admin/reviews",
+  ].filter(Boolean);
+  await sendTelegramMessage(tgLines.join("\n"));
 
   revalidatePath("/admin/reviews");
   return { ok: true };

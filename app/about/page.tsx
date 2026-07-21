@@ -3,12 +3,12 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ContactButton } from "@/components/contact/contact-modal";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "О враче",
   description:
-    "Практика Dentology с ведущим фокусом на сложной эндодонтии, точной диагностике и междисциплинарном подходе к лечению.",
+    "Практика Lucenta с ведущим фокусом на сложной эндодонтии, точной диагностике и междисциплинарном подходе к лечению.",
 };
 
 export default function AboutPage() {
@@ -26,7 +26,7 @@ export default function AboutPage() {
             <div className="overflow-hidden rounded-[22px] border border-[var(--color-gray-200)] bg-white">
               <Image
                 src="/doctor-photo.jpg"
-                alt="Врач Dentology"
+                alt="Врач Lucenta"
                 width={900}
                 height={1200}
                 className="h-auto w-full object-cover"
@@ -68,7 +68,11 @@ export default function AboutPage() {
             </Card>
 
             <div>
-              <Button href="/contacts">Записаться на консультацию</Button>
+              <ContactButton
+                label="Записаться на консультацию"
+                variant="teal"
+                context="Страница «О враче»"
+              />
             </div>
           </div>
         </div>

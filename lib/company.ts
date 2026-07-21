@@ -12,9 +12,16 @@ export const COMPANY = {
     "г. Москва, вн.тер.г. муниципальный округ Даниловский, ул. Ленинская Слобода, д. 4, эт. 1, пом. III, ком. 4",
   legalAddress:
     "г. Москва, вн.тер.г. муниципальный округ Даниловский, ул. Ленинская Слобода, д. 4, эт. 1, пом. III, ком. 4",
-  // Заполнить, когда будут данные:
-  email: "",
-  phone: "",
+  // Контакты
+  email: "murat.kurdzhiev@yandex.ru",
+  phone: "+7 (999) 965-47-90",
+  // Адрес для отображения (короткий, с метро)
+  displayAddress: "Москва, ул. Ленинская Слобода, д. 4",
+  metro: "м. Автозаводская",
+  // Мессенджеры. telegram — username без @; whatsapp — номер в межд.
+  // формате без + и символов (например 79999654790). Пусто — кнопка скрыта.
+  telegram: "Doc_murat",
+  whatsapp: "89999654790",
   // Лицензия на медицинскую деятельность
   license: {
     number: "Л041-01137-77/00331076",
@@ -27,6 +34,6 @@ export const COMPANY = {
     registryUrl: "https://roszdravnadzor.gov.ru/services/licenses",
     // Файл выписки (ZIP/PDF). Положи файл в папку public/ и укажи путь,
     // например "/license-extract.zip". Пусто — кнопка скачивания скрыта.
-    extractUrl: "/license-extract.pdf",
+    extractUrl: "",
   },
 } as const;

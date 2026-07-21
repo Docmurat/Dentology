@@ -12,7 +12,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-[var(--color-gray-50)] px-6">
       <div className="w-full max-w-sm rounded-2xl border border-[var(--color-gray-200)] bg-white p-8 shadow-[0_8px_28px_rgba(0,0,0,0.06)]">
         <p className="text-sm uppercase tracking-[0.18em] text-[var(--color-teal)]">
-          Dentology
+          Lucenta
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-[var(--color-navy)]">
           Личный кабинет

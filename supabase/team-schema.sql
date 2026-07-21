@@ -1,5 +1,5 @@
 -- ============================================================
--- Dentology — схема раздела «Команда» (Supabase)
+-- Lucenta — схема раздела «Команда» (Supabase)
 -- Дополняет supabase/schema.sql. Запусти этот файл целиком
 -- в Supabase → SQL Editor ПОСЛЕ основного schema.sql
 -- (нужны функции public.is_staff() / public.is_admin()).

@@ -11,7 +11,7 @@ export function AboutPreview() {
           <div className="overflow-hidden rounded-[22px] border border-[var(--color-gray-200)] bg-white">
             <Image
               src="/doctor-photo.jpg"
-              alt="Врач Dentology"
+              alt="Врач Lucenta"
               width={900}
               height={1200}
               className="h-auto w-full object-cover"

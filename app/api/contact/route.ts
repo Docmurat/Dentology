@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { sendTelegramMessage, tgEscape } from "@/lib/telegram";
 
 type ContactPayload = {
   name: string;
@@ -7,6 +8,7 @@ type ContactPayload = {
   contactMethod?: string;
   message?: string;
   consent?: boolean;
+  context?: string;
 };
 
 function isValidPayload(data: ContactPayload) {
@@ -34,6 +36,21 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // Дублируем заявку в Telegram (если бот настроен) — до отправки письма,
+    // чтобы заявка дошла даже при проблемах с почтой.
+    const tgText = [
+      "<b>Новая заявка с сайта Lucenta</b>",
+      "",
+      `<b>Имя:</b> ${tgEscape(body.name)}`,
+      `<b>Телефон:</b> ${tgEscape(body.phone)}`,
+      `<b>Способ связи:</b> ${tgEscape(body.contactMethod || "Не указан")}`,
+      `<b>Заявка по:</b> ${tgEscape(body.context || "Общая заявка")}`,
+      body.message ? `<b>Сообщение:</b> ${tgEscape(body.message)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    await sendTelegramMessage(tgText);
 
     const {
       SMTP_HOST,
@@ -74,21 +91,25 @@ export async function POST(request: Request) {
       socketTimeout: 5000,
     });
 
-    const subject = "Новая заявка с сайта Dentology";
+    const subject = body.context
+      ? `Новая заявка (${body.context}) — Lucenta`
+      : "Новая заявка с сайта Lucenta";
     const text = [
       `Имя: ${body.name}`,
       `Телефон: ${body.phone}`,
       `Способ связи: ${body.contactMethod || "Не указан"}`,
       `Сообщение: ${body.message || "Не указано"}`,
+      `Заявка по: ${body.context || "Общая заявка"}`,
       `Согласие на обработку ПДн: да`,
     ].join("\n");
 
     const html = `
-      <h2>Новая заявка с сайта Dentology</h2>
+      <h2>Новая заявка с сайта Lucenta</h2>
       <p><strong>Имя:</strong> ${body.name}</p>
       <p><strong>Телефон:</strong> ${body.phone}</p>
       <p><strong>Способ связи:</strong> ${body.contactMethod || "Не указан"}</p>
       <p><strong>Сообщение:</strong><br />${(body.message || "Не указано").replace(/\n/g, "<br />")}</p>
+      <p><strong>Заявка по:</strong> ${body.context || "Общая заявка"}</p>
       <p><strong>Согласие на обработку ПДн:</strong> да</p>
     `;
 

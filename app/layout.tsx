@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { CookieBanner } from "@/components/legal/cookie-banner";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://dentology.ru"),
+  metadataBase: new URL("https://lucenta.ru"),
   title: {
-    default: "Dentology",
-    template: "%s | Dentology",
+    default: "Lucenta",
+    template: "%s | Lucenta",
   },
   description:
     "Стоматологическая практика с ведущей экспертизой в сложной эндодонтии, комплексным подходом к лечению и образовательным направлением для врачей.",
@@ -18,20 +19,20 @@ export const metadata: Metadata = {
     "имплантация",
     "ортодонтия",
     "гнатология",
-    "Dentology",
+    "Lucenta",
   ],
   openGraph: {
-    title: "Dentology",
+    title: "Lucenta",
     description:
       "Стоматологическая практика с ведущей экспертизой в сложной эндодонтии и комплексным подходом к лечению.",
-    url: "https://dentology.ru",
-    siteName: "Dentology",
+    url: "https://lucenta.ru",
+    siteName: "Lucenta",
     locale: "ru_RU",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dentology",
+    title: "Lucenta",
     description:
       "Стоматологическая практика с ведущей экспертизой в сложной эндодонтии и комплексным подходом к лечению.",
   },
@@ -48,7 +49,29 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" data-scroll-behavior="smooth">
-      <body>{children}</body>
+      <body>
+        <style
+          dangerouslySetInnerHTML={{
+            __html:
+              'html[data-a11y-font="large"]{font-size:120%}' +
+              'html[data-a11y-font="xlarge"]{font-size:145%}' +
+              'html[data-a11y-contrast="high"]{--color-gray-400:#333;--color-gray-500:#1a1a1a;--color-gray-600:#111827;--color-gray-700:#000}' +
+              'html[data-a11y-contrast="high"] a{text-decoration:underline}',
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var e=document.documentElement," +
+              "f=localStorage.getItem('dentology-a11y-font')," +
+              "c=localStorage.getItem('dentology-a11y-contrast');" +
+              "if(f)e.setAttribute('data-a11y-font',f);" +
+              "if(c)e.setAttribute('data-a11y-contrast',c);}catch(x){}})();",
+          }}
+        />
+        {children}
+        <CookieBanner />
+      </body>
     </html>
   );
 }

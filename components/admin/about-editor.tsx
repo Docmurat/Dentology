@@ -38,7 +38,7 @@ export function AboutEditor({ initial }: { initial: AboutContent }) {
         style={{ color: "#ffffff" }}
         className="rounded-lg bg-[var(--color-navy)] px-5 py-2.5 text-sm font-medium hover:opacity-90"
       >
-        Сохранить «О Dentology»
+        Сохранить «О Lucenta»
       </button>
     </form>
   );

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { siteConfig } from "@/lib/constants";
 import { AuthNav } from "@/components/layout/auth-nav";
+import { ContactButton } from "@/components/contact/contact-modal";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
@@ -51,13 +52,11 @@ export function MobileNav() {
                 );
               })}
 
-              <Link
-                href="/contacts"
-                onClick={() => setOpen(false)}
-                className="mt-2 inline-flex items-center justify-center rounded-xl bg-[var(--color-teal)] px-5 py-4 text-sm font-medium text-white"
-              >
-                Записаться
-              </Link>
+              <ContactButton
+                label="Записаться"
+                variant="teal"
+                className="mt-2 w-full"
+              />
 
               <div className="mt-2 flex flex-col gap-4 border-t border-[var(--color-gray-200)] pt-4">
                 <AuthNav variant="mobile" onNavigate={() => setOpen(false)} />
