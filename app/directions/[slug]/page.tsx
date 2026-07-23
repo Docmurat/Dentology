@@ -5,6 +5,7 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ContactButton } from "@/components/contact/contact-modal";
 import { getDirectionBySlug, getDirectionLabelMap } from "@/lib/directions-db";
 import { getLeadByDirection, getTeamMembers } from "@/lib/team";
@@ -231,12 +232,9 @@ export default async function DirectionPage({ params }: Props) {
                   </p>
                 </div>
 
-                <Link
-                  href={`/cases?direction=${slug}`}
-                  className="inline-flex shrink-0 text-sm font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
-                >
+                <Button href={`/cases?direction=${slug}`} variant="secondary">
                   Все кейсы направления
-                </Link>
+                </Button>
               </div>
 
               <div className="mt-8 grid gap-6 lg:grid-cols-3">
@@ -268,12 +266,9 @@ export default async function DirectionPage({ params }: Props) {
                   </p>
                 </div>
 
-                <Link
-                  href={`/reviews?direction=${slug}`}
-                  className="inline-flex shrink-0 text-sm font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
-                >
+                <Button href={`/reviews?direction=${slug}`} variant="secondary">
                   Все отзывы направления
-                </Link>
+                </Button>
               </div>
 
               <div className="mt-8 grid gap-6 lg:grid-cols-2">
