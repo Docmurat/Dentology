@@ -1,116 +1,138 @@
-# Личный кабинет Lucenta — настройка
+# Lucenta — техническая документация
 
-Подсистема: вход по логину, раздел `/admin` с ролями (админ/редактор), добавление
-клинических кейсов с загрузкой фото (обложка, до/после, протокол) и выбором врача из
-существующей базы. Кейсы хранятся в Supabase, публичные страницы читают из неё.
+Сайт стоматологической практики Lucenta: публичные страницы, админ-панель,
+кабинет врача и личный кабинет пациента.
 
-## Структура файлов
+## Стек
+
+| Слой | Технология |
+|---|---|
+| Приложение | Next.js 16 (App Router), React 19, TypeScript, Tailwind v4 |
+| База данных | PostgreSQL (Yandex Managed Service for PostgreSQL) |
+| Файлы (фото) | Yandex Object Storage (S3-совместимое) |
+| Авторизация | Auth.js (NextAuth v5), вход по email + паролю, сессия в JWT-cookie |
+| Почта | SMTP (nodemailer) |
+| Уведомления | Telegram Bot API |
+| Хостинг | Виртуальная машина Yandex Compute Cloud, Node + PM2 + Nginx |
+
+## Структура
 
 ```
-supabase/schema.sql                 — схема БД, роли, RLS, бакет хранилища
-utils/supabase/client.ts            — Supabase для Client Components
-utils/supabase/server.ts            — Supabase для Server Components/Actions
-utils/supabase/middleware.ts        — обновление сессии + защита /admin
-middleware.ts                       — корневой middleware
-lib/supabase-public.ts              — клиент для публичного чтения (SSG/ISR)
-lib/cases.ts                        — чтение кейсов из БД (getAllCases/getCaseBySlug/getCaseSlugs)
-lib/slugify.ts                      — генерация slug (кириллица → латиница)
-app/admin/layout.tsx                — защищённый каркас кабинета + проверка роли
-app/admin/page.tsx                  — дашборд
-app/admin/actions.ts                — выход
-app/admin/login/page.tsx            — страница входа
-app/admin/login/actions.ts          — вход
-app/admin/cases/page.tsx            — список кейсов (открыть/удалить)
-app/admin/cases/actions.ts          — создание/удаление кейса + загрузка картинок
-app/admin/cases/new/page.tsx        — страница «новый кейс»
-app/admin/cases/new/case-form.tsx   — форма создания
-app/cases/[slug]/page.tsx           — публичная страница кейса (теперь читает из БД)
-scripts/seed.ts                     — разовый перенос существующих 7 кейсов в БД
+app/                 страницы и серверные экшены (App Router)
+  admin/             админ-панель (роли admin, editor)
+  doctor/            кабинет врача (роль doctor)
+  cabinet/           личный кабинет пациента (роль patient)
+  api/auth/          служебные роуты Auth.js
+components/          React-компоненты
+lib/                 доступ к данным и утилиты
+  db.ts              пул подключений к PostgreSQL
+  auth.ts            конфигурация Auth.js (сервер)
+  auth.config.ts     лёгкая конфигурация для proxy.ts (Edge)
+  auth-guards.ts     проверки прав: requireStaff / requireAdmin / requireDoctor
+  storage.ts         загрузка файлов в Object Storage
+  sql-helpers.ts     сборка INSERT/UPDATE, обработка jsonb
+proxy.ts             защита закрытых разделов (в Next 16 вместо middleware.ts)
 ```
 
-## Шаги настройки
+## Роли и права
 
-1. **Установить пакеты**
+Права проверяются **в коде** (в серверных экшенах и в `proxy.ts`), а не на уровне БД.
 
-   ```bash
-   npm install @supabase/supabase-js @supabase/ssr
-   npm install -D tsx        # только для сид-скрипта
-   ```
+| Роль | Доступ |
+|---|---|
+| `admin` | всё, включая удаление и управление аккаунтами |
+| `editor` | админ-панель без удаления и без управления аккаунтами |
+| `doctor` | кабинет врача: свои кейсы (на модерацию), курсы — если отмечен «спикер» |
+| `patient` | личный кабинет |
 
-2. **Создать проект Supabase** на supabase.com. В разделе Project → Connect (или
-   Settings → API) взять `Project URL` и публичный ключ (`anon` / `publishable`).
+Аккаунты хранятся в таблице `profiles`: `email`, `password_hash` (bcrypt),
+`role`, `doctor_slug` (привязка к карточке в команде).
 
-3. **Переменные окружения.** Скопировать `.env.local.example` → `.env.local` и заполнить
-   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Service role-ключ нужен
-   только для сид-скрипта.
+## Таблицы
 
-4. **Схема БД.** Открыть Supabase → SQL Editor, вставить и выполнить `supabase/schema.sql`.
-   Он создаёт таблицы `profiles` и `cases`, роли, RLS-политики и публичный бакет
-   `case-images`.
+`profiles`, `team_members`, `directions`, `cases`, `courses`, `reviews`,
+`review_contacts`, `homepage_blocks`, `homepage_content`.
 
-5. **Создать первого пользователя.** Supabase → Authentication → Users → Add user
-   (email + пароль). Затем в SQL Editor назначить роль администратора:
+Схема — в `db/schema.sql`.
 
-   ```sql
-   update public.profiles set role = 'admin'
-   where id = (select id from auth.users where email = 'you@example.com');
-   ```
+## Переменные окружения
 
-   Редакторам после создания оставляйте роль `editor` (она по умолчанию) либо назначайте
-   её так же через `update`.
+Локально — `.env.local`, на сервере — `.env`. В репозиторий не попадают.
 
-6. **Закрыть публичную регистрацию.** Authentication → Providers/Sign In → выключить
-   «Allow new users to sign up», чтобы аккаунты заводил только админ.
+```
+# База данных
+PGHOST=            # localhost при работе через SSH-туннель, FQDN на сервере
+PGPORT=6432
+PGDATABASE=lucenta
+PGUSER=lucenta_app
+PGPASSWORD=
+PGSSLROOTCERT=     # путь к CA-сертификату (только на сервере)
 
-7. **Разрешить домен картинок для next/image.** В `next.config.js` добавить хост Storage:
+# Хранилище файлов
+S3_ENDPOINT=https://storage.yandexcloud.net
+S3_REGION=ru-central1
+S3_BUCKET=lucenta-media
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
 
-   ```js
-   // next.config.js
-   const nextConfig = {
-     images: {
-       remotePatterns: [
-         { protocol: "https", hostname: "<project-ref>.supabase.co", pathname: "/storage/v1/object/public/**" },
-       ],
-     },
-   };
-   module.exports = nextConfig;
-   ```
+# Авторизация
+AUTH_SECRET=       # случайная строка, openssl rand -base64 32
+AUTH_URL=          # http://localhost:3000 локально, https://lucenta.ru на сервере
+AUTH_TRUST_HOST=true
 
-8. **Перенести существующие кейсы** (один раз). Добавить в `.env.local`
-   `SUPABASE_SERVICE_ROLE_KEY` и выполнить:
+# Почта
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+CONTACT_TO_EMAIL=
+CONTACT_FROM_EMAIL=
 
-   ```bash
-   npx tsx scripts/seed.ts
-   ```
-
-   Картинки уже перенесённых кейсов остаются в `/public/cases/...` и работают по
-   относительным путям. Новые кейсы из кабинета будут грузиться в Supabase Storage.
-
-## Ещё один файл, который нужно поправить вручную
-
-Страница списка `app/cases/page.tsx` (или её контент-компонент) сейчас импортирует
-статический `casesData`. Переключите её на БД:
-
-```ts
-import { getAllCases } from "@/lib/cases";
-// ...
-const cases = await getAllCases();
+# Telegram
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
 ```
 
-Я не трогал этот файл, потому что его точного содержимого у меня нет — но изменение
-сводится к замене источника данных, разметка остаётся прежней.
+## Локальная разработка
 
-## Как пользоваться
+База закрыта от интернета, поэтому подключаемся через SSH-туннель.
 
-- Вход: `/admin/login`.
-- Добавить кейс: `/admin/cases/new` — выбрать врача, направление, заполнить тексты,
-  загрузить фото. Пустые поля не показываются на странице кейса.
-- Список и удаление: `/admin/cases` (удаление доступно администратору).
+1. В отдельном окне терминала:
 
-## Роли
+```
+ssh -o ServerAliveInterval=30 -L 6432:<FQDN базы>:6432 ubuntu@<IP сервера>
+```
 
-- **admin** — полный доступ, включая удаление кейсов и смену ролей.
-- **editor** — создание и редактирование кейсов, без удаления.
+2. В `.env.local` указать `PGHOST=localhost`.
+3. Запустить:
 
-Разграничение задано в RLS-политиках (`supabase/schema.sql`), поэтому работает даже при
-прямом обращении к API, а не только в интерфейсе.
+```
+npm install
+npm run dev
+```
+
+Если появляется `Connection terminated due to connection timeout` — оборвался
+туннель: поднять заново и перезапустить `npm run dev`.
+
+## Деплой
+
+```
+git pull
+npm ci
+npm run build
+pm2 restart lucenta
+```
+
+Nginx проксирует запросы на `localhost:3000`, HTTPS — сертификат Let's Encrypt.
+
+## Загрузка изображений
+
+Фото загружаются через серверный экшен `app/admin/upload-actions.ts`
+(ключи хранилища в браузер не попадают). Права на папки:
+
+- `admin` / `editor` — `case-images`, `team-images`, `review-images`
+- `doctor` — `case-images`
+- `doctor` со флагом «спикер» — плюс `team-images/courses`
+
+Перед загрузкой изображения обрезаются и сжимаются на клиенте
+(`lib/crop-image.ts`, `lib/image-compress.ts`).
