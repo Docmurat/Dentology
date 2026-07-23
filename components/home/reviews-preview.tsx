@@ -20,7 +20,7 @@ export async function ReviewsPreview() {
     .map((m) => ({ slug: m.slug, name: m.name }));
 
   return (
-    <Section id="reviews" className="py-20 md:py-28">
+    <Section id="reviews" className="pt-20 pb-12 md:pt-28 md:pb-16">
       <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
         <SectionHeading
           eyebrow={heading.eyebrow}

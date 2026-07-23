@@ -54,16 +54,25 @@ export default async function CasesPage({
 
   const directions = [...activeDirections, ...archivedDirections];
 
-  // Комбинированный фильтр: врач И (если задано) направления.
+  // Врач фильтруется на сервере. Направление — тоже, но только в связке
+  // с врачом (переход с курса). Если задано одно направление без врача,
+  // просто предвыбираем его в фильтрах, чтобы можно было переключиться.
   const cases = allCases.filter((item) => {
     if (doctor && item.doctorSlug !== doctor.slug) return false;
     if (
+      doctor &&
       directionSet &&
       (!item.directionSlug || !directionSet.has(item.directionSlug))
     )
       return false;
     return true;
   });
+
+  // Предвыбранное направление (переход со страницы направления).
+  const preselected =
+    !doctor && directionSet && directionSet.size === 1
+      ? Array.from(directionSet)[0]
+      : "all";
 
   const genitive = doctor ? doctor.nameGenitive || doctor.name : null;
 
@@ -94,7 +103,8 @@ export default async function CasesPage({
           cases={cases}
           directions={directions}
           doctorFilter={doctor ? { slug: doctor.slug, name: doctor.name } : null}
-          hideFilters={Boolean(directionSet)}
+          hideFilters={Boolean(doctor && directionSet)}
+          initialFilter={preselected}
         />
 
         <div className="mt-8 border-t border-[var(--color-gray-200)] pt-4">

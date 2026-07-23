@@ -12,7 +12,7 @@ export async function CasesPreview() {
   const heading = await getSectionHeadingContent("cases");
 
   return (
-    <Section id="cases" className="py-20 md:py-28">
+    <Section id="cases" className="pt-20 pb-12 md:pt-28 md:pb-16">
       <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
         <SectionHeading
           eyebrow={heading.eyebrow}

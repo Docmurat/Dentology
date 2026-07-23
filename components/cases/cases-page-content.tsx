@@ -1,12 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import type { CaseItem } from "@/lib/cases-data";
-import { directionLabel } from "@/lib/directions";
-import { CaseExcerpt } from "@/components/cases/case-excerpt";
+import { CaseCard } from "@/components/cases/case-card";
 import { teamData } from "@/lib/team-data";
 
 const ITEMS_PER_PAGE = 6;
@@ -16,14 +14,18 @@ export function CasesPageContent({
   directions = [],
   doctorFilter = null,
   hideFilters = false,
+  initialFilter = "all",
 }: {
   cases: CaseItem[];
   directions?: { slug: string; label: string }[];
   doctorFilter?: { slug: string; name: string } | null;
   // Полностью скрыть строку фильтров (напр. переход с курса: врач + направление).
   hideFilters?: boolean;
+  // Какое направление выбрано при открытии (переход со страницы направления).
+  // Кнопки фильтра остаются видимыми — можно посмотреть и другие направления.
+  initialFilter?: string;
 }) {
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState(initialFilter);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Кнопки фильтра и карта подписей — из направлений БД.
@@ -105,43 +107,12 @@ export function CasesPageContent({
               );
 
               return (
-                <Link
+                <CaseCard
                   key={item.slug}
-                  href={`/cases/${item.slug}`}
-                  className="group block h-full"
-                >
-                  <Card className="flex h-full flex-col overflow-hidden transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg">
-                    <div className="relative mb-5">
-                      <div className="relative aspect-[3/2] w-full overflow-hidden rounded-xl bg-[var(--color-gray-100)]">
-                        {item.coverImage ? (
-                          <Image
-                            src={item.coverImage}
-                            alt={item.title}
-                            width={1500}
-                            height={1000}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                      {directionLabel(item.directionSlug, dirLabel)}
-                    </p>
-
-                    <h2 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
-                      {item.title}
-                    </h2>
-
-                    <CaseExcerpt text={item.excerpt} />
-
-                    {doctor ? (
-                      <p className="mt-5 text-sm font-medium text-[var(--color-navy-secondary)]">
-                        {doctor.name}
-                      </p>
-                    ) : null}
-                  </Card>
-                </Link>
+                  item={item}
+                  dirLabel={dirLabel}
+                  doctorName={doctor?.name}
+                />
               );
             })}
           </div>

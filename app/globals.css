@@ -19,7 +19,6 @@
 
 
 html { scroll-behavior: smooth; }
-#directions { scroll-margin-top: 90px; }
 
 body {
   background: var(--background);

@@ -37,6 +37,7 @@ export function Footer() {
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a href="/#directions">Направления</a>
               <Link href="/cases">Клинические случаи</Link>
+              <Link href="/reviews">Отзывы</Link>
               <Link href="/team">Команда</Link>
               <Link href="/about">О враче</Link>
               <Link href="/education">Обучение</Link>

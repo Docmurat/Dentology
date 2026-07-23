@@ -20,10 +20,10 @@ export const revalidate = 60;
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ doctor?: string; course?: string }>;
+  searchParams: Promise<{ doctor?: string; course?: string; direction?: string }>;
 }): Promise<Metadata> {
-  const { doctor, course } = await searchParams;
-  const filtered = Boolean(doctor || course);
+  const { doctor, course, direction } = await searchParams;
+  const filtered = Boolean(doctor || course || direction);
   const heading = await getPageHeading("reviews");
 
   return {
@@ -40,9 +40,13 @@ export async function generateMetadata({
 export default async function ReviewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ doctor?: string; course?: string }>;
+  searchParams: Promise<{ doctor?: string; course?: string; direction?: string }>;
 }) {
-  const { doctor: doctorSlug, course: courseSlug } = await searchParams;
+  const {
+    doctor: doctorSlug,
+    course: courseSlug,
+    direction: directionSlug,
+  } = await searchParams;
 
   // Режим курса: спикер курса — для группировки всех его курс-отзывов.
   const courseObj = courseSlug ? await getCourseBySlug(courseSlug) : null;
@@ -124,6 +128,11 @@ export default async function ReviewsPage({
     .filter((m) => m.category === "doctor")
     .map((m) => ({ slug: m.slug, name: m.name }));
 
+  // Переход со страницы направления: фильтр предвыбран, но кнопки остаются —
+  // можно посмотреть отзывы и по другим направлениям.
+  const preselected =
+    !courseSlug && !doctorSlug && directionSlug ? directionSlug : undefined;
+
   // Заголовок: курсы > врач > общий.
   const title = courseSlug
     ? courseDoctor
@@ -156,7 +165,7 @@ export default async function ReviewsPage({
           reviews={reviews}
           directions={courseSlug ? [] : directions}
           courses={courseSlug ? courseOptions : []}
-          initialFilter={courseSlug ?? undefined}
+          initialFilter={courseSlug ?? preselected}
           doctorFilter={
             !courseSlug && doctor
               ? { slug: doctor.slug, name: doctor.name }
