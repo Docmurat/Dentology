@@ -37,10 +37,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Значок в шапке уведомления помогает различать тип с первого взгляда:
+    // 📅 — заявка с курса, 🦷 — обычная заявка на консультацию.
+    const isCourseRequest = (body.context || "")
+      .trim()
+      .toLowerCase()
+      .startsWith("курс");
+    const headerEmoji = isCourseRequest ? "📅" : "🦷";
+
     // Дублируем заявку в Telegram (если бот настроен) — до отправки письма,
     // чтобы заявка дошла даже при проблемах с почтой.
     const tgText = [
-      "<b>Новая заявка с сайта Lucenta</b>",
+      `${headerEmoji} <b>Новая заявка с сайта Lucenta</b>`,
       "",
       `<b>Имя:</b> ${tgEscape(body.name)}`,
       `<b>Телефон:</b> ${tgEscape(body.phone)}`,

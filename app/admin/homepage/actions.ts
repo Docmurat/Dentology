@@ -1,51 +1,47 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { query } from "@/lib/db";
+import { requireStaff } from "@/lib/auth-guards";
 import { getHomepageBlocks } from "@/lib/homepage";
-
-async function requireStaff() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Не авторизован");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || !["admin", "editor"].includes(profile.role)) {
-    throw new Error("Недостаточно прав");
-  }
-  return supabase;
-}
 
 function revalidateHomepage() {
   revalidatePath("/");
   revalidatePath("/admin/homepage");
 }
 
+// Сохранить контент блока (upsert по block_key).
+async function saveBlockContent(blockKey: string, content: unknown) {
+  await query(
+    `insert into homepage_content (block_key, content)
+     values ($1, $2::jsonb)
+     on conflict (block_key) do update
+       set content = excluded.content, updated_at = now()`,
+    [blockKey, JSON.stringify(content)]
+  );
+}
+
 // Включить/выключить блок (добавить/убрать с главной).
 export async function toggleHomepageBlock(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
   const key = String(formData.get("key") || "");
   const enabled = formData.get("enabled") === "true";
   if (!key) return;
 
-  // upsert: создаём строку, если её ещё не было (на случай не до конца засеянной таблицы).
-  await supabase
-    .from("homepage_blocks")
-    .upsert({ block_key: key, enabled }, { onConflict: "block_key" });
+  await query(
+    `insert into homepage_blocks (block_key, enabled)
+     values ($1, $2)
+     on conflict (block_key) do update
+       set enabled = excluded.enabled, updated_at = now()`,
+    [key, enabled]
+  );
 
   revalidateHomepage();
 }
 
 // Переместить блок вверх/вниз — меняем sort_order с соседом.
 export async function moveHomepageBlock(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
   const key = String(formData.get("key") || "");
   const dir = String(formData.get("dir") || ""); // "up" | "down"
   if (!key || (dir !== "up" && dir !== "down")) return;
@@ -59,23 +55,23 @@ export async function moveHomepageBlock(formData: FormData) {
   const b = blocks[j];
 
   // Гарантируем, что обе строки существуют, и меняем порядок местами.
-  await supabase.from("homepage_blocks").upsert(
-    [
-      { block_key: a.key, sort_order: b.sortOrder, enabled: a.enabled },
-      { block_key: b.key, sort_order: a.sortOrder, enabled: b.enabled },
-    ],
-    { onConflict: "block_key" }
-  );
+  const upsert = `insert into homepage_blocks (block_key, enabled, sort_order)
+                  values ($1, $2, $3)
+                  on conflict (block_key) do update
+                    set enabled = excluded.enabled,
+                        sort_order = excluded.sort_order,
+                        updated_at = now()`;
+  await query(upsert, [a.key, a.enabled, b.sortOrder]);
+  await query(upsert, [b.key, b.enabled, a.sortOrder]);
 
   revalidateHomepage();
 }
 
-
 // Сохранить контент блока Hero.
 export async function saveHeroContent(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
 
-  const content = {
+  await saveBlockContent("hero", {
     eyebrow: String(formData.get("eyebrow") || "").trim(),
     title: String(formData.get("title") || "").trim(),
     subtitle: String(formData.get("subtitle") || "").trim(),
@@ -86,39 +82,28 @@ export async function saveHeroContent(formData: FormData) {
     photo: String(formData.get("photo") || "").trim(),
     quote: String(formData.get("quote") || "").trim(),
     quoteCaption: String(formData.get("quoteCaption") || "").trim(),
-  };
-
-  await supabase
-    .from("homepage_content")
-    .upsert({ block_key: "hero", content }, { onConflict: "block_key" });
+  });
 
   revalidateHomepage();
 }
-
 
 // Сохранить контент блока «О Lucenta».
 export async function saveAboutContent(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
 
-  const content = {
+  await saveBlockContent("about", {
     eyebrow: String(formData.get("eyebrow") || "").trim(),
     text1: String(formData.get("text1") || "").trim(),
     text2: String(formData.get("text2") || "").trim(),
-  };
-
-  await supabase
-    .from("homepage_content")
-    .upsert({ block_key: "about", content }, { onConflict: "block_key" });
+  });
 
   revalidateHomepage();
 }
 
-
 // Сохранить контент блока «Когда стоит обратиться».
 export async function saveWhenContent(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
 
-  // items приходят JSON-строкой из клиентского редактора (динамический список).
   let items: { title: string; text: string }[] = [];
   try {
     const parsed = JSON.parse(String(formData.get("items") || "[]"));
@@ -134,24 +119,19 @@ export async function saveWhenContent(formData: FormData) {
     items = [];
   }
 
-  const content = {
+  await saveBlockContent("when_to_apply", {
     eyebrow: String(formData.get("eyebrow") || "").trim(),
     title: String(formData.get("title") || "").trim(),
     description: String(formData.get("description") || "").trim(),
     items,
-  };
-
-  await supabase
-    .from("homepage_content")
-    .upsert({ block_key: "when_to_apply", content }, { onConflict: "block_key" });
+  });
 
   revalidateHomepage();
 }
 
-
 // Сохранить контент блока «Почему Lucenta».
 export async function saveWhyContent(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
 
   let items: { title: string; text: string; icon: string }[] = [];
   try {
@@ -169,45 +149,35 @@ export async function saveWhyContent(formData: FormData) {
     items = [];
   }
 
-  const content = {
+  await saveBlockContent("why", {
     eyebrow: String(formData.get("eyebrow") || "").trim(),
     title: String(formData.get("title") || "").trim(),
     items,
-  };
-
-  await supabase
-    .from("homepage_content")
-    .upsert({ block_key: "why", content }, { onConflict: "block_key" });
+  });
 
   revalidateHomepage();
 }
 
-
-// Сохранить заголовок блока с собственной механикой (directions/cases/team/reviews).
+// Сохранить заголовок блока с собственной механикой.
 export async function saveSectionHeadingContent(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
 
   const blockKey = String(formData.get("blockKey") || "").trim();
   const allowed = ["directions", "cases", "team", "reviews"];
   if (!allowed.includes(blockKey)) return;
 
-  const content = {
+  await saveBlockContent(blockKey, {
     eyebrow: String(formData.get("eyebrow") || "").trim(),
     title: String(formData.get("title") || "").trim(),
     description: String(formData.get("description") || "").trim(),
-  };
-
-  await supabase
-    .from("homepage_content")
-    .upsert({ block_key: blockKey, content }, { onConflict: "block_key" });
+  });
 
   revalidateHomepage();
 }
 
-
 // Сохранить контент блока «Обучение».
 export async function saveEducationContent(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
 
   let bullets: string[] = [];
   try {
@@ -219,7 +189,7 @@ export async function saveEducationContent(formData: FormData) {
     bullets = [];
   }
 
-  const content = {
+  await saveBlockContent("education", {
     eyebrow: String(formData.get("eyebrow") || "").trim(),
     title: String(formData.get("title") || "").trim(),
     description: String(formData.get("description") || "").trim(),
@@ -227,49 +197,36 @@ export async function saveEducationContent(formData: FormData) {
     bullets,
     primaryLabel: String(formData.get("primaryLabel") || "").trim(),
     secondaryLabel: String(formData.get("secondaryLabel") || "").trim(),
-  };
-
-  await supabase
-    .from("homepage_content")
-    .upsert({ block_key: "education", content }, { onConflict: "block_key" });
+  });
 
   revalidateHomepage();
 }
 
 // Сохранить контент блока CTA.
 export async function saveCtaContent(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
 
-  const content = {
+  await saveBlockContent("cta", {
     title: String(formData.get("title") || "").trim(),
     text1: String(formData.get("text1") || "").trim(),
     text2: String(formData.get("text2") || "").trim(),
     primaryLabel: String(formData.get("primaryLabel") || "").trim(),
     secondaryLabel: String(formData.get("secondaryLabel") || "").trim(),
-  };
-
-  await supabase
-    .from("homepage_content")
-    .upsert({ block_key: "cta", content }, { onConflict: "block_key" });
+  });
 
   revalidateHomepage();
 }
 
-
 // Сохранить контент блока «Информационная плашка».
 export async function savePromoContent(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
 
-  const content = {
+  await saveBlockContent("promo", {
     eyebrow: String(formData.get("eyebrow") || "").trim(),
     text: String(formData.get("text") || "").trim(),
     linkLabel: String(formData.get("linkLabel") || "").trim(),
     linkHref: String(formData.get("linkHref") || "").trim(),
-  };
-
-  await supabase
-    .from("homepage_content")
-    .upsert({ block_key: "promo", content }, { onConflict: "block_key" });
+  });
 
   revalidateHomepage();
 }

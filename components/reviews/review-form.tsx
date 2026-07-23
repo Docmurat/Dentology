@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { submitReview } from "@/app/reviews/actions";
+import { compressImage } from "@/lib/image-compress";
 
 type State = { error?: string; ok?: boolean };
 type DoctorOption = { slug: string; name: string };
@@ -24,14 +25,36 @@ function ReviewModal({
     {}
   );
   const [photoName, setPhotoName] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
   const [consent, setConsent] = useState(false);
 
-  // После успешной отправки окно закрывается само через 3 секунды.
   useEffect(() => {
     if (!state.ok) return;
     const t = setTimeout(onClose, 3000);
     return () => clearTimeout(t);
   }, [state.ok, onClose]);
+
+  async function onPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const file = input.files?.[0] ?? null;
+    if (!file) {
+      setPhotoName(null);
+      return;
+    }
+    setPhotoName(file.name);
+    setPreparing(true);
+    try {
+      const compressed = await compressImage(file);
+      const dt = new DataTransfer();
+      dt.items.add(compressed);
+      input.files = dt.files;
+      setPhotoName(compressed.name);
+    } catch {
+      // если сжать не удалось — оставляем оригинал
+    } finally {
+      setPreparing(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
@@ -57,7 +80,6 @@ function ReviewModal({
             </div>
 
             <form action={action} className="mt-4 space-y-4">
-              {/* honeypot */}
               <input
                 type="text"
                 name="company"
@@ -67,7 +89,6 @@ function ReviewModal({
                 aria-hidden="true"
               />
 
-              {/* Режим курса: отзыв привязывается к курсу, выбор врача не нужен. */}
               {courseSlug ? (
                 <input type="hidden" name="courseSlug" value={courseSlug} />
               ) : null}
@@ -178,14 +199,12 @@ function ReviewModal({
                     name="photo"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) =>
-                      setPhotoName(e.target.files?.[0]?.name ?? null)
-                    }
+                    onChange={onPhotoChange}
                   />
                 </label>
                 {photoName ? (
                   <p className="mt-1 truncate text-xs text-[var(--color-gray-500)]">
-                    {photoName}
+                    {preparing ? "Обрабатываем фото…" : photoName}
                   </p>
                 ) : null}
               </div>
@@ -218,8 +237,8 @@ function ReviewModal({
 
               <button
                 type="submit"
-                disabled={pending || !consent}
-                className="w-full rounded-lg bg-[var(--color-navy)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+                disabled={pending || !consent || preparing}
+                className="w-full rounded-lg bg-[var(--color-teal)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
               >
                 {pending ? "Отправляем…" : "Отправить отзыв"}
               </button>

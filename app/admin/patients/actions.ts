@@ -1,31 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
-import { createAdminClient } from "@/lib/supabase-admin";
+import bcrypt from "bcryptjs";
+import { query, queryOne } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth-guards";
+import { pgErrorCode } from "@/lib/sql-helpers";
 import { loginToEmail } from "@/lib/auth-login";
 
 type Result = { error?: string; ok?: boolean };
 
 // Управление аккаунтами пациентов — только администратор.
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Не авторизован");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || profile.role !== "admin") {
-    throw new Error("Доступно только администратору");
-  }
-}
-
+// Аккаунты живут в таблице profiles (email + bcrypt-хеш пароля).
 export async function createPatientAccount(
   _prev: Result,
   formData: FormData
@@ -44,22 +29,20 @@ export async function createPatientAccount(
   if (!login.trim()) return { error: "Укажите логин" };
   if (password.length < 8) return { error: "Пароль — минимум 8 символов" };
 
-  const admin = createAdminClient();
+  const passwordHash = await bcrypt.hash(password, 10);
 
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: fullName },
-  });
-  if (error) return { error: error.message };
-
-  const { error: pErr } = await admin.from("profiles").upsert({
-    id: data.user.id,
-    role: "patient",
-    full_name: fullName || null,
-  });
-  if (pErr) return { error: pErr.message };
+  try {
+    await query(
+      `insert into profiles (email, password_hash, full_name, role)
+       values ($1, $2, $3, 'patient')`,
+      [email.toLowerCase(), passwordHash, fullName || null]
+    );
+  } catch (err) {
+    if (pgErrorCode(err) === "23505") {
+      return { error: "Пользователь с таким логином уже существует" };
+    }
+    return { error: err instanceof Error ? err.message : "Ошибка создания" };
+  }
 
   revalidatePath("/admin/patients");
   return { ok: true };
@@ -80,9 +63,16 @@ export async function setPatientPassword(
   if (!userId) return { error: "Нет пользователя" };
   if (password.length < 8) return { error: "Пароль — минимум 8 символов" };
 
-  const admin = createAdminClient();
-  const { error } = await admin.auth.admin.updateUserById(userId, { password });
-  if (error) return { error: error.message };
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  try {
+    await query(`update profiles set password_hash = $1 where id = $2`, [
+      passwordHash,
+      userId,
+    ]);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Ошибка смены пароля" };
+  }
 
   return { ok: true };
 }
@@ -92,8 +82,20 @@ export async function deletePatientAccount(formData: FormData) {
   const userId = String(formData.get("userId") || "");
   if (!userId) return;
 
-  const admin = createAdminClient();
-  await admin.auth.admin.deleteUser(userId);
+  // Удаляем только пациентов — на случай ошибочного id.
+  await query(`delete from profiles where id = $1 and role = 'patient'`, [
+    userId,
+  ]);
 
   revalidatePath("/admin/patients");
+}
+
+// Проверка существования логина (используется формой при необходимости).
+export async function patientExists(login: string): Promise<boolean> {
+  const email = loginToEmail(login).toLowerCase();
+  const row = await queryOne<{ id: string }>(
+    `select id from profiles where lower(email) = $1`,
+    [email]
+  );
+  return Boolean(row);
 }

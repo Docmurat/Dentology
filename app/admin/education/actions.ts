@@ -1,28 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { query } from "@/lib/db";
+import { buildInsert, buildUpdate } from "@/lib/sql-helpers";
+import { requireStaff, requireAdmin } from "@/lib/auth-guards";
 import { slugify } from "@/lib/slugify";
 import { readCourseFields } from "@/lib/course-fields";
-
-async function requireStaff() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Не авторизован");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || !["admin", "editor"].includes(profile.role)) {
-    throw new Error("Недостаточно прав");
-  }
-  return supabase;
-}
 
 function revalidateCourses(slug?: string) {
   revalidatePath("/education");
@@ -31,7 +14,7 @@ function revalidateCourses(slug?: string) {
 }
 
 export async function createCourse(formData: FormData) {
-  const supabase = await requireStaff();
+  const user = await requireStaff();
   const fields = readCourseFields(formData);
   if (!fields.title) return;
 
@@ -40,35 +23,56 @@ export async function createCourse(formData: FormData) {
     slugify(fields.title) ||
     `course-${Date.now()}`;
 
-  const { error } = await supabase.from("courses").insert({ slug, ...fields });
-  if (error) console.error("createCourse error:", error.message);
+  try {
+    const { text, values } = buildInsert("courses", {
+      slug,
+      ...fields,
+      created_by: user.id,
+    });
+    await query(text, values);
+  } catch (err) {
+    console.error(
+      "createCourse error:",
+      err instanceof Error ? err.message : err
+    );
+  }
   revalidateCourses(slug);
 }
 
 export async function updateCourse(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
   const slug = String(formData.get("originalSlug") || "");
   if (!slug) return;
 
   const fields = readCourseFields(formData);
   if (!fields.title) return;
 
-  const { error } = await supabase
-    .from("courses")
-    .update(fields)
-    .eq("slug", slug);
-  if (error) console.error("updateCourse error:", error.message);
+  try {
+    const { text, values } = buildUpdate("courses", fields, "slug", slug);
+    await query(text, values);
+  } catch (err) {
+    console.error(
+      "updateCourse error:",
+      err instanceof Error ? err.message : err
+    );
+  }
   revalidateCourses(slug);
 }
 
 export async function setCourseArchived(slug: string, archived: boolean) {
-  const supabase = await requireStaff();
+  await requireStaff();
   if (!slug) return;
-  const { error } = await supabase
-    .from("courses")
-    .update({ archived })
-    .eq("slug", slug);
-  if (error) console.error("setCourseArchived error:", error.message);
+  try {
+    await query(`update courses set archived = $1 where slug = $2`, [
+      archived,
+      slug,
+    ]);
+  } catch (err) {
+    console.error(
+      "setCourseArchived error:",
+      err instanceof Error ? err.message : err
+    );
+  }
   revalidateCourses(slug);
 }
 
@@ -78,11 +82,12 @@ export async function toggleArchiveAction(formData: FormData) {
   await setCourseArchived(slug, archived);
 }
 
+// Удаление курса — только администратор.
 export async function deleteCourse(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireAdmin();
   const slug = String(formData.get("slug") || "");
   if (!slug) return;
 
-  await supabase.from("courses").delete().eq("slug", slug);
+  await query(`delete from courses where slug = $1`, [slug]);
   revalidateCourses(slug);
 }

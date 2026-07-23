@@ -1,19 +1,30 @@
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
+import { query } from "@/lib/db";
 import { deleteTeamMember } from "./actions";
+import { AdminThumb } from "@/components/admin/admin-thumb";
 
 export const dynamic = "force-dynamic";
 
+type Row = {
+  slug: string;
+  name: string;
+  position: string;
+  image: string | null;
+  category: string;
+  is_chief: boolean;
+  is_lead: boolean;
+  lead_direction_slug: string | null;
+  sort_order: number;
+  is_speaker: boolean;
+};
+
 export default async function AdminTeamPage() {
-  const supabase = await createClient();
-  const { data: members } = await supabase
-    .from("team_members")
-    .select(
-      "slug, name, position, image, category, is_chief, is_lead, lead_direction_slug, sort_order, is_speaker"
-    )
-    .order("is_chief", { ascending: false })
-    .order("is_lead", { ascending: false })
-    .order("sort_order", { ascending: true });
+  const members = await query<Row>(
+    `select slug, name, position, image, category, is_chief, is_lead,
+            lead_direction_slug, sort_order, is_speaker
+       from team_members
+      order by is_chief desc, is_lead desc, sort_order asc`
+  );
 
   return (
     <div>
@@ -39,20 +50,12 @@ export default async function AdminTeamPage() {
                 className="flex items-center justify-between gap-4 px-5 py-4"
               >
                 <div className="flex min-w-0 items-center gap-4">
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-[var(--color-gray-100)]">
-                    {item.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.image}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[10px] text-[var(--color-gray-400)]">
-                        нет фото
-                      </div>
-                    )}
-                  </div>
+                  <AdminThumb
+                    url={item.image}
+                    className="h-12 w-12"
+                    sizes="48px"
+                    rounded="rounded-full"
+                  />
 
                   <div className="min-w-0">
                     <p className="truncate font-medium text-[var(--color-navy)]">

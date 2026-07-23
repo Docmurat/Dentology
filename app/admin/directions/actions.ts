@@ -1,33 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { query } from "@/lib/db";
+import { buildInsert, buildUpdate, pgErrorCode } from "@/lib/sql-helpers";
+import { requireStaff } from "@/lib/auth-guards";
 import { slugify } from "@/lib/slugify";
-
-async function requireStaff() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Не авторизован");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || !["admin", "editor"].includes(profile.role)) {
-    throw new Error("Недостаточно прав");
-  }
-  return supabase;
-}
 
 function revalidateDirections(slug?: string) {
   revalidatePath("/admin/directions");
   revalidatePath("/directions");
   if (slug) revalidatePath(`/directions/${slug}`);
-  revalidatePath("/"); // коллаж на главной
+  revalidatePath("/");
 }
 
 function parseLines(value: FormDataEntryValue | null): string[] {
@@ -53,7 +36,6 @@ function parseFaq(value: FormDataEntryValue | null) {
   }
 }
 
-// Поля направления из формы. slug читается отдельно (на create).
 function readFields(formData: FormData) {
   const roleRaw = String(formData.get("collageRole") || "small");
   const collageRole = ["featured", "large", "small"].includes(roleRaw)
@@ -65,7 +47,6 @@ function readFields(formData: FormData) {
     short: String(formData.get("short") || "").trim(),
     description: String(formData.get("description") || "").trim(),
     hero_description: String(formData.get("heroDescription") || "").trim(),
-    // Позиция в коллаже сама определяет «главное» направление.
     featured: collageRole === "featured",
     collage_role: collageRole,
     sort_order: Number(formData.get("sortOrder") || 0) || 0,
@@ -80,21 +61,18 @@ function readFields(formData: FormData) {
 
 // «Главным» может быть только одно направление: остальные featured
 // понижаем до «большого», чтобы коллаж не сломался.
-async function demoteOtherFeatured(
-  supabase: Awaited<ReturnType<typeof requireStaff>>,
-  keepSlug: string
-) {
-  await supabase
-    .from("directions")
-    .update({ featured: false, collage_role: "large" })
-    .eq("collage_role", "featured")
-    .neq("slug", keepSlug);
+async function demoteOtherFeatured(keepSlug: string) {
+  await query(
+    `update directions set featured = false, collage_role = 'large'
+      where collage_role = 'featured' and slug <> $1`,
+    [keepSlug]
+  );
 }
 
 export async function createDirection(
   formData: FormData
 ): Promise<{ error?: string }> {
-  const supabase = await requireStaff();
+  await requireStaff();
 
   const fields = readFields(formData);
   if (!fields.title) return { error: "Название обязательно" };
@@ -104,15 +82,19 @@ export async function createDirection(
     slugify(fields.title) ||
     `direction-${Date.now()}`;
 
-  if (fields.featured) await demoteOtherFeatured(supabase, slug);
+  if (fields.featured) await demoteOtherFeatured(slug);
 
-  const { error } = await supabase
-    .from("directions")
-    .insert({ slug, ...fields, archived: false });
-  if (error) {
-    if (error.code === "23505")
+  try {
+    const { text, values } = buildInsert("directions", {
+      slug,
+      ...fields,
+      archived: false,
+    });
+    await query(text, values);
+  } catch (err) {
+    if (pgErrorCode(err) === "23505")
       return { error: "Направление с таким slug уже существует" };
-    return { error: error.message };
+    return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
   }
 
   revalidateDirections(slug);
@@ -122,7 +104,7 @@ export async function createDirection(
 export async function updateDirection(
   formData: FormData
 ): Promise<{ error?: string }> {
-  const supabase = await requireStaff();
+  await requireStaff();
 
   const originalSlug = String(formData.get("originalSlug") || "");
   if (!originalSlug) return { error: "Не указано направление для обновления" };
@@ -131,43 +113,44 @@ export async function updateDirection(
   if (!fields.title) return { error: "Название обязательно" };
 
   // slug не меняем — к нему привязаны кейсы и отзывы.
-  const { error } = await supabase
-    .from("directions")
-    .update(fields)
-    .eq("slug", originalSlug);
-  if (error) return { error: error.message };
+  try {
+    const { text, values } = buildUpdate(
+      "directions",
+      fields,
+      "slug",
+      originalSlug
+    );
+    await query(text, values);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
+  }
 
-  if (fields.featured) await demoteOtherFeatured(supabase, originalSlug);
+  if (fields.featured) await demoteOtherFeatured(originalSlug);
 
   revalidateDirections(originalSlug);
   return {};
 }
 
 // «Мягкое удаление»: направление архивируется, а не стирается.
-// Строка остаётся в БД (поэтому название сохраняется навсегда), но
-// уходит из пикеров, коллажа и списка /directions. Снимаем флаг
-// «главное», чтобы освободить место в коллаже.
 export async function deleteDirection(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
   const slug = String(formData.get("slug") || "");
   if (!slug) return;
 
-  await supabase
-    .from("directions")
-    .update({ archived: true, featured: false, collage_role: "small" })
-    .eq("slug", slug);
+  await query(
+    `update directions set archived = true, featured = false, collage_role = 'small'
+      where slug = $1`,
+    [slug]
+  );
   revalidateDirections(slug);
 }
 
 // Вернуть направление из архива.
 export async function restoreDirection(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
   const slug = String(formData.get("slug") || "");
   if (!slug) return;
 
-  await supabase
-    .from("directions")
-    .update({ archived: false })
-    .eq("slug", slug);
+  await query(`update directions set archived = false where slug = $1`, [slug]);
   revalidateDirections(slug);
 }

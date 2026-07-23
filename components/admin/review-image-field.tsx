@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { uploadImageFile } from "@/lib/upload-client";
+import { compressImage } from "@/lib/image-compress";
 import { setReviewImage } from "@/app/admin/reviews/actions";
-
-const BUCKET = "review-images";
 
 export function ReviewImageField({
   id,
@@ -31,15 +30,14 @@ export function ReviewImageField({
     setBusy(true);
     setError(null);
     try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${id}/photo-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (upErr) throw new Error(upErr.message);
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      await save(data.publicUrl);
+      // Сжимаем перед загрузкой, чтобы в хранилище не попадали тяжёлые оригиналы.
+      const compressed = await compressImage(file);
+      const url = await uploadImageFile(
+        `review-images/${id}`,
+        compressed,
+        "photo"
+      );
+      await save(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка загрузки");
     } finally {

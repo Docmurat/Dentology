@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
+import { query } from "@/lib/db";
 import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
 import { getTeamMembers } from "@/lib/team";
 import { deleteCourse, toggleArchiveAction } from "./actions";
@@ -16,14 +16,9 @@ type Row = {
 };
 
 export default async function AdminEducationPage() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("courses")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
-
-  const rows = (data ?? []) as Row[];
+  const rows = await query<Row>(
+    `select * from courses order by sort_order asc, created_at desc`
+  );
 
   const team = await getTeamMembers();
   const doctorName = new Map(team.map((d) => [d.slug, d.name]));

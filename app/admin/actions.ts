@@ -1,10 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { signOut as authSignOut } from "@/lib/auth";
 
 export async function signOut() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/");
+  // Auth.js сам очистит cookie сессии и выполнит переход.
+  await authSignOut({ redirectTo: "/" });
 }

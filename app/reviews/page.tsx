@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
@@ -15,6 +16,26 @@ import { ReviewForm } from "@/components/reviews/review-form";
 import { getPageHeading } from "@/lib/page-content";
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ doctor?: string; course?: string }>;
+}): Promise<Metadata> {
+  const { doctor, course } = await searchParams;
+  const filtered = Boolean(doctor || course);
+  const heading = await getPageHeading("reviews");
+
+  return {
+    title: heading.title || "Отзывы",
+    description:
+      heading.description ||
+      "Отзывы пациентов о лечении в клинике Lucenta — реальный опыт по сложным клиническим случаям.",
+    // Отфильтрованные варианты не индексируем, чтобы не плодить дубли.
+    alternates: { canonical: "/reviews" },
+    ...(filtered ? { robots: { index: false, follow: true } } : {}),
+  };
+}
 
 export default async function ReviewsPage({
   searchParams,

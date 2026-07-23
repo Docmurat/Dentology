@@ -3,8 +3,8 @@ import { TeamForm } from "@/components/admin/team-form";
 import { TeamAccountForm } from "@/components/admin/team-account-form";
 import { getTeamMemberBySlug } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
-import { createClient } from "@/utils/supabase/server";
-import { createAdminClient } from "@/lib/supabase-admin";
+import { queryOne } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth-guards";
 import { emailToLogin } from "@/lib/auth-login";
 
 export const dynamic = "force-dynamic";
@@ -25,31 +25,17 @@ export default async function EditTeamMemberPage({
     label: d.title,
   }));
 
-
   // Управление аккаунтом — только администратору.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user!.id)
-    .maybeSingle();
+  const me = await getCurrentUser();
   const isAdmin = me?.role === "admin";
 
   let currentEmail: string | null = null;
   if (isAdmin) {
-    const admin = createAdminClient();
-    const { data: linked } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("doctor_slug", slug)
-      .maybeSingle();
-    if (linked) {
-      const { data } = await admin.auth.admin.getUserById(linked.id);
-      currentEmail = data.user?.email ?? null;
-    }
+    const linked = await queryOne<{ email: string }>(
+      `select email from profiles where doctor_slug = $1`,
+      [slug]
+    );
+    currentEmail = linked?.email ?? null;
   }
 
   return (

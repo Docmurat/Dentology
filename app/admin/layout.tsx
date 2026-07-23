@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
+import { queryOne } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth-guards";
 import { signOut } from "./actions";
 
 export default async function AdminLayout({
@@ -7,22 +8,14 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
+  // Неавторизованный — отдаём голое содержимое (страница входа).
   if (!user) {
     return <>{children}</>;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, full_name")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || !["admin", "editor"].includes(profile.role)) {
+  if (!["admin", "editor"].includes(user.role)) {
     return (
       <main className="flex min-h-screen items-center justify-center px-6 text-center">
         <div>
@@ -42,6 +35,11 @@ export default async function AdminLayout({
     );
   }
 
+  const profile = await queryOne<{ full_name: string | null }>(
+    `select full_name from profiles where id = $1`,
+    [user.id]
+  );
+
   return (
     <div className="min-h-screen bg-[var(--color-gray-50)]">
       <header className="border-b border-[var(--color-gray-200)] bg-white">
@@ -58,17 +56,17 @@ export default async function AdminLayout({
                 Кейсы
               </Link>
               <Link
-              href="/admin/team" 
-              className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
+                href="/admin/team"
+                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
               >
                 Команда
               </Link>
               <Link
-  href="/admin/directions"
-  className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
->
-  Направления
-</Link>
+                href="/admin/directions"
+                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
+              >
+                Направления
+              </Link>
               <Link
                 href="/admin/homepage"
                 className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
@@ -92,9 +90,9 @@ export default async function AdminLayout({
 
           <div className="flex items-center gap-4 text-sm">
             <span className="text-[var(--color-gray-500)]">
-              {profile.full_name || user.email}
+              {profile?.full_name || user.email}
               <span className="ml-2 rounded-full bg-[var(--color-gray-100)] px-2 py-0.5 text-xs">
-                {profile.role}
+                {user.role}
               </span>
             </span>
             <form action={signOut}>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CropField } from "@/components/admin/crop-field";
-import { createClient } from "@/utils/supabase/client";
+import { uploadImageBlob } from "@/lib/upload-client";
 import { CourseMetricsEditor } from "@/components/admin/course-metrics-editor";
 import { CourseFaqEditor } from "@/components/admin/course-faq-editor";
 import { CourseProgramEditor } from "@/components/admin/course-program-editor";
@@ -13,8 +13,6 @@ import type { Course } from "@/lib/courses";
 const labelCls = "text-sm font-medium text-[var(--color-navy)]";
 const inputCls =
   "mt-1 w-full rounded-lg border border-[var(--color-gray-200)] px-3 py-2 text-sm outline-none focus:border-[var(--color-teal)]";
-
-const BUCKET = "team-images";
 
 type DoctorOption = { slug: string; name: string };
 type DirectionOption = { slug: string; label: string };
@@ -94,17 +92,9 @@ function FormSection({
   );
 }
 
-async function uploadBlob(
-  supabase: ReturnType<typeof createClient>,
-  blob: Blob
-): Promise<string> {
-  const path = `courses/quote-${Date.now()}.jpg`;
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-  if (error) throw new Error(error.message);
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+// Загрузка через серверный экшен (Object Storage).
+async function uploadBlob(blob: Blob): Promise<string> {
+  return uploadImageBlob("team-images/courses", blob, "quote");
 }
 
 export function CourseForm({
@@ -127,7 +117,6 @@ export function CourseForm({
   lockedDoctorSlug?: string;
 }) {
   const router = useRouter();
-  const supabase = createClient();
 
   const selectedDirs = new Set(initial?.directionSlugs ?? []);
   const [quoteBlob, setQuoteBlob] = useState<Blob | null>(null);
@@ -150,7 +139,7 @@ export function CourseForm({
     setError(null);
     try {
       let quoteImage = initial?.quoteImage ?? "";
-      if (quoteBlob) quoteImage = await uploadBlob(supabase, quoteBlob);
+      if (quoteBlob) quoteImage = await uploadBlob(quoteBlob);
       else if (quoteRemoved) quoteImage = "";
       formData.set("quoteImage", quoteImage);
 
@@ -329,7 +318,7 @@ export function CourseForm({
 
       {/* Цитата и фото */}
       <FormSection
-        title="Цитата спикера и фото"
+        title="Цитата и портрет спикера"
         toggleName="showQuote"
         toggleDefault={show(initial?.showQuote)}
       >
@@ -344,10 +333,9 @@ export function CourseForm({
           />
         </div>
         <div>
-          <label className={labelCls}>Фото 3:4 рядом с цитатой</label>
-          <div className="mt-2 max-w-[220px]">
+          <div className="max-w-[220px]">
             <CropField
-              label="Фото цитаты (3:4)"
+              label="Портрет спикера (3:4)"
               aspect={3 / 4}
               existingUrl={initial?.quoteImage ?? undefined}
               onCropped={(blob) => setQuoteBlob(blob)}

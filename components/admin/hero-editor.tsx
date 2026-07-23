@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CropField } from "@/components/admin/crop-field";
-import { createClient } from "@/utils/supabase/client";
+import { uploadImageBlob } from "@/lib/upload-client";
 import { saveHeroContent } from "@/app/admin/homepage/actions";
 import type { HeroContent } from "@/lib/homepage";
 
@@ -11,24 +11,13 @@ const labelCls = "text-sm font-medium text-[var(--color-navy)]";
 const inputCls =
   "mt-1 w-full rounded-lg border border-[var(--color-gray-200)] px-3 py-2 text-sm outline-none focus:border-[var(--color-teal)]";
 
-const BUCKET = "team-images";
-
-async function uploadBlob(
-  supabase: ReturnType<typeof createClient>,
-  blob: Blob
-): Promise<string> {
-  const path = `hero/photo-${Date.now()}.jpg`;
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-  if (error) throw new Error(error.message);
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+// Загрузка через серверный экшен (Object Storage).
+async function uploadBlob(blob: Blob): Promise<string> {
+  return uploadImageBlob("team-images/hero", blob, "photo");
 }
 
 export function HeroEditor({ initial }: { initial: HeroContent }) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null);
   const [photoRemoved, setPhotoRemoved] = useState(false);
@@ -47,7 +36,7 @@ export function HeroEditor({ initial }: { initial: HeroContent }) {
 
       // Фото: новое (blob) → грузим; удалено → пусто; иначе оставляем прежнее.
       let photo = initial.photo;
-      if (photoBlob) photo = await uploadBlob(supabase, photoBlob);
+      if (photoBlob) photo = await uploadBlob(photoBlob);
       else if (photoRemoved) photo = "";
       formData.set("photo", photo);
 

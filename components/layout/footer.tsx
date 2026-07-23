@@ -16,6 +16,7 @@ export function Footer() {
               width={200}
               height={64}
               className="h-16 w-auto brightness-0 invert"
+              style={{ width: "auto" }}
             />
             <p className="mt-4 max-w-sm text-sm leading-7 text-white/75">
               Стоматологическая практика с ведущей экспертизой в сложной

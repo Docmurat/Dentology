@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,6 +16,7 @@ import { CaseExcerpt } from "@/components/cases/case-excerpt";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { ReviewsCarousel } from "@/components/reviews/reviews-carousel";
 import { DoctorDocuments } from "@/components/team/doctor-documents";
+import { JsonLd, physicianJsonLd } from "@/components/seo/json-ld";
 
 export const revalidate = 60;
 
@@ -23,6 +25,35 @@ type Props = {
     slug: string;
   }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const doctor = await getTeamMemberBySlug(slug);
+  if (!doctor) return {};
+
+  const description = doctor.excerpt || doctor.description || undefined;
+  const url = `/team/${slug}`;
+  const images = doctor.image ? [{ url: doctor.image }] : undefined;
+
+  return {
+    title: doctor.name,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: doctor.name,
+      description,
+      url,
+      type: "profile",
+      ...(images ? { images } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: doctor.name,
+      description,
+      ...(doctor.image ? { images: [doctor.image] } : {}),
+    },
+  };
+}
 
 const FOCUS_FALLBACK = [
   "Работа со сложными клиническими ситуациями",
@@ -74,7 +105,17 @@ export default async function DoctorPage({ params }: Props) {
   const courses = doctor.courses ?? [];
 
   return (
-    <SiteShell>
+    <>
+      <JsonLd
+        data={physicianJsonLd({
+          name: doctor.name,
+          slug: doctor.slug,
+          position: doctor.position,
+          description: doctor.excerpt || doctor.description || undefined,
+          image: doctor.image || undefined,
+        })}
+      />
+      <SiteShell>
       <Section className="pt-14 pb-16 md:pt-20 md:pb-24">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
           <div className="order-2 lg:order-1">
@@ -242,29 +283,8 @@ export default async function DoctorPage({ params }: Props) {
 
           <DoctorDocuments
             initialBeside={courses.length >= 6}
-            diploma={
-              <Card>
-                <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
-                  Диплом специалиста
-                </h2>
-
-                {doctor.diplomaImage ? (
-                  <div className="mt-5 overflow-hidden rounded-2xl bg-[var(--color-gray-100)]">
-                    <Image
-                      src={doctor.diplomaImage}
-                      alt={`Диплом — ${doctor.name}`}
-                      width={1000}
-                      height={750}
-                      className="h-auto w-full"
-                    />
-                  </div>
-                ) : (
-                  <p className="mt-4 text-base leading-7 text-[var(--color-gray-700)]">
-                    Скан диплома появится после загрузки в админ-панели.
-                  </p>
-                )}
-              </Card>
-            }
+            diplomaSrc={doctor.diplomaImage}
+            diplomaAlt={`Диплом — ${doctor.name}`}
             education={
               <Card>
                 <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
@@ -365,5 +385,6 @@ export default async function DoctorPage({ params }: Props) {
         </div>
       </Section>
     </SiteShell>
+    </>
   );
 }

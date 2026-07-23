@@ -1,10 +1,14 @@
+import type { ComponentProps } from "react";
 import { notFound } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { queryOne } from "@/lib/db";
 import { getTeamMembers } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
 import { ReviewEditForm } from "@/components/admin/review-edit-form";
 
 export const dynamic = "force-dynamic";
+
+// Тип строки берём прямо из пропсов формы — так они не разъедутся.
+type ReviewRow = ComponentProps<typeof ReviewEditForm>["review"];
 
 export default async function EditReviewPage({
   params,
@@ -13,14 +17,13 @@ export default async function EditReviewPage({
 }) {
   const { id } = await params;
 
-  const supabase = await createClient();
-  const { data: review } = await supabase
-    .from("reviews")
-    .select(
-      "id, author, text, doctor_slug, direction_slugs, instagram, review_date, sort_order, image, course_slug, course_title, pros, cons, wishes"
-    )
-    .eq("id", id)
-    .maybeSingle();
+  const review = await queryOne<ReviewRow>(
+    `select id, author, text, doctor_slug, direction_slugs, instagram,
+            review_date, sort_order, image, course_slug, course_title,
+            pros, cons, wishes
+       from reviews where id = $1`,
+    [id]
+  );
 
   if (!review) notFound();
 

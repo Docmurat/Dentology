@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
+import { query } from "@/lib/db";
 import { deleteDirection, restoreDirection } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -21,15 +21,11 @@ type Row = {
 };
 
 export default async function AdminDirectionsPage() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("directions")
-    .select("slug, title, short, collage_role, sort_order, featured, archived")
-    .order("archived", { ascending: true })
-    .order("featured", { ascending: false })
-    .order("sort_order", { ascending: true });
-
-  const rows = (data ?? []) as Row[];
+  const rows = await query<Row>(
+    `select slug, title, short, collage_role, sort_order, featured, archived
+       from directions
+      order by archived asc, featured desc, sort_order asc`
+  );
 
   return (
     <div>

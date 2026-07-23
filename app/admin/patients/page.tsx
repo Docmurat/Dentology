@@ -1,5 +1,5 @@
-import { createClient } from "@/utils/supabase/server";
-import { createAdminClient } from "@/lib/supabase-admin";
+import { query } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth-guards";
 import { emailToLogin } from "@/lib/auth-login";
 import { CreatePatientForm } from "@/components/admin/create-patient-form";
 import { PatientRow } from "@/components/admin/patient-row";
@@ -8,15 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPatientsPage() {
   // Только администратору (layout пускает admin+editor).
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user!.id)
-    .maybeSingle();
+  const me = await getCurrentUser();
 
   if (me?.role !== "admin") {
     return (
@@ -31,25 +23,16 @@ export default async function AdminPatientsPage() {
     );
   }
 
-  // Список аккаунтов пациентов (auth.users + profiles) через сервисный клиент.
-  const admin = createAdminClient();
-  const { data: list } = await admin.auth.admin.listUsers({ perPage: 200 });
-  const { data: profiles } = await admin
-    .from("profiles")
-    .select("id, role, full_name");
-
-  const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
-  const patients = (list?.users ?? [])
-    .map((u) => {
-      const p = byId.get(u.id);
-      return {
-        id: u.id,
-        email: u.email ?? "",
-        role: p?.role ?? null,
-        fullName: p?.full_name ?? null,
-      };
-    })
-    .filter((d) => d.role === "patient");
+  // Аккаунты пациентов теперь целиком в таблице profiles.
+  const patients = await query<{
+    id: string;
+    email: string;
+    full_name: string | null;
+  }>(
+    `select id, email, full_name from profiles
+      where role = 'patient'
+      order by created_at desc`
+  );
 
   return (
     <div className="space-y-8">
@@ -77,7 +60,7 @@ export default async function AdminPatientsPage() {
                 key={p.id}
                 id={p.id}
                 email={emailToLogin(p.email)}
-                fullName={p.fullName}
+                fullName={p.full_name}
               />
             ))}
           </div>

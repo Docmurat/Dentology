@@ -4,7 +4,7 @@ import { updateSpeakerCourse } from "../../../course-actions";
 import { getCourseBySlugAdmin } from "@/lib/courses";
 import { getTeamMembers } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentUser } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -15,20 +15,12 @@ export default async function SpeakerEditCoursePage({
 }) {
   const { slug } = await params;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/admin/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, doctor_slug")
-    .eq("id", user.id)
-    .maybeSingle();
-  const isStaff = ["admin", "editor"].includes(profile?.role ?? "");
+  const isStaff = ["admin", "editor"].includes(user.role);
   const lockedDoctorSlug =
-    !isStaff && profile?.doctor_slug ? profile.doctor_slug : undefined;
+    !isStaff && user.doctorSlug ? user.doctorSlug : undefined;
 
   const course = await getCourseBySlugAdmin(slug);
   if (!course) notFound();

@@ -1,6 +1,5 @@
 import type { CaseItem, ContentBlock } from "@/lib/cases-data";
-import { createPublicClient } from "@/lib/supabase-public";
-import { createClient } from "@/utils/supabase/server";
+import { query, queryOne } from "@/lib/db";
 
 // Строка в БД (snake_case) -> доменная модель CaseItem (camelCase).
 type CaseRow = {
@@ -37,56 +36,45 @@ function mapRow(row: CaseRow): CaseItem {
     decision: row.decision ?? "",
     result: row.result ?? "",
     doctorWords: row.doctor_words ?? undefined,
+    // content_blocks — jsonb: драйвер pg уже возвращает готовый массив.
     contentBlocks: row.content_blocks ?? [],
   };
 }
 
 const COLUMNS =
-  "slug,title,excerpt,direction_slug,doctor_slug,cover_image,image_before,image_after,protocol_images,situation,diagnostics,decision,result,doctor_words,content_blocks";
+  "slug, title, excerpt, direction_slug, doctor_slug, cover_image, image_before, image_after, protocol_images, situation, diagnostics, decision, result, doctor_words, content_blocks";
 
-// --- Публичное чтение (только опубликованные кейсы, RLS) ---
+// --- Публичное чтение: только опубликованные кейсы ---
 export async function getAllCases(): Promise<CaseItem[]> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("cases")
-    .select(COLUMNS)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return (data as CaseRow[]).map(mapRow);
+  const rows = await query<CaseRow>(
+    `select ${COLUMNS} from cases where published = true order by created_at desc`
+  );
+  return rows.map(mapRow);
 }
 
 export async function getCaseBySlug(slug: string): Promise<CaseItem | null> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("cases")
-    .select(COLUMNS)
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data ? mapRow(data as CaseRow) : null;
+  const row = await queryOne<CaseRow>(
+    `select ${COLUMNS} from cases where slug = $1 and published = true`,
+    [slug]
+  );
+  return row ? mapRow(row) : null;
 }
 
 export async function getCaseSlugs(): Promise<string[]> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase.from("cases").select("slug");
-  if (error) throw error;
-  return (data as { slug: string }[]).map((row) => row.slug);
+  const rows = await query<{ slug: string }>(
+    `select slug from cases where published = true`
+  );
+  return rows.map((row) => row.slug);
 }
 
-// --- Чтение под сессией пользователя (RLS пускает сотрудника/автора
-//     к неопубликованным) — для предпросмотра и редактирования. ---
+// --- Чтение без фильтра публикации (для предпросмотра и редактирования).
+//     Проверку прав (сотрудник/автор) теперь выполняет вызывающая страница. ---
 export async function getCaseBySlugAuthed(
   slug: string
 ): Promise<CaseItem | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("cases")
-    .select(COLUMNS)
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data ? mapRow(data as CaseRow) : null;
+  const row = await queryOne<CaseRow>(
+    `select ${COLUMNS} from cases where slug = $1`,
+    [slug]
+  );
+  return row ? mapRow(row) : null;
 }

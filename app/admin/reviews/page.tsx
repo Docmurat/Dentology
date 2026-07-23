@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
+import { query } from "@/lib/db";
 import { getTeamMembers } from "@/lib/team";
+import { getDirections } from "@/lib/directions-db";
 import {
   approveReview,
   rejectReview,
@@ -8,18 +9,11 @@ import {
   deleteReview,
 } from "./actions";
 import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
+import { AdminThumb } from "@/components/admin/admin-thumb";
 
 export const dynamic = "force-dynamic";
 
-const DIRECTIONS = [
-  { slug: "endodontics", label: "Эндодонтия" },
-  { slug: "implantation", label: "Имплантация" },
-  { slug: "gnathology", label: "Гнатология" },
-  { slug: "prosthetics", label: "Ортопедия" },
-  { slug: "restoration", label: "Реставрация" },
-];
-const labelOf = (slug: string) =>
-  DIRECTIONS.find((d) => d.slug === slug)?.label ?? slug;
+type DirectionOption = { slug: string; label: string };
 
 type Row = {
   id: string;
@@ -111,11 +105,13 @@ function Card({
   row,
   phone,
   doctorName,
+  dirLabel,
   children,
 }: {
   row: Row;
   phone: string | null;
   doctorName: string | null;
+  dirLabel: Record<string, string>;
   children: React.ReactNode;
 }) {
   const dirs = row.direction_slugs ?? [];
@@ -124,11 +120,11 @@ function Card({
     <div className="rounded-2xl border border-[var(--color-gray-200)] bg-white p-5">
       <div className="flex items-start gap-3">
         {avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatar}
-            alt=""
-            className="h-12 w-12 shrink-0 rounded-full object-cover"
+          <AdminThumb
+            url={avatar}
+            className="h-12 w-12"
+            sizes="48px"
+            rounded="rounded-full"
           />
         ) : (
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-gray-100)] text-xs font-semibold text-[var(--color-navy-secondary)]">
@@ -172,7 +168,7 @@ function Card({
             </span>
           </span>
         ) : dirs.length ? (
-          <span>Направления: {dirs.map(labelOf).join(", ")}</span>
+          <span>Направления: {dirs.map((d) => dirLabel[d] ?? d).join(", ")}</span>
         ) : null}
         {row.instagram ? (
           <a
@@ -197,7 +193,13 @@ function Card({
   );
 }
 
-function ApproveForm({ row }: { row: Row }) {
+function ApproveForm({
+  row,
+  directions,
+}: {
+  row: Row;
+  directions: DirectionOption[];
+}) {
   // Курс-отзыв публикуется без направлений.
   if (row.course_slug) {
     return (
@@ -220,7 +222,7 @@ function ApproveForm({ row }: { row: Row }) {
       <span className="text-xs text-[var(--color-gray-500)]">
         Направления (до 3):
       </span>
-      {DIRECTIONS.map((d) => (
+      {directions.map((d) => (
         <label
           key={d.slug}
           className="inline-flex items-center gap-1 text-xs text-[var(--color-navy)]"
@@ -242,27 +244,34 @@ function ApproveForm({ row }: { row: Row }) {
 }
 
 export default async function AdminReviewsPage() {
-  const supabase = await createClient();
-
-  const { data } = await supabase
-    .from("reviews")
-    .select(
-      "id, author, text, image, doctor_slug, direction_slugs, course_slug, course_title, pros, cons, wishes, instagram, review_date, sort_order, status, created_at"
-    )
-    .order("created_at", { ascending: false });
-
-  const rows = (data ?? []) as Row[];
+  const rows = await query<Row>(
+    `select id, author, text, image, doctor_slug, direction_slugs, course_slug,
+            course_title, pros, cons, wishes, instagram, review_date,
+            sort_order, status, created_at
+       from reviews order by created_at desc`
+  );
 
   const team = await getTeamMembers();
   const doctorName = new Map(team.map((d) => [d.slug, d.name]));
+
+  // Направления берём из базы, а не из фиксированного списка,
+  // чтобы новые (например, ортодонтия) сразу были доступны при модерации.
+  const allDirections = await getDirections();
+  const directions: DirectionOption[] = allDirections.map((d) => ({
+    slug: d.slug,
+    label: d.title,
+  }));
+  const dirLabel: Record<string, string> = Object.fromEntries(
+    allDirections.map((d) => [d.slug, d.title])
+  );
   const nameOf = (slug: string | null) =>
     slug ? doctorName.get(slug) ?? null : null;
 
-  const { data: contacts } = await supabase
-    .from("review_contacts")
-    .select("review_id, phone");
+  const contacts = await query<{ review_id: string; phone: string | null }>(
+    `select review_id, phone from review_contacts`
+  );
   const phoneById = new Map(
-    (contacts ?? []).map((c) => [c.review_id as string, c.phone as string])
+    contacts.map((c) => [c.review_id, c.phone ?? ""])
   );
 
   const pending = rows.filter((r) => r.status === "pending");
@@ -291,8 +300,9 @@ export default async function AdminReviewsPage() {
                 row={row}
                 phone={phoneById.get(row.id) ?? null}
                 doctorName={nameOf(row.doctor_slug)}
+                dirLabel={dirLabel}
               >
-                <ApproveForm row={row} />
+                <ApproveForm row={row} directions={directions} />
                 <EditLink id={row.id} />
                 <form action={rejectReview}>
                   <input type="hidden" name="id" value={row.id} />
@@ -328,6 +338,7 @@ export default async function AdminReviewsPage() {
                 row={row}
                 phone={phoneById.get(row.id) ?? null}
                 doctorName={nameOf(row.doctor_slug)}
+                dirLabel={dirLabel}
               >
                 <EditLink id={row.id} />
                 <form action={unpublishReview}>
@@ -364,6 +375,7 @@ export default async function AdminReviewsPage() {
                 row={row}
                 phone={phoneById.get(row.id) ?? null}
                 doctorName={nameOf(row.doctor_slug)}
+                dirLabel={dirLabel}
               >
                 <EditLink id={row.id} />
                 <form action={deleteReview}>

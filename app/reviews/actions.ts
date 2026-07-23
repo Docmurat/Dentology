@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { sendTelegramMessage, tgEscape } from "@/lib/telegram";
-import { createClient } from "@/utils/supabase/server";
-import { createAdminClient } from "@/lib/supabase-admin";
+import { query } from "@/lib/db";
+import { uploadFile } from "@/lib/storage";
 import { getCourseBySlug } from "@/lib/courses";
+import { getTeamMembers } from "@/lib/team";
 
 type Result = { error?: string; ok?: boolean };
 
@@ -36,7 +37,6 @@ export async function submitReview(
   const courseSlug = String(formData.get("courseSlug") || "") || null;
   const instagram = normalizeInstagram(String(formData.get("instagram") || ""));
 
-  // Разделы курс-отзыва (по пункту в строке). Только для курс-отзыва.
   const trimOrNull = (v: string) => v.trim() || null;
   const pros = courseSlug ? trimOrNull(String(formData.get("pros") || "")) : null;
   const cons = courseSlug ? trimOrNull(String(formData.get("cons") || "")) : null;
@@ -45,7 +45,6 @@ export async function submitReview(
     : null;
 
   // Курс-отзыв: фиксируем слепок — ведущего врача и название курса.
-  // Так отзыв остаётся полноценным даже после удаления курса.
   let courseTitle: string | null = null;
   let courseDoctorSlug: string | null = null;
   if (courseSlug) {
@@ -65,7 +64,7 @@ export async function submitReview(
 
   const id = crypto.randomUUID();
 
-  // Необязательное фото посетителя -> в бакет через сервис-роль.
+  // Необязательное фото посетителя -> в Object Storage.
   let image: string | null = null;
   const photo = formData.get("photo");
   if (photo instanceof File && photo.size > 0) {
@@ -74,55 +73,76 @@ export async function submitReview(
     if (photo.size > 5 * 1024 * 1024)
       return { error: "Фото слишком большое (до 5 МБ)" };
     try {
-      const admin = createAdminClient();
       const ext = (photo.name.split(".").pop() || "jpg").toLowerCase();
-      const path = `${id}/visitor-${Date.now()}.${ext}`;
-      const { error: upErr } = await admin.storage
-        .from("review-images")
-        .upload(path, photo, { contentType: photo.type, upsert: true });
-      if (!upErr) {
-        const { data } = admin.storage
-          .from("review-images")
-          .getPublicUrl(path);
-        image = data.publicUrl;
-      }
+      const path = `review-images/${id}/visitor-${Date.now()}.${ext}`;
+      image = await uploadFile(path, photo);
     } catch {
       // если фото не загрузилось — отзыв всё равно отправляем без него
     }
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("reviews").insert({
-    id,
-    author,
-    text,
-    doctor_slug: courseSlug ? courseDoctorSlug : doctorSlug,
-    course_slug: courseSlug,
-    course_title: courseTitle,
-    pros,
-    cons,
-    wishes,
-    instagram,
-    image,
-    status: "pending",
-    verified: false,
-  });
-  if (error) {
+  try {
+    await query(
+      `insert into reviews
+         (id, author, text, doctor_slug, course_slug, course_title,
+          pros, cons, wishes, instagram, image, status, verified)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',false)`,
+      [
+        id,
+        author,
+        text,
+        courseSlug ? courseDoctorSlug : doctorSlug,
+        courseSlug,
+        courseTitle,
+        pros,
+        cons,
+        wishes,
+        instagram,
+        image,
+      ]
+    );
+  } catch {
     return { error: "Не удалось отправить отзыв. Попробуйте позже." };
   }
 
   if (phone) {
-    await supabase.from("review_contacts").insert({ review_id: id, phone });
+    try {
+      await query(
+        `insert into review_contacts (review_id, phone) values ($1, $2)`,
+        [id, phone]
+      );
+    } catch {
+      // телефон не критичен для самого отзыва
+    }
   }
 
-  // Уведомление в Telegram (в ту же группу) — с пометкой о модерации.
+  // Имя врача для уведомления (slug → имя из «Команды»).
+  const notifyDoctorSlug = courseSlug ? courseDoctorSlug : doctorSlug;
+  let doctorName: string | null = null;
+  if (notifyDoctorSlug) {
+    try {
+      const team = await getTeamMembers();
+      doctorName =
+        team.find((m) => m.slug === notifyDoctorSlug)?.name ?? notifyDoctorSlug;
+    } catch {
+      doctorName = notifyDoctorSlug;
+    }
+  }
+
+  // Уведомление в Telegram: ⭐️ — отзыв о клинике/враче, 🎓 — о курсе.
+  const headerEmoji = courseSlug ? "🎓" : "⭐️";
   const kind = courseSlug
     ? `Курс: ${tgEscape(courseTitle || courseSlug)}`
     : "Отзыв о клинике/враче";
   const tgLines = [
-    "<b>Новый отзыв — требует модерации</b>",
+    `${headerEmoji} <b>Новый отзыв — требует модерации</b>`,
     "",
     `<b>Тип:</b> ${kind}`,
+    courseSlug
+      ? doctorName
+        ? `<b>Ведущий:</b> ${tgEscape(doctorName)}`
+        : ""
+      : `<b>Врач:</b> ${doctorName ? tgEscape(doctorName) : "не выбран"}`,
     `<b>Автор:</b> ${tgEscape(author)}`,
     `<b>Телефон:</b> ${tgEscape(phone || "не указан")}`,
     instagram ? `<b>Instagram:</b> ${tgEscape(instagram)}` : "",
@@ -131,7 +151,7 @@ export async function submitReview(
     pros ? `<b>Плюсы:</b> ${tgEscape(pros)}` : "",
     cons ? `<b>Минусы:</b> ${tgEscape(cons)}` : "",
     wishes ? `<b>Пожелания:</b> ${tgEscape(wishes)}` : "",
-    image ? "Фото: приложено" : "",
+    image ? "<b>Фото:</b> приложено" : "",
     "",
     "Подтвердить/отклонить: /admin/reviews",
   ].filter(Boolean);

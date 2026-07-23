@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CookieBanner } from "@/components/legal/cookie-banner";
+import { JsonLd, dentistJsonLd } from "@/components/seo/json-ld";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://lucenta.ru"),
@@ -21,6 +22,9 @@ export const metadata: Metadata = {
     "гнатология",
     "Lucenta",
   ],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "Lucenta",
     description:
@@ -29,12 +33,21 @@ export const metadata: Metadata = {
     siteName: "Lucenta",
     locale: "ru_RU",
     type: "website",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Lucenta — стоматология",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Lucenta",
     description:
       "Стоматологическая практика с ведущей экспертизой в сложной эндодонтии и комплексным подходом к лечению.",
+    images: ["/og-image.jpg"],
   },
   robots: {
     index: true,
@@ -50,6 +63,7 @@ export default function RootLayout({
   return (
     <html lang="ru" data-scroll-behavior="smooth">
       <body>
+        <JsonLd data={dentistJsonLd()} />
         <style
           dangerouslySetInnerHTML={{
             __html:

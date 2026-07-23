@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
+import { query } from "@/lib/db";
 import { directionLabel } from "@/lib/directions";
 import { getTeamMembers } from "@/lib/team";
 import { approveCase, deleteCase } from "./actions";
 import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
+import { AdminThumb } from "@/components/admin/admin-thumb";
 
 export const dynamic = "force-dynamic";
 
@@ -17,18 +18,7 @@ type Row = {
 };
 
 function Cover({ url }: { url: string | null }) {
-  return (
-    <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-[var(--color-gray-100)]">
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-[10px] text-[var(--color-gray-400)]">
-          нет фото
-        </div>
-      )}
-    </div>
-  );
+  return <AdminThumb url={url} className="h-12 w-16" sizes="80px" />;
 }
 
 function Meta({ doctorName, direction }: { doctorName: string; direction: string | null }) {
@@ -41,13 +31,10 @@ function Meta({ doctorName, direction }: { doctorName: string; direction: string
 }
 
 export default async function AdminCasesPage() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("cases")
-    .select("slug, title, direction_slug, doctor_slug, cover_image, published")
-    .order("created_at", { ascending: false });
-
-  const rows = (data ?? []) as Row[];
+  const rows = await query<Row>(
+    `select slug, title, direction_slug, doctor_slug, cover_image, published
+       from cases order by created_at desc`
+  );
 
   // Карта slug врача -> «Фамилия Имя».
   const team = await getTeamMembers();

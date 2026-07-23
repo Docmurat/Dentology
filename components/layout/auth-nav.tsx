@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/client";
 import { roleHome } from "@/lib/role-home";
 import { signOut } from "@/app/admin/actions";
 
 // Клиентский островок авторизации в шапке: гость видит «Войти»,
 // залогиненный — «Кабинет» (по роли) и «Выйти». Не делает страницы
-// динамическими: статус читается на клиенте.
+// динамическими: статус читается на клиенте через эндпоинт сессии Auth.js.
 export function AuthNav({
   variant,
   onNavigate,
@@ -20,30 +19,23 @@ export function AuthNav({
   const [home, setHome] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
     let active = true;
 
     (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const res = await fetch("/api/auth/session");
+        const session = (await res.json()) as {
+          user?: { role?: string } | null;
+        } | null;
 
-      if (!active) return;
-      if (!user) {
-        setHome(null);
-        setLoading(false);
-        return;
+        if (!active) return;
+        const role = session?.user?.role;
+        setHome(role ? roleHome(role) : null);
+      } catch {
+        if (active) setHome(null);
+      } finally {
+        if (active) setLoading(false);
       }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!active) return;
-      setHome(roleHome(profile?.role));
-      setLoading(false);
     })();
 
     return () => {

@@ -9,9 +9,10 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
+        // Yandex Object Storage — картинки кейсов, команды, отзывов.
         protocol: "https",
-        hostname: "dkjlcdnrtrxrikxvgpxl.supabase.co",
-        pathname: "/storage/v1/object/public/**",
+        hostname: "storage.yandexcloud.net",
+        pathname: "/**",
       },
       {
         protocol: "https",

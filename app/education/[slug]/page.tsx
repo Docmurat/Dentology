@@ -7,7 +7,7 @@ import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCourseBySlug, getCourseBySlugAdmin } from "@/lib/courses";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentUser } from "@/lib/auth-guards";
 import { getTeamMemberBySlug } from "@/lib/team";
 import { CourseStats } from "@/components/education/course-stats";
 import { CourseQuote } from "@/components/education/course-quote";
@@ -23,19 +23,11 @@ async function getViewer(): Promise<{
   userId: string | null;
   isStaff: boolean;
 }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { userId: null, isStaff: false };
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
   return {
     userId: user.id,
-    isStaff: ["admin", "editor"].includes(profile?.role ?? ""),
+    isStaff: ["admin", "editor"].includes(user.role),
   };
 }
 

@@ -1,14 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
 import { CaseView } from "@/components/cases/case-view";
 import { getCaseBySlugAuthed } from "@/lib/cases";
 import { getTeamMemberBySlug } from "@/lib/team";
+import { queryOne } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
-// Предпросмотр кейса «как на сайте». Доступ ограничен RLS:
-// сотрудник видит любой кейс, автор — свой (в т.ч. на модерации).
+// Предпросмотр кейса «как на сайте». Раньше доступ ограничивала RLS,
+// теперь проверяем в коде: сотрудник видит любой кейс, врач — свой.
 export default async function CasePreviewPage({
   params,
 }: {
@@ -16,25 +17,23 @@ export default async function CasePreviewPage({
 }) {
   const { slug } = await params;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/admin/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  // Ссылка «к списку» — туда, откуда пришёл пользователь по роли.
-  const backHref = ["admin", "editor"].includes(profile?.role ?? "")
-    ? "/admin/cases"
-    : "/doctor";
+  const isStaff = ["admin", "editor"].includes(user.role);
+  const backHref = isStaff ? "/admin/cases" : "/doctor";
 
   const item = await getCaseBySlugAuthed(slug);
   if (!item) notFound();
+
+  // Не сотрудник видит только свой кейс.
+  if (!isStaff) {
+    const owner = await queryOne<{ created_by: string | null }>(
+      `select created_by from cases where slug = $1`,
+      [slug]
+    );
+    if (owner?.created_by !== user.id) notFound();
+  }
 
   const doctor = item.doctorSlug
     ? await getTeamMemberBySlug(item.doctorSlug)

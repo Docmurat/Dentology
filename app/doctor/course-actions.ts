@@ -1,38 +1,27 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { query, queryOne } from "@/lib/db";
+import { buildInsert, buildUpdate } from "@/lib/sql-helpers";
+import { getCurrentUser, type SessionUser } from "@/lib/auth-guards";
 import { slugify } from "@/lib/slugify";
 import { readCourseFields } from "@/lib/course-fields";
 
-// Доступ: сотрудник ИЛИ спикер (его карточка команды is_speaker).
-async function requireSpeaker() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+// Доступ: сотрудник ИЛИ спикер (его карточка команды помечена is_speaker).
+async function requireSpeaker(): Promise<SessionUser> {
+  const user = await getCurrentUser();
   if (!user) throw new Error("Не авторизован");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, doctor_slug")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!profile) throw new Error("Нет профиля");
+  if (["admin", "editor"].includes(user.role)) return user;
+  if (!user.doctorSlug) throw new Error("Недостаточно прав");
 
-  if (["admin", "editor"].includes(profile.role)) {
-    return { supabase, user };
-  }
-  if (!profile.doctor_slug) throw new Error("Недостаточно прав");
-
-  const { data: card } = await supabase
-    .from("team_members")
-    .select("is_speaker")
-    .eq("slug", profile.doctor_slug)
-    .maybeSingle();
+  const card = await queryOne<{ is_speaker: boolean }>(
+    `select is_speaker from team_members where slug = $1`,
+    [user.doctorSlug]
+  );
   if (!card?.is_speaker) throw new Error("Недостаточно прав");
 
-  return { supabase, user };
+  return user;
 }
 
 function revalidate(slug?: string) {
@@ -43,7 +32,7 @@ function revalidate(slug?: string) {
 }
 
 export async function createSpeakerCourse(formData: FormData) {
-  const { supabase, user } = await requireSpeaker();
+  const user = await requireSpeaker();
   const fields = readCourseFields(formData);
   if (!fields.title) return;
 
@@ -52,26 +41,52 @@ export async function createSpeakerCourse(formData: FormData) {
     slugify(fields.title) ||
     `course-${Date.now()}`;
 
-  const { error } = await supabase
-    .from("courses")
-    .insert({ slug, ...fields, created_by: user.id });
-  if (error) console.error("createSpeakerCourse:", error.message);
+  try {
+    const { text, values } = buildInsert("courses", {
+      slug,
+      ...fields,
+      created_by: user.id,
+    });
+    await query(text, values);
+  } catch (err) {
+    console.error(
+      "createSpeakerCourse:",
+      err instanceof Error ? err.message : err
+    );
+  }
   revalidate(slug);
 }
 
 export async function updateSpeakerCourse(formData: FormData) {
-  const { supabase } = await requireSpeaker();
+  const user = await requireSpeaker();
   const slug = String(formData.get("originalSlug") || "");
   if (!slug) return;
 
   const fields = readCourseFields(formData);
   if (!fields.title) return;
 
-  // RLS не даст обновить чужой курс.
-  const { error } = await supabase
-    .from("courses")
-    .update(fields)
-    .eq("slug", slug);
-  if (error) console.error("updateSpeakerCourse:", error.message);
+  // Раньше чужой курс не давала обновить RLS — теперь проверяем в коде:
+  // сотрудник правит любой курс, спикер — только свой.
+  const isStaff = ["admin", "editor"].includes(user.role);
+  if (!isStaff) {
+    const owner = await queryOne<{ created_by: string | null }>(
+      `select created_by from courses where slug = $1`,
+      [slug]
+    );
+    if (!owner || owner.created_by !== user.id) {
+      console.error("updateSpeakerCourse: попытка правки чужого курса");
+      return;
+    }
+  }
+
+  try {
+    const { text, values } = buildUpdate("courses", fields, "slug", slug);
+    await query(text, values);
+  } catch (err) {
+    console.error(
+      "updateSpeakerCourse:",
+      err instanceof Error ? err.message : err
+    );
+  }
   revalidate(slug);
 }

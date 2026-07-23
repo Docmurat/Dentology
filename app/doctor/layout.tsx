@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { queryOne } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth-guards";
 import { signOut } from "@/app/admin/actions";
 import { roleHome } from "@/lib/role-home";
 
@@ -9,32 +10,25 @@ export default async function DoctorLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   if (!user) redirect("/admin/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, full_name, doctor_slug")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile) redirect("/admin/login");
-  if (!["doctor", "admin"].includes(profile.role)) {
-    redirect(roleHome(profile.role));
+  if (!["doctor", "admin"].includes(user.role)) {
+    redirect(roleHome(user.role));
   }
 
+  const profile = await queryOne<{ full_name: string | null }>(
+    `select full_name from profiles where id = $1`,
+    [user.id]
+  );
+
   // Раздел «Мои курсы» доступен сотрудникам и спикерам (карточка is_speaker).
-  let canCourses = ["admin", "editor"].includes(profile.role);
-  if (!canCourses && profile.doctor_slug) {
-    const { data: card } = await supabase
-      .from("team_members")
-      .select("is_speaker")
-      .eq("slug", profile.doctor_slug)
-      .maybeSingle();
+  let canCourses = ["admin", "editor"].includes(user.role);
+  if (!canCourses && user.doctorSlug) {
+    const card = await queryOne<{ is_speaker: boolean }>(
+      `select is_speaker from team_members where slug = $1`,
+      [user.doctorSlug]
+    );
     canCourses = Boolean(card?.is_speaker);
   }
 
@@ -66,7 +60,7 @@ export default async function DoctorLayout({
 
           <div className="flex items-center gap-4 text-sm">
             <span className="text-[var(--color-gray-500)]">
-              {profile.full_name || user.email}
+              {profile?.full_name || user.email}
             </span>
             <form action={signOut}>
               <button className="font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]">

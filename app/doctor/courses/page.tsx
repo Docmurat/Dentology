@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentUser } from "@/lib/auth-guards";
 import { getCoursesByOwner } from "@/lib/courses";
 
 export const dynamic = "force-dynamic";
 
 export default async function SpeakerCoursesPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/admin/login");
 
   const courses = await getCoursesByOwner(user.id);

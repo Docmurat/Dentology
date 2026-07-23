@@ -1,4 +1,4 @@
-import { createPublicClient } from "@/lib/supabase-public";
+import { queryOne } from "@/lib/db";
 
 export type PageHeading = {
   eyebrow: string;
@@ -6,7 +6,6 @@ export type PageHeading = {
   description: string;
 };
 
-// Ключи страниц (хранятся в homepage_content как page_<key>).
 export const PAGE_HEADING_KEYS = ["cases", "team", "reviews", "education"] as const;
 export type PageHeadingKey = (typeof PAGE_HEADING_KEYS)[number];
 
@@ -42,19 +41,15 @@ export function pageHeadingStorageKey(key: PageHeadingKey): string {
   return `${STORAGE_PREFIX}${key}`;
 }
 
-/** Заголовок страницы: из БД поверх дефолтов по ключу. */
 export async function getPageHeading(key: PageHeadingKey): Promise<PageHeading> {
   const fallback = PAGE_HEADING_DEFAULTS[key];
   try {
-    const supabase = createPublicClient();
-    const { data, error } = await supabase
-      .from("homepage_content")
-      .select("content")
-      .eq("block_key", pageHeadingStorageKey(key))
-      .maybeSingle();
-
-    if (error || !data?.content) return fallback;
-    const c = data.content as Partial<PageHeading>;
+    const row = await queryOne<{ content: Partial<PageHeading> | null }>(
+      `select content from homepage_content where block_key = $1`,
+      [pageHeadingStorageKey(key)]
+    );
+    if (!row?.content) return fallback;
+    const c = row.content;
     return {
       eyebrow: c.eyebrow ?? fallback.eyebrow,
       title: c.title ?? fallback.title,

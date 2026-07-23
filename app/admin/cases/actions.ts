@@ -1,27 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { query } from "@/lib/db";
+import { buildInsert, buildUpdate, pgErrorCode } from "@/lib/sql-helpers";
+import { requireStaff, requireAdmin } from "@/lib/auth-guards";
 import { slugify } from "@/lib/slugify";
-
-async function requireStaff() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Не авторизован");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || !["admin", "editor"].includes(profile.role)) {
-    throw new Error("Недостаточно прав");
-  }
-  return { supabase, user };
-}
 
 // Общий набор полей из формы (картинки приходят уже ссылками).
 function readFields(formData: FormData) {
@@ -53,7 +36,7 @@ function parseBlocks(value: FormDataEntryValue | null) {
 export async function createCase(
   formData: FormData
 ): Promise<{ error?: string; slug?: string }> {
-  const { supabase, user } = await requireStaff();
+  const user = await requireStaff();
 
   const fields = readFields(formData);
   if (!fields.title) return { error: "Заголовок обязателен" };
@@ -64,14 +47,18 @@ export async function createCase(
     `case-${Date.now()}`;
 
   // Кейс, созданный сотрудником, публикуется сразу.
-  const { error } = await supabase
-    .from("cases")
-    .insert({ slug, ...fields, published: true, created_by: user.id });
-
-  if (error) {
-    if (error.code === "23505")
+  try {
+    const { text, values } = buildInsert("cases", {
+      slug,
+      ...fields,
+      published: true,
+      created_by: user.id,
+    });
+    await query(text, values);
+  } catch (err) {
+    if (pgErrorCode(err) === "23505")
       return { error: "Кейс с таким slug уже существует" };
-    return { error: error.message };
+    return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
   }
 
   revalidatePath("/cases");
@@ -83,7 +70,7 @@ export async function createCase(
 export async function updateCase(
   formData: FormData
 ): Promise<{ error?: string; slug?: string }> {
-  const { supabase } = await requireStaff();
+  await requireStaff();
 
   const originalSlug = String(formData.get("originalSlug") || "");
   if (!originalSlug) return { error: "Не указан кейс для обновления" };
@@ -92,12 +79,12 @@ export async function updateCase(
   if (!fields.title) return { error: "Заголовок обязателен" };
 
   // published не трогаем — статус публикации меняется только модерацией.
-  const { error } = await supabase
-    .from("cases")
-    .update(fields)
-    .eq("slug", originalSlug);
-
-  if (error) return { error: error.message };
+  try {
+    const { text, values } = buildUpdate("cases", fields, "slug", originalSlug);
+    await query(text, values);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
+  }
 
   revalidatePath("/cases");
   revalidatePath(`/cases/${originalSlug}`);
@@ -107,26 +94,22 @@ export async function updateCase(
 
 // Модерация: опубликовать кейс (например, присланный врачом).
 export async function approveCase(formData: FormData) {
-  const { supabase } = await requireStaff();
+  await requireStaff();
   const slug = String(formData.get("slug") || "");
 
-  const { error } = await supabase
-    .from("cases")
-    .update({ published: true })
-    .eq("slug", slug);
-  if (error) throw error;
+  await query(`update cases set published = true where slug = $1`, [slug]);
 
   revalidatePath("/cases");
   revalidatePath(`/cases/${slug}`);
   revalidatePath("/admin/cases");
 }
 
+// Удаление кейса — только администратор (раньше это задавала RLS-политика).
 export async function deleteCase(formData: FormData) {
-  const { supabase } = await requireStaff();
+  await requireAdmin();
   const slug = String(formData.get("slug") || "");
 
-  const { error } = await supabase.from("cases").delete().eq("slug", slug);
-  if (error) throw error;
+  await query(`delete from cases where slug = $1`, [slug]);
 
   revalidatePath("/cases");
   revalidatePath("/admin/cases");

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CaseView } from "@/components/cases/case-view";
+import { JsonLd, caseJsonLd } from "@/components/seo/json-ld";
 import { getCaseBySlug, getCaseSlugs } from "@/lib/cases";
 import { getTeamMemberBySlug } from "@/lib/team";
 
@@ -22,7 +23,28 @@ export async function generateMetadata({
   const { slug } = await params;
   const item = await getCaseBySlug(slug);
   if (!item) return {};
-  return { title: item.title, description: item.excerpt };
+
+  const url = `/cases/${slug}`;
+  const images = item.coverImage ? [{ url: item.coverImage }] : undefined;
+
+  return {
+    title: item.title,
+    description: item.excerpt,
+    alternates: { canonical: url },
+    openGraph: {
+      title: item.title,
+      description: item.excerpt,
+      url,
+      type: "article",
+      ...(images ? { images } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: item.title,
+      description: item.excerpt,
+      ...(item.coverImage ? { images: [item.coverImage] } : {}),
+    },
+  };
 }
 
 export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
@@ -35,5 +57,17 @@ export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
     ? await getTeamMemberBySlug(item.doctorSlug)
     : null;
 
-  return <CaseView item={item} doctor={doctor} />;
+  return (
+    <>
+      <JsonLd
+        data={caseJsonLd({
+          title: item.title,
+          slug,
+          excerpt: item.excerpt,
+          image: item.coverImage,
+        })}
+      />
+      <CaseView item={item} doctor={doctor} />
+    </>
+  );
 }

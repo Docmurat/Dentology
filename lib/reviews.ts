@@ -1,10 +1,14 @@
-import { createPublicClient } from "@/lib/supabase-public";
+import { query } from "@/lib/db";
 import type { ReviewItem } from "@/lib/reviews-data";
 
 export type ApprovedReview = ReviewItem & { date: string };
 
 const SELECT =
   "id, author, text, image, instagram, direction_slug, direction_slugs, course_slug, course_title, pros, cons, wishes, sort_order, review_date, created_at";
+
+// Порядок: ручной sort_order (пустые в конце), затем дата отзыва, затем создание.
+const ORDER =
+  "order by sort_order asc nulls last, review_date desc nulls last, created_at desc";
 
 function formatDate(value: string | null): string {
   if (!value) return "";
@@ -15,7 +19,6 @@ function formatDate(value: string | null): string {
 
 function mapRow(r: Record<string, unknown>): ApprovedReview {
   const instagram = (r.instagram as string) ?? null;
-  // Только загруженное фото; внешние аватарки (unavatar) не используем.
   const image = (r.image as string) ?? null;
 
   const arr = (r.direction_slugs as string[] | null) ?? [];
@@ -45,74 +48,43 @@ function mapRow(r: Record<string, unknown>): ApprovedReview {
   };
 }
 
-// Одобренные отзывы пациентов — для общей страницы и главной (без курс-отзывов).
+// Одобренные отзывы пациентов (без курс-отзывов).
 export async function getApprovedReviews(): Promise<ApprovedReview[]> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("reviews")
-    .select(SELECT)
-    .eq("status", "approved")
-    .is("course_slug", null)
-    .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("review_date", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return (data ?? []).map((r) => mapRow(r as Record<string, unknown>));
+  const rows = await query<Record<string, unknown>>(
+    `select ${SELECT} from reviews where status = 'approved' and course_slug is null ${ORDER}`
+  );
+  return rows.map(mapRow);
 }
 
 // Пациентские отзывы врача (курс-отзывы исключены).
 export async function getReviewsByDoctor(
   doctorSlug: string
 ): Promise<ApprovedReview[]> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("reviews")
-    .select(SELECT)
-    .eq("status", "approved")
-    .eq("doctor_slug", doctorSlug)
-    .is("course_slug", null)
-    .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("review_date", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return (data ?? []).map((r) => mapRow(r as Record<string, unknown>));
+  const rows = await query<Record<string, unknown>>(
+    `select ${SELECT} from reviews where status = 'approved' and doctor_slug = $1 and course_slug is null ${ORDER}`,
+    [doctorSlug]
+  );
+  return rows.map(mapRow);
 }
 
 // Одобренные отзывы о конкретном курсе.
 export async function getReviewsByCourse(
   courseSlug: string
 ): Promise<ApprovedReview[]> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("reviews")
-    .select(SELECT)
-    .eq("status", "approved")
-    .eq("course_slug", courseSlug)
-    .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("review_date", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return (data ?? []).map((r) => mapRow(r as Record<string, unknown>));
+  const rows = await query<Record<string, unknown>>(
+    `select ${SELECT} from reviews where status = 'approved' and course_slug = $1 ${ORDER}`,
+    [courseSlug]
+  );
+  return rows.map(mapRow);
 }
 
-// Все курс-отзывы врача (по всем его курсам, включая удалённые — по слепку).
+// Все курс-отзывы врача (по всем его курсам).
 export async function getCourseReviewsByDoctor(
   doctorSlug: string
 ): Promise<ApprovedReview[]> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("reviews")
-    .select(SELECT)
-    .eq("status", "approved")
-    .eq("doctor_slug", doctorSlug)
-    .not("course_slug", "is", null)
-    .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("review_date", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return (data ?? []).map((r) => mapRow(r as Record<string, unknown>));
-} 
+  const rows = await query<Record<string, unknown>>(
+    `select ${SELECT} from reviews where status = 'approved' and doctor_slug = $1 and course_slug is not null ${ORDER}`,
+    [doctorSlug]
+  );
+  return rows.map(mapRow);
+}

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { queryOne } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth-guards";
 import { signOut } from "@/app/admin/actions";
 import { roleHome } from "@/lib/role-home";
 
@@ -8,23 +9,17 @@ export default async function CabinetLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   if (!user) redirect("/admin/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, full_name")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile) redirect("/admin/login");
-  if (!["patient", "admin"].includes(profile.role)) {
-    redirect(roleHome(profile.role));
+  if (!["patient", "admin"].includes(user.role)) {
+    redirect(roleHome(user.role));
   }
+
+  const profile = await queryOne<{ full_name: string | null }>(
+    `select full_name from profiles where id = $1`,
+    [user.id]
+  );
 
   return (
     <div className="min-h-screen bg-[var(--color-gray-50)]">
@@ -35,7 +30,7 @@ export default async function CabinetLayout({
           </span>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-[var(--color-gray-500)]">
-              {profile.full_name || user.email}
+              {profile?.full_name || user.email}
             </span>
             <form action={signOut}>
               <button className="font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]">

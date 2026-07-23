@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Image from "next/image";
 import Cropper from "react-easy-crop";
 import { getCroppedBlob } from "@/lib/crop-image";
 
@@ -23,6 +24,7 @@ export function CropField({
   existingUrl,
   onCropped,
   onRemovedToggle,
+  compress,
 }: {
   label: string;
   /** Число — формат зафиксирован; "free" — по пропорциям картинки;
@@ -31,6 +33,10 @@ export function CropField({
   existingUrl?: string;
   onCropped: (blob: Blob, aspect: AspectChoice) => void;
   onRemovedToggle?: (removed: boolean) => void;
+  /** Настройки сжатия результата. По умолчанию (не задано) — 1600px / JPEG 0.82
+   *  из getCroppedBlob. Для документов с мелким текстом (диплом) стоит поднять,
+   *  например { maxDimension: 2400, quality: 0.92 }. */
+  compress?: { maxDimension?: number; quality?: number };
 }) {
   const [src, setSrc] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -55,7 +61,7 @@ export function CropField({
   function pick(file: File | undefined) {
     if (!file) return;
     const url = URL.createObjectURL(file);
-    const img = new Image();
+    const img = new window.Image();
     img.onload = () => {
       setNaturalRatio(img.naturalWidth / img.naturalHeight);
       setSrc(url);
@@ -76,7 +82,7 @@ export function CropField({
     if (!src || !areaPixels) return;
     setBusy(true);
     try {
-      const blob = await getCroppedBlob(src, areaPixels);
+      const blob = await getCroppedBlob(src, areaPixels, compress);
       setPreview(URL.createObjectURL(blob));
       onCropped(blob, resolvedChoice);
       setOpen(false);
@@ -100,11 +106,13 @@ export function CropField({
         />
       ) : existingUrl && !removed ? (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={existingUrl}
             alt=""
-            className="mt-2 w-full rounded-lg border border-[var(--color-gray-200)] object-cover"
+            width={0}
+            height={0}
+            sizes="(max-width: 768px) 100vw, 360px"
+            className="mt-2 h-auto w-full rounded-lg border border-[var(--color-gray-200)]"
           />
           {onRemovedToggle ? (
             <label className="mt-1 flex items-center gap-2 text-xs text-[var(--color-gray-600)]">

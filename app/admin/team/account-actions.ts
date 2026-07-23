@@ -1,44 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
-import { createAdminClient } from "@/lib/supabase-admin";
+import bcrypt from "bcryptjs";
+import { query, queryOne } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth-guards";
 import { loginToEmail } from "@/lib/auth-login";
 
 type Result = { error?: string; ok?: boolean };
 
-// Управление аккаунтом врача — только администратор.
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Не авторизован");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || profile.role !== "admin") {
-    throw new Error("Доступно только администратору");
-  }
-}
-
-async function findUserByEmail(
-  admin: ReturnType<typeof createAdminClient>,
-  email: string
-) {
-  const { data } = await admin.auth.admin.listUsers({ perPage: 200 });
-  return (
-    (data?.users ?? []).find(
-      (u) => (u.email ?? "").toLowerCase() === email
-    ) ?? null
-  );
-}
-
 // Привязать (или создать) аккаунт к карточке сотрудника + задать пароль.
+// Аккаунты хранятся в profiles: email + bcrypt-хеш пароля.
 export async function linkTeamAccount(
   _prev: Result,
   formData: FormData
@@ -53,53 +24,58 @@ export async function linkTeamAccount(
   const name = String(formData.get("name") || "").trim();
   const login = String(formData.get("login") || "");
   const password = String(formData.get("password") || "");
-  const email = loginToEmail(login);
+  const email = loginToEmail(login).toLowerCase();
 
   if (!slug) return { error: "Нет карточки сотрудника" };
   if (!login.trim()) return { error: "Укажите логин" };
 
-  const admin = createAdminClient();
-  const existing = await findUserByEmail(admin, email);
+  const existing = await queryOne<{ id: string }>(
+    `select id from profiles where lower(email) = $1`,
+    [email]
+  );
 
   let userId: string;
 
   if (existing) {
     userId = existing.id;
+    // Пароль меняем только если его ввели.
     if (password) {
       if (password.length < 8) return { error: "Пароль — минимум 8 символов" };
-      const { error } = await admin.auth.admin.updateUserById(userId, {
-        password,
-      });
-      if (error) return { error: error.message };
+      const hash = await bcrypt.hash(password, 10);
+      await query(`update profiles set password_hash = $1 where id = $2`, [
+        hash,
+        userId,
+      ]);
     }
+    await query(
+      `update profiles set role = 'doctor', full_name = $1, doctor_slug = $2
+        where id = $3`,
+      [name || null, slug, userId]
+    );
   } else {
     if (password.length < 8) {
       return { error: "Для нового аккаунта укажите пароль (от 8 символов)" };
     }
-    const { data, error } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name: name },
-    });
-    if (error) return { error: error.message };
-    userId = data.user.id;
+    const hash = await bcrypt.hash(password, 10);
+    try {
+      const created = await queryOne<{ id: string }>(
+        `insert into profiles (email, password_hash, full_name, role, doctor_slug)
+         values ($1, $2, $3, 'doctor', $4)
+         returning id`,
+        [email, hash, name || null, slug]
+      );
+      if (!created) return { error: "Не удалось создать аккаунт" };
+      userId = created.id;
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Ошибка создания" };
+    }
   }
 
   // Одна карточка — один аккаунт: снимаем привязку с других.
-  await admin
-    .from("profiles")
-    .update({ doctor_slug: null })
-    .eq("doctor_slug", slug)
-    .neq("id", userId);
-
-  const { error: pErr } = await admin.from("profiles").upsert({
-    id: userId,
-    role: "doctor",
-    full_name: name || null,
-    doctor_slug: slug,
-  });
-  if (pErr) return { error: pErr.message };
+  await query(
+    `update profiles set doctor_slug = null where doctor_slug = $1 and id <> $2`,
+    [slug, userId]
+  );
 
   revalidatePath(`/admin/team/${slug}/edit`);
   return { ok: true };
@@ -111,11 +87,9 @@ export async function unlinkTeamAccount(formData: FormData) {
   const slug = String(formData.get("slug") || "");
   if (!slug) return;
 
-  const admin = createAdminClient();
-  await admin
-    .from("profiles")
-    .update({ doctor_slug: null })
-    .eq("doctor_slug", slug);
+  await query(`update profiles set doctor_slug = null where doctor_slug = $1`, [
+    slug,
+  ]);
 
   revalidatePath(`/admin/team/${slug}/edit`);
 }

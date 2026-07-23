@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createCase, updateCase } from "@/app/admin/cases/actions";
 import { slugify } from "@/lib/slugify";
-import { createClient } from "@/utils/supabase/client";
+import { uploadImageBlob } from "@/lib/upload-client";
 import type { CaseItem } from "@/lib/cases-data";
 
 type DoctorOption = { slug: string; name: string; position: string };
@@ -19,23 +19,16 @@ const inputCls =
 const cardCls =
   "rounded-2xl border border-[var(--color-gray-200)] bg-white p-6 space-y-4";
 
-const BUCKET = "case-images";
 const COVER_ASPECT = 3 / 2;
 
+// Загрузка через серверный экшен (Object Storage).
 async function uploadBlob(
-  supabase: ReturnType<typeof createClient>,
   slug: string,
   name: string,
   blob: Blob | null
 ): Promise<string | null> {
   if (!blob) return null;
-  const path = `${slug}/${name}-${Date.now()}.jpg`;
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-  if (error) throw new Error(`Не удалось загрузить ${name}: ${error.message}`);
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return uploadImageBlob(`case-images/${slug}`, blob, name);
 }
 
 export function CaseForm({
@@ -96,7 +89,6 @@ export function CaseForm({
       : slugify(autoSlug) || `case-${Date.now()}`;
 
     try {
-      const supabase = createClient();
       setStatus("Загрузка изображений…");
 
       async function resolveSingle(
@@ -105,7 +97,7 @@ export function CaseForm({
         existing: string | undefined,
         removed: boolean
       ): Promise<string> {
-        const uploaded = await uploadBlob(supabase, finalSlug, name, blob);
+        const uploaded = await uploadBlob(finalSlug, name, blob);
         if (uploaded) return uploaded;
         if (removed) return "";
         return existing ?? "";

@@ -1,7 +1,6 @@
 import type { TeamMember } from "@/lib/team-data";
-import { createPublicClient } from "@/lib/supabase-public";
+import { query, queryOne } from "@/lib/db";
 
-// Строка БД (snake_case) -> доменная модель TeamMember (camelCase).
 type TeamRow = {
   slug: string;
   name: string;
@@ -35,14 +34,12 @@ type TeamRow = {
 };
 
 const COLUMNS =
-  "slug,name,position,role,short_role,excerpt,description,image,category,is_chief,is_lead,lead_direction_slug,direction_slugs,sort_order,stats,approach,focus_points,visit_points,quote,lead_image,lead_quote,home_image,home_quote,doctor_quote,courses,diploma_image,name_genitive,show_on_homepage,is_speaker";
+  "slug, name, position, role, short_role, excerpt, description, image, category, is_chief, is_lead, lead_direction_slug, direction_slugs, sort_order, stats, approach, focus_points, visit_points, quote, lead_image, lead_quote, home_image, home_quote, doctor_quote, courses, diploma_image, name_genitive, show_on_homepage, is_speaker";
 
-// Сколько ведущих максимум показываем на главной.
 const HOMEPAGE_LIMIT = 5;
 
 function mapRow(row: TeamRow): TeamMember {
   const featured = row.is_chief || row.is_lead;
-  // Флаг «на главной»: по умолчанию (null) — включён, чтобы текущие не пропали.
   const showOnHomepage = row.show_on_homepage ?? true;
   return {
     slug: row.slug,
@@ -78,12 +75,11 @@ function mapRow(row: TeamRow): TeamMember {
   };
 }
 
-// Иерархия списка: главный врач -> ведущие -> остальные врачи -> персонал.
 function hierarchyRank(member: TeamMember): number {
   if (member.isChief) return 0;
   if (member.isLead) return 1;
   if (member.category === "doctor") return 2;
-  return 3; // staff
+  return 3;
 }
 
 function sortTeam(members: TeamMember[]): TeamMember[] {
@@ -95,19 +91,11 @@ function sortTeam(members: TeamMember[]): TeamMember[] {
   });
 }
 
-/** Все сотрудники в правильном порядке — для страницы /team. */
 export async function getTeamMembers(): Promise<TeamMember[]> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase.from("team_members").select(COLUMNS);
-  if (error) throw error;
-  return sortTeam((data as TeamRow[]).map(mapRow));
+  const rows = await query<TeamRow>(`select ${COLUMNS} from team_members`);
+  return sortTeam(rows.map(mapRow));
 }
 
-/**
- * Для блока команды на главной: только отмеченные «показывать на главной».
- * Главный врач всегда первый (он в начале sortTeam), затем остальные —
- * всего не больше HOMEPAGE_LIMIT.
- */
 export async function getFeaturedTeam(): Promise<TeamMember[]> {
   const all = await getTeamMembers();
   return all
@@ -118,34 +106,24 @@ export async function getFeaturedTeam(): Promise<TeamMember[]> {
 export async function getTeamMemberBySlug(
   slug: string
 ): Promise<TeamMember | null> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("team_members")
-    .select(COLUMNS)
-    .eq("slug", slug)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? mapRow(data as TeamRow) : null;
+  const row = await queryOne<TeamRow>(
+    `select ${COLUMNS} from team_members where slug = $1`,
+    [slug]
+  );
+  return row ? mapRow(row) : null;
 }
 
 export async function getTeamSlugs(): Promise<string[]> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase.from("team_members").select("slug");
-  if (error) throw error;
-  return (data as { slug: string }[]).map((row) => row.slug);
+  const rows = await query<{ slug: string }>(`select slug from team_members`);
+  return rows.map((row) => row.slug);
 }
 
-/** Ведущий специалист направления — для страницы /directions/[slug]. */
 export async function getLeadByDirection(
   directionSlug: string
 ): Promise<TeamMember | null> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("team_members")
-    .select(COLUMNS)
-    .eq("is_lead", true)
-    .eq("lead_direction_slug", directionSlug)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? mapRow(data as TeamRow) : null;
+  const row = await queryOne<TeamRow>(
+    `select ${COLUMNS} from team_members where is_lead = true and lead_direction_slug = $1`,
+    [directionSlug]
+  );
+  return row ? mapRow(row) : null;
 }

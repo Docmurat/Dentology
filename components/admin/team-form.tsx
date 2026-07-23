@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createTeamMember, updateTeamMember } from "@/app/admin/team/actions";
 import { CropField } from "@/components/admin/crop-field";
 import { slugify } from "@/lib/slugify";
-import { createClient } from "@/utils/supabase/client";
+import { uploadImageBlob } from "@/lib/upload-client";
 import type { TeamMember } from "@/lib/team-data";
 
 const labelCls = "text-sm font-medium text-[var(--color-navy)]";
@@ -14,22 +14,14 @@ const inputCls =
 const cardCls =
   "rounded-2xl border border-[var(--color-gray-200)] bg-white p-6 space-y-4";
 
-const BUCKET = "team-images";
-
+// Загрузка через серверный экшен (Object Storage).
 async function uploadBlob(
-  supabase: ReturnType<typeof createClient>,
   slug: string,
   name: string,
   blob: Blob | null
 ): Promise<string | null> {
   if (!blob) return null;
-  const path = `${slug}/${name}-${Date.now()}.jpg`;
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-  if (error) throw new Error(`Не удалось загрузить фото: ${error.message}`);
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return uploadImageBlob(`team-images/${slug}`, blob, name);
 }
 
 export function TeamForm({
@@ -40,7 +32,6 @@ export function TeamForm({
   directions: { slug: string; label: string }[];
 }) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -70,13 +61,13 @@ export function TeamForm({
 
       // Фото уже обрезано до 4:3 в CropField — грузим blob.
       const uploadedUrl = photoBlob
-        ? await uploadBlob(supabase, slug, "photo", photoBlob)
+        ? await uploadBlob(slug, "photo", photoBlob)
         : null;
       const image = photoRemoved ? "" : uploadedUrl ?? initial?.image ?? "";
       formData.set("image", image);
 
       const uploadedDiploma = diplomaBlob
-        ? await uploadBlob(supabase, slug, "diploma", diplomaBlob)
+        ? await uploadBlob(slug, "diploma", diplomaBlob)
         : null;
       const diploma = diplomaRemoved
         ? ""
@@ -85,7 +76,7 @@ export function TeamForm({
 
       // Фото ведущего специалиста для страницы направления (кроп 3:4).
       const uploadedLead = leadPhotoBlob
-        ? await uploadBlob(supabase, slug, "lead", leadPhotoBlob)
+        ? await uploadBlob(slug, "lead", leadPhotoBlob)
         : null;
       const leadImage = leadPhotoRemoved
         ? ""
@@ -317,6 +308,7 @@ export function TeamForm({
               existingUrl={initial?.diplomaImage}
               onCropped={(blob) => setDiplomaBlob(blob)}
               onRemovedToggle={setDiplomaRemoved}
+              compress={{ maxDimension: 2400, quality: 0.92 }}
             />
           </div>
         </div>

@@ -1,27 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { query, queryOne } from "@/lib/db";
+import { buildInsert, buildUpdate, pgErrorCode } from "@/lib/sql-helpers";
+import { requireDoctor } from "@/lib/auth-guards";
 import { slugify } from "@/lib/slugify";
-
-async function requireDoctor() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Не авторизован");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || !["doctor", "admin"].includes(profile.role)) {
-    throw new Error("Недостаточно прав");
-  }
-  return { supabase, user };
-}
 
 function parseBlocks(value: FormDataEntryValue | null) {
   try {
@@ -50,7 +33,7 @@ function readFields(formData: FormData) {
 export async function createDoctorCase(
   formData: FormData
 ): Promise<{ error?: string; slug?: string }> {
-  const { supabase, user } = await requireDoctor();
+  const user = await requireDoctor();
 
   const fields = readFields(formData);
   if (!fields.title) return { error: "Заголовок обязателен" };
@@ -60,14 +43,18 @@ export async function createDoctorCase(
     slugify(fields.title) ||
     `case-${Date.now()}`;
 
-  const { error } = await supabase
-    .from("cases")
-    .insert({ slug, ...fields, published: false, created_by: user.id });
-
-  if (error) {
-    if (error.code === "23505")
+  try {
+    const { text, values } = buildInsert("cases", {
+      slug,
+      ...fields,
+      published: false,
+      created_by: user.id,
+    });
+    await query(text, values);
+  } catch (err) {
+    if (pgErrorCode(err) === "23505")
       return { error: "Кейс с таким slug уже существует" };
-    return { error: error.message };
+    return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
   }
 
   revalidatePath("/doctor");
@@ -76,11 +63,12 @@ export async function createDoctorCase(
 }
 
 // Правка врачом своего кейса, пока он на модерации.
-// RLS не даст обновить опубликованный или чужой кейс.
+// Раньше ограничение задавала RLS — теперь проверяем в коде:
+// врач может править только СВОЙ и только неопубликованный кейс.
 export async function updateDoctorCase(
   formData: FormData
 ): Promise<{ error?: string; slug?: string }> {
-  const { supabase } = await requireDoctor();
+  const user = await requireDoctor();
 
   const originalSlug = String(formData.get("originalSlug") || "");
   if (!originalSlug) return { error: "Не указан кейс для обновления" };
@@ -88,13 +76,24 @@ export async function updateDoctorCase(
   const fields = readFields(formData);
   if (!fields.title) return { error: "Заголовок обязателен" };
 
-  const { error } = await supabase
-    .from("cases")
-    .update(fields)
-    .eq("slug", originalSlug)
-    .eq("published", false);
+  const existing = await queryOne<{ created_by: string | null; published: boolean }>(
+    `select created_by, published from cases where slug = $1`,
+    [originalSlug]
+  );
+  if (!existing) return { error: "Кейс не найден" };
 
-  if (error) return { error: error.message };
+  const isOwner = existing.created_by === user.id;
+  const canEdit = user.role === "admin" || (isOwner && !existing.published);
+  if (!canEdit) {
+    return { error: "Кейс уже опубликован или недоступен для правки" };
+  }
+
+  try {
+    const { text, values } = buildUpdate("cases", fields, "slug", originalSlug);
+    await query(text, values);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
+  }
 
   revalidatePath("/doctor");
   revalidatePath("/admin/cases");

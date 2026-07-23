@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { query, queryOne } from "@/lib/db";
+import { buildUpdate } from "@/lib/sql-helpers";
+import { requireStaff, requireAdmin } from "@/lib/auth-guards";
 
 type Result = { error?: string; ok?: boolean };
 
@@ -12,25 +14,6 @@ function normalizeInstagram(value: string): string | null {
   return `https://www.instagram.com/${s}`;
 }
 
-async function requireStaff() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Не авторизован");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || !["admin", "editor"].includes(profile.role)) {
-    throw new Error("Недостаточно прав");
-  }
-  return supabase;
-}
-
 function revalidateReviews() {
   revalidatePath("/admin/reviews");
   revalidatePath("/reviews");
@@ -38,20 +21,16 @@ function revalidateReviews() {
 }
 
 // Курс-отзыв определяется по course_slug в БД, а не по полям формы.
-async function isCourseReview(
-  supabase: Awaited<ReturnType<typeof requireStaff>>,
-  id: string
-): Promise<boolean> {
-  const { data } = await supabase
-    .from("reviews")
-    .select("course_slug")
-    .eq("id", id)
-    .maybeSingle();
-  return Boolean(data?.course_slug);
+async function isCourseReview(id: string): Promise<boolean> {
+  const row = await queryOne<{ course_slug: string | null }>(
+    `select course_slug from reviews where id = $1`,
+    [id]
+  );
+  return Boolean(row?.course_slug);
 }
 
 export async function approveReview(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
   const id = String(formData.get("id") || "");
   const dirs = formData
     .getAll("directionSlug")
@@ -59,61 +38,59 @@ export async function approveReview(formData: FormData) {
     .filter(Boolean)
     .slice(0, 3);
 
-  const isCourse = await isCourseReview(supabase, id);
+  const isCourse = await isCourseReview(id);
 
   // Пациентский отзыв без направления не публикуется.
   // Курс-отзыв публикуется без направлений.
   if (!isCourse && !dirs.length) return;
 
-  await supabase
-    .from("reviews")
-    .update({ status: "approved", direction_slugs: isCourse ? [] : dirs })
-    .eq("id", id);
+  await query(
+    `update reviews set status = 'approved', direction_slugs = $1 where id = $2`,
+    [isCourse ? [] : dirs, id]
+  );
   revalidateReviews();
 }
 
 export async function rejectReview(formData: FormData) {
-  const supabase = await requireStaff();
-  await supabase
-    .from("reviews")
-    .update({ status: "rejected" })
-    .eq("id", String(formData.get("id") || ""));
+  await requireStaff();
+  await query(`update reviews set status = 'rejected' where id = $1`, [
+    String(formData.get("id") || ""),
+  ]);
   revalidateReviews();
 }
 
 export async function unpublishReview(formData: FormData) {
-  const supabase = await requireStaff();
-  await supabase
-    .from("reviews")
-    .update({ status: "pending" })
-    .eq("id", String(formData.get("id") || ""));
+  await requireStaff();
+  await query(`update reviews set status = 'pending' where id = $1`, [
+    String(formData.get("id") || ""),
+  ]);
   revalidateReviews();
 }
 
+// Удаление отзыва — только администратор.
 export async function deleteReview(formData: FormData) {
-  const supabase = await requireStaff();
-  await supabase
-    .from("reviews")
-    .delete()
-    .eq("id", String(formData.get("id") || ""));
+  await requireAdmin();
+  await query(`delete from reviews where id = $1`, [
+    String(formData.get("id") || ""),
+  ]);
   revalidateReviews();
 }
 
 export async function setReviewVerified(formData: FormData) {
-  const supabase = await requireStaff();
-  await supabase
-    .from("reviews")
-    .update({ verified: String(formData.get("verified") || "") === "true" })
-    .eq("id", String(formData.get("id") || ""));
+  await requireStaff();
+  await query(`update reviews set verified = $1 where id = $2`, [
+    String(formData.get("verified") || "") === "true",
+    String(formData.get("id") || ""),
+  ]);
   revalidateReviews();
 }
 
 export async function setReviewImage(formData: FormData) {
-  const supabase = await requireStaff();
-  await supabase
-    .from("reviews")
-    .update({ image: String(formData.get("url") || "") || null })
-    .eq("id", String(formData.get("id") || ""));
+  await requireStaff();
+  await query(`update reviews set image = $1 where id = $2`, [
+    String(formData.get("url") || "") || null,
+    String(formData.get("id") || ""),
+  ]);
   revalidateReviews();
 }
 
@@ -121,9 +98,8 @@ export async function updateReview(
   _prev: Result,
   formData: FormData
 ): Promise<Result> {
-  let supabase;
   try {
-    supabase = await requireStaff();
+    await requireStaff();
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Ошибка" };
   }
@@ -144,21 +120,19 @@ export async function updateReview(
   const parsed = sortRaw ? Number.parseInt(sortRaw, 10) : null;
   const sortOrder = parsed !== null && !Number.isNaN(parsed) ? parsed : null;
 
-  const isCourse = await isCourseReview(supabase, id);
+  const isCourse = await isCourseReview(id);
 
   if (!author) return { error: "Укажите имя" };
   if (text.length < 5) return { error: "Текст слишком короткий" };
-  // Направление обязательно только для пациентских отзывов.
   if (!isCourse && !dirs.length)
     return { error: "Выберите хотя бы одно направление" };
 
   // Освобождаем номер у другого отзыва, если он уже занят (номер уникален).
   if (sortOrder !== null) {
-    await supabase
-      .from("reviews")
-      .update({ sort_order: null })
-      .eq("sort_order", sortOrder)
-      .neq("id", id);
+    await query(
+      `update reviews set sort_order = null where sort_order = $1 and id <> $2`,
+      [sortOrder, id]
+    );
   }
 
   const patch: Record<string, unknown> = {
@@ -171,7 +145,7 @@ export async function updateReview(
   };
   if (reviewDate) patch.review_date = reviewDate;
 
-  // Разделы курс-отзыва — сохраняем как есть (trim), только для курс-отзыва.
+  // Разделы курс-отзыва — только для курс-отзыва.
   if (isCourse) {
     const trimOrNull = (v: string) => v.trim() || null;
     patch.pros = trimOrNull(String(formData.get("pros") || ""));
@@ -179,8 +153,12 @@ export async function updateReview(
     patch.wishes = trimOrNull(String(formData.get("wishes") || ""));
   }
 
-  const { error } = await supabase.from("reviews").update(patch).eq("id", id);
-  if (error) return { error: error.message };
+  try {
+    const q = buildUpdate("reviews", patch, "id", id);
+    await query(q.text, q.values);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
+  }
 
   revalidateReviews();
   return { ok: true };

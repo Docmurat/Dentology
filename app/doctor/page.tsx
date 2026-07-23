@@ -1,34 +1,29 @@
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
+import { query } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth-guards";
+import { AdminThumb } from "@/components/admin/admin-thumb";
 
 export const dynamic = "force-dynamic";
 
-function Cover({ url }: { url: string | null }) {
-  return (
-    <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-[var(--color-gray-100)]">
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-[10px] text-[var(--color-gray-400)]">
-          нет фото
-        </div>
-      )}
-    </div>
-  );
-}
+type Row = {
+  slug: string;
+  title: string;
+  cover_image: string | null;
+  published: boolean;
+  created_at: string;
+};
 
 export default async function DoctorHomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
+  if (!user) redirect("/admin/login");
 
-  const { data: cases } = await supabase
-    .from("cases")
-    .select("slug, title, cover_image, published, created_at")
-    .eq("created_by", user!.id)
-    .order("created_at", { ascending: false });
+  const cases = await query<Row>(
+    `select slug, title, cover_image, published, created_at
+       from cases where created_by = $1
+      order by created_at desc`,
+    [user.id]
+  );
 
   return (
     <div>
@@ -52,7 +47,7 @@ export default async function DoctorHomePage() {
       </p>
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white">
-        {cases && cases.length ? (
+        {cases.length ? (
           <ul className="divide-y divide-[var(--color-gray-200)]">
             {cases.map((item) => (
               <li
@@ -60,7 +55,11 @@ export default async function DoctorHomePage() {
                 className="flex items-center justify-between gap-4 px-5 py-4"
               >
                 <div className="flex min-w-0 items-center gap-4">
-                  <Cover url={item.cover_image} />
+                  <AdminThumb
+                    url={item.cover_image}
+                    className="h-12 w-16"
+                    sizes="80px"
+                  />
                   <div className="min-w-0">
                     <p className="truncate font-medium text-[var(--color-navy)]">
                       {item.title}

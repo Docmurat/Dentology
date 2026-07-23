@@ -1,22 +1,15 @@
+import { redirect } from "next/navigation";
 import { CaseForm } from "@/components/admin/case-form";
 import { createDoctorCase } from "../../actions";
 import { getTeamMembers } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentUser } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function DoctorNewCasePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("doctor_slug")
-    .eq("id", user!.id)
-    .maybeSingle();
+  const user = await getCurrentUser();
+  if (!user) redirect("/admin/login");
 
   const team = await getTeamMembers();
   const doctors = team.map((d) => ({
@@ -31,8 +24,8 @@ export default async function DoctorNewCasePage() {
 
   // Подставляем врача-себя, только если аккаунт привязан к карточке и она есть.
   const lockedDoctorSlug =
-    profile?.doctor_slug && doctors.some((d) => d.slug === profile.doctor_slug)
-      ? profile.doctor_slug
+    user.doctorSlug && doctors.some((d) => d.slug === user.doctorSlug)
+      ? user.doctorSlug
       : undefined;
 
   return (

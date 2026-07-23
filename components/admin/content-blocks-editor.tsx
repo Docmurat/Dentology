@@ -1,17 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { uploadImageBlob } from "@/lib/upload-client";
+import { AdminThumb } from "@/components/admin/admin-thumb";
+import { CropModal, type AspectChoice } from "@/components/admin/crop-modal";
 import type { CaseItem, ContentBlock } from "@/lib/cases-data";
 
 const MAX_BLOCKS = 10;
-const BUCKET = "case-images";
 
 const labelCls = "text-sm font-medium text-[var(--color-navy)]";
 const inputCls =
   "mt-1 w-full rounded-lg border border-[var(--color-gray-200)] px-3 py-2 text-sm outline-none focus:border-[var(--color-teal)]";
 
 type EditableBlock = ContentBlock & { uid: string };
+// Задача в очереди кропа: к какому блоку относится и objectURL выбранного файла.
+type CropTask = { uid: string; src: string };
 
 function emptyBlock(): EditableBlock {
   return {
@@ -23,23 +26,12 @@ function emptyBlock(): EditableBlock {
   };
 }
 
-// Загружаем фото сразу при выборе — в content_blocks хранятся уже готовые ссылки.
-async function uploadBlockImage(
-  supabase: ReturnType<typeof createClient>,
-  file: File
-): Promise<string> {
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `blocks/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type });
-  if (error) throw new Error(error.message);
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+// Загружаем уже обрезанный (и сжатый в getCroppedBlob) blob в хранилище.
+async function uploadBlockBlob(blob: Blob): Promise<string> {
+  return uploadImageBlob("case-images/blocks", blob, "block");
 }
 
 export function ContentBlocksEditor({ initial }: { initial?: CaseItem }) {
-  const supabase = createClient();
 
   const [doctorWords, setDoctorWords] = useState(initial?.doctorWords ?? "");
   const [blocks, setBlocks] = useState<EditableBlock[]>(
@@ -48,6 +40,20 @@ export function ContentBlocksEditor({ initial }: { initial?: CaseItem }) {
       : []
   );
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Очередь кропа и зафиксированный формат по каждому блоку (uid -> число).
+  const [queue, setQueue] = useState<CropTask[]>([]);
+  const [blockAspect, setBlockAspect] = useState<Record<string, number>>({});
+
+  const current = queue[0] ?? null;
+  // Формат для текущей задачи: если у блока уже зафиксирован — берём его
+  // (кнопки форматов скрыты), иначе null — первая картинка выбирает формат.
+  const currentAspect: AspectChoice | null = current
+    ? current.uid in blockAspect
+      ? blockAspect[current.uid]
+      : null
+    : null;
 
   function patch(uid: string, data: Partial<EditableBlock>) {
     setBlocks((prev) =>
@@ -66,28 +72,50 @@ export function ContentBlocksEditor({ initial }: { initial?: CaseItem }) {
     });
   }
 
-  async function addImages(uid: string, files: FileList | null) {
+  // Выбор файлов -> ставим их в очередь кропа (по одному покажем в модалке).
+  function selectFiles(uid: string, files: FileList | null) {
     if (!files || !files.length) return;
+    setError(null);
+    const tasks: CropTask[] = [];
+    for (const f of Array.from(files)) {
+      if (f.size === 0 || !f.type.startsWith("image/")) continue;
+      tasks.push({ uid, src: URL.createObjectURL(f) });
+    }
+    if (tasks.length) setQueue((prev) => [...prev, ...tasks]);
+  }
+
+  // Кроп подтверждён -> грузим blob, добавляем ссылку, фиксируем формат блока.
+  async function onCropDone(blob: Blob, usedAspect: number) {
+    if (!current) return;
+    const { uid, src } = current;
     setBusy(true);
+    setError(null);
     try {
-      const urls: string[] = [];
-      for (const file of Array.from(files)) {
-        if (file.size === 0) continue;
-        urls.push(await uploadBlockImage(supabase, file));
-      }
+      const url = await uploadBlockBlob(blob);
       setBlocks((prev) =>
         prev.map((b) =>
-          b.uid === uid ? { ...b, images: [...b.images, ...urls] } : b
+          b.uid === uid ? { ...b, images: [...b.images, url] } : b
         )
       );
+      // Формат фиксируем по ПЕРВОЙ картинке блока.
+      setBlockAspect((prev) =>
+        uid in prev ? prev : { ...prev, [uid]: usedAspect }
+      );
     } catch (err) {
-      alert(
+      setError(
         "Не удалось загрузить фото: " +
-          (err instanceof Error ? err.message : "ошибка")
+          (err instanceof Error ? err.message : "неизвестная ошибка")
       );
     } finally {
       setBusy(false);
+      URL.revokeObjectURL(src);
+      setQueue((prev) => prev.slice(1));
     }
+  }
+
+  function onCropCancel() {
+    if (current) URL.revokeObjectURL(current.src);
+    setQueue((prev) => prev.slice(1));
   }
 
   // Сериализация для отправки: пустые блоки отбрасываем, uid убираем.
@@ -103,6 +131,12 @@ export function ContentBlocksEditor({ initial }: { initial?: CaseItem }) {
         name="contentBlocks"
         value={JSON.stringify(serialized)}
       />
+
+      {error ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
 
       {/* Слова врача */}
       <div className="rounded-2xl border border-[var(--color-gray-200)] bg-white p-6">
@@ -204,11 +238,11 @@ export function ContentBlocksEditor({ initial }: { initial?: CaseItem }) {
                 <div className="mt-2 flex flex-wrap gap-3">
                   {block.images.map((url) => (
                     <div key={url} className="relative">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={url}
-                        alt=""
-                        className="h-20 w-20 rounded-lg border border-[var(--color-gray-200)] object-cover"
+                      <AdminThumb
+                        url={url}
+                        className="h-20 w-20 border border-[var(--color-gray-200)]"
+                        sizes="80px"
+                        rounded="rounded-lg"
                       />
                       <button
                         type="button"
@@ -227,16 +261,36 @@ export function ContentBlocksEditor({ initial }: { initial?: CaseItem }) {
                 </div>
               ) : null}
 
-              <label className="mt-2 flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-[var(--color-gray-200)] bg-[var(--color-gray-50)] px-3 py-3 text-center text-sm text-[var(--color-gray-600)] transition hover:border-[var(--color-teal)] hover:bg-white">
+              <label
+                className={`mt-2 flex items-center justify-center rounded-lg border border-dashed border-[var(--color-gray-200)] bg-[var(--color-gray-50)] px-3 py-3 text-center text-sm text-[var(--color-gray-600)] transition hover:border-[var(--color-teal)] hover:bg-white ${
+                  busy || queue.length ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                }`}
+              >
                 <input
                   type="file"
                   accept="image/*"
                   multiple
-                  onChange={(e) => addImages(block.uid, e.target.files)}
+                  disabled={busy || queue.length > 0}
+                  onChange={(e) => {
+                    selectFiles(block.uid, e.target.files);
+                    e.target.value = "";
+                  }}
                   className="hidden"
                 />
-                {busy ? "Загрузка…" : "Добавить фото (можно несколько)"}
+                {busy
+                  ? "Загрузка…"
+                  : queue.length
+                  ? "Обрезка…"
+                  : block.images.length
+                  ? "Добавить ещё (в том же формате)"
+                  : "Добавить и обрезать (можно несколько)"}
               </label>
+
+              {block.images.length ? (
+                <p className="mt-1 text-xs text-[var(--color-gray-500)]">
+                  Формат задаёт первая картинка — остальные обрезаются в нём же.
+                </p>
+              ) : null}
             </div>
           </div>
         ))}
@@ -255,6 +309,18 @@ export function ContentBlocksEditor({ initial }: { initial?: CaseItem }) {
           Достигнут максимум — {MAX_BLOCKS} блоков.
         </p>
       )}
+
+      {/* Модалка кропа для текущего файла из очереди */}
+      {current ? (
+        <CropModal
+          key={current.src}
+          src={current.src}
+          label="Фото блока"
+          aspect={currentAspect}
+          onDone={onCropDone}
+          onCancel={onCropCancel}
+        />
+      ) : null}
     </div>
   );
 }

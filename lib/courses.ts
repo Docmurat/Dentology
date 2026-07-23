@@ -1,6 +1,4 @@
-import { createPublicClient } from "@/lib/supabase-public";
-import { createAdminClient } from "@/lib/supabase-admin";
-import { createClient } from "@/utils/supabase/server";
+import { query, queryOne } from "@/lib/db";
 
 export type CourseMetric = { value: string; label: string };
 export type CourseFaq = { q: string; a: string };
@@ -53,9 +51,6 @@ export type Course = {
   sortOrder: number;
 };
 
-// Читаем через select("*"): берём все существующие колонки, а отсутствующие
-// (если миграция ещё не выполнена) просто подставляются дефолтами в mapRow.
-// Это исключает «обнуление» всех полей из-за одной недостающей колонки.
 type Row = {
   slug: string;
   title: string;
@@ -188,15 +183,10 @@ function mapRow(row: Row): Course {
 
 export async function getPublishedCourses(): Promise<Course[]> {
   try {
-    const supabase = createPublicClient();
-    const { data, error } = await supabase
-      .from("courses")
-      .select("*")
-      .eq("published", true)
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false });
-    if (error || !data) return [];
-    return (data as Row[]).map(mapRow).filter((c) => !c.archived);
+    const rows = await query<Row>(
+      `select * from courses where published = true order by sort_order asc, created_at desc`
+    );
+    return rows.map(mapRow).filter((c) => !c.archived);
   } catch {
     return [];
   }
@@ -204,50 +194,31 @@ export async function getPublishedCourses(): Promise<Course[]> {
 
 export async function getCourseBySlug(slug: string): Promise<Course | null> {
   try {
-    const supabase = createPublicClient();
-    const { data, error } = await supabase
-      .from("courses")
-      .select("*")
-      .eq("slug", slug)
-      .maybeSingle();
-    if (error || !data) return null;
-    return mapRow(data as Row);
+    const row = await queryOne<Row>(`select * from courses where slug = $1`, [
+      slug,
+    ]);
+    return row ? mapRow(row) : null;
   } catch {
     return null;
   }
 }
 
-// Чтение курса для staff-превью (в т.ч. черновик). Сервис-роль минует RLS —
-// вызывать только после проверки прав.
+// Чтение курса без фильтра публикации (для staff-превью, в т.ч. черновик).
+// Проверку прав выполняет вызывающая страница.
 export async function getCourseBySlugAdmin(
   slug: string
 ): Promise<Course | null> {
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("courses")
-      .select("*")
-      .eq("slug", slug)
-      .maybeSingle();
-    if (error || !data) return null;
-    return mapRow(data as Row);
-  } catch {
-    return null;
-  }
+  return getCourseBySlug(slug);
 }
 
-// Курсы конкретного владельца (для кабинета спикера). Читает авторизованно —
-// RLS отдаёт свои курсы (в т.ч. черновики).
+// Курсы конкретного владельца (кабинет спикера).
 export async function getCoursesByOwner(userId: string): Promise<Course[]> {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("courses")
-      .select("*")
-      .eq("created_by", userId)
-      .order("created_at", { ascending: false });
-    if (error || !data) return [];
-    return (data as Row[]).map(mapRow);
+    const rows = await query<Row>(
+      `select * from courses where created_by = $1 order by created_at desc`,
+      [userId]
+    );
+    return rows.map(mapRow);
   } catch {
     return [];
   }

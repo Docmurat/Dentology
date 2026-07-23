@@ -1,4 +1,4 @@
-import { createPublicClient } from "@/lib/supabase-public";
+import { query, queryOne } from "@/lib/db";
 
 export type DirectionFaq = {
   question: string;
@@ -11,19 +11,14 @@ export type DirectionItem = {
   short: string;
   description: string;
   heroDescription: string;
-
   featured: boolean;
-  /** Позиция в коллаже на главной: главное / большое / маленькое. */
   collageRole: "featured" | "large" | "small";
   sortOrder: number;
-
   problems: string[];
   fears: string[];
   approach: string[];
-
   insightTitle?: string;
   insightText: string[];
-
   faq: DirectionFaq[];
 };
 
@@ -45,7 +40,7 @@ type DirectionRow = {
 };
 
 const COLUMNS =
-  "slug,title,short,description,hero_description,featured,collage_role,sort_order,problems,fears,approach,insight_title,insight_text,faq";
+  "slug, title, short, description, hero_description, featured, collage_role, sort_order, problems, fears, approach, insight_title, insight_text, faq";
 
 function mapRow(row: DirectionRow): DirectionItem {
   return {
@@ -67,7 +62,6 @@ function mapRow(row: DirectionRow): DirectionItem {
 }
 
 function sortDirections(items: DirectionItem[]): DirectionItem[] {
-  // featured всегда первым, дальше — по ручному порядку, затем по названию.
   return [...items].sort((a, b) => {
     if (a.featured !== b.featured) return a.featured ? -1 : 1;
     if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
@@ -75,51 +69,31 @@ function sortDirections(items: DirectionItem[]): DirectionItem[] {
   });
 }
 
-/** Все направления в правильном порядке — для главной, /directions и пикеров. */
 export async function getDirections(): Promise<DirectionItem[]> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("directions")
-    .select(COLUMNS)
-    .eq("archived", false);
-  if (error) throw error;
-  return sortDirections((data as DirectionRow[]).map(mapRow));
+  const rows = await query<DirectionRow>(
+    `select ${COLUMNS} from directions where archived = false`
+  );
+  return sortDirections(rows.map(mapRow));
 }
 
-/** Одно направление по slug — для /directions/[slug]. */
 export async function getDirectionBySlug(
   slug: string
 ): Promise<DirectionItem | null> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("directions")
-    .select(COLUMNS)
-    .eq("slug", slug)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? mapRow(data as DirectionRow) : null;
-}
-
-/** Только slug'и — для generateStaticParams и валидации. */
-export async function getDirectionSlugs(): Promise<string[]> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase.from("directions").select("slug");
-  if (error) throw error;
-  return (data as { slug: string }[]).map((r) => r.slug);
-}
-
-/**
- * Карта slug → название. Нужна для подписей на кейсах/отзывах и в фильтрах.
- * Если направление удалили, его slug всё ещё может встречаться в старых
- * кейсах/отзывах — для них вернётся аккуратный фолбэк (см. directionLabel).
- */
-export async function getDirectionLabelMap(): Promise<Record<string, string>> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("directions")
-    .select("slug,title");
-  if (error) throw error;
-  return Object.fromEntries(
-    (data as { slug: string; title: string }[]).map((r) => [r.slug, r.title])
+  const row = await queryOne<DirectionRow>(
+    `select ${COLUMNS} from directions where slug = $1`,
+    [slug]
   );
+  return row ? mapRow(row) : null;
+}
+
+export async function getDirectionSlugs(): Promise<string[]> {
+  const rows = await query<{ slug: string }>(`select slug from directions`);
+  return rows.map((r) => r.slug);
+}
+
+export async function getDirectionLabelMap(): Promise<Record<string, string>> {
+  const rows = await query<{ slug: string; title: string }>(
+    `select slug, title from directions`
+  );
+  return Object.fromEntries(rows.map((r) => [r.slug, r.title]));
 }

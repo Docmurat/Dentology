@@ -1,31 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { query } from "@/lib/db";
+import { requireStaff } from "@/lib/auth-guards";
 import {
   PAGE_HEADING_KEYS,
   pageHeadingStorageKey,
   type PageHeadingKey,
 } from "@/lib/page-content";
-
-async function requireStaff() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Не авторизован");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || !["admin", "editor"].includes(profile.role)) {
-    throw new Error("Недостаточно прав");
-  }
-  return supabase;
-}
 
 // Пути публичных страниц по ключу — для ревалидации.
 const PUBLIC_PATH: Record<PageHeadingKey, string> = {
@@ -36,7 +18,7 @@ const PUBLIC_PATH: Record<PageHeadingKey, string> = {
 };
 
 export async function savePageHeading(formData: FormData) {
-  const supabase = await requireStaff();
+  await requireStaff();
 
   const key = String(formData.get("pageKey") || "") as PageHeadingKey;
   if (!PAGE_HEADING_KEYS.includes(key)) return;
@@ -47,12 +29,13 @@ export async function savePageHeading(formData: FormData) {
     description: String(formData.get("description") || "").trim(),
   };
 
-  await supabase
-    .from("homepage_content")
-    .upsert(
-      { block_key: pageHeadingStorageKey(key), content },
-      { onConflict: "block_key" }
-    );
+  await query(
+    `insert into homepage_content (block_key, content)
+     values ($1, $2::jsonb)
+     on conflict (block_key) do update
+       set content = excluded.content, updated_at = now()`,
+    [pageHeadingStorageKey(key), JSON.stringify(content)]
+  );
 
   revalidatePath(PUBLIC_PATH[key]);
 }
