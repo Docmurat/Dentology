@@ -45,9 +45,19 @@ export default async function AdminLayout({
       <header className="border-b border-[var(--color-gray-200)] bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-6">
-            <Link href="/admin" className="font-semibold text-[var(--color-navy)]">
-              Lucenta · Кабинет
-            </Link>
+            <p className="font-semibold text-[var(--color-navy)]">
+              {/* «Lucenta» ведёт на публичный сайт, «Кабинет» — в корень админки */}
+              <Link href="/" className="hover:text-[var(--color-navy-secondary)]">
+                Lucenta
+              </Link>
+              <span className="text-[var(--color-gray-400)]"> · </span>
+              <Link
+                href="/admin"
+                className="hover:text-[var(--color-navy-secondary)]"
+              >
+                Кабинет
+              </Link>
+            </p>
             <nav className="flex items-center gap-3 text-sm">
               <Link
                 href="/admin/cases"

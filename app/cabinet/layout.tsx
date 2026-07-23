@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { queryOne } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-guards";
@@ -25,9 +26,14 @@ export default async function CabinetLayout({
     <div className="min-h-screen bg-[var(--color-gray-50)]">
       <header className="border-b border-[var(--color-gray-200)] bg-white">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-          <span className="font-semibold text-[var(--color-navy)]">
-            Lucenta · Личный кабинет
-          </span>
+          <p className="font-semibold text-[var(--color-navy)]">
+            {/* «Lucenta» ведёт на публичный сайт */}
+            <Link href="/" className="hover:text-[var(--color-navy-secondary)]">
+              Lucenta
+            </Link>
+            <span className="text-[var(--color-gray-400)]"> · </span>
+            <span>Личный кабинет</span>
+          </p>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-[var(--color-gray-500)]">
               {profile?.full_name || user.email}

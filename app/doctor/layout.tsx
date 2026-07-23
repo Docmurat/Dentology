@@ -37,9 +37,19 @@ export default async function DoctorLayout({
       <header className="border-b border-[var(--color-gray-200)] bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-6">
-            <Link href="/doctor" className="font-semibold text-[var(--color-navy)]">
-              Lucenta · Врач
-            </Link>
+            <p className="font-semibold text-[var(--color-navy)]">
+              {/* «Lucenta» ведёт на публичный сайт, «Врач» — в корень кабинета */}
+              <Link href="/" className="hover:text-[var(--color-navy-secondary)]">
+                Lucenta
+              </Link>
+              <span className="text-[var(--color-gray-400)]"> · </span>
+              <Link
+                href="/doctor"
+                className="hover:text-[var(--color-navy-secondary)]"
+              >
+                Врач
+              </Link>
+            </p>
             <nav className="flex items-center gap-3 text-sm">
               <Link
                 href="/doctor"

@@ -9,7 +9,9 @@ export async function PromoBanner() {
   const showLink = Boolean(promo.linkHref && promo.linkLabel);
 
   return (
-    <Section className="pt-4 pb-0 md:pt-5 md:pb-0">
+    // Отступ сверху совпадает с отступом Hero снизу от плашки
+    // (pt-6 / md:pt-8) — так зазоры над и под плашкой выглядят одинаково.
+    <Section className="pt-6 pb-0 md:pt-8 md:pb-0">
       <div className="rounded-[24px] border border-red-200 bg-red-50 px-6 py-3 text-center md:px-8">
         {promo.eyebrow ? (
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-600">
