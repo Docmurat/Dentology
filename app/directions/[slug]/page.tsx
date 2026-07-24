@@ -41,17 +41,21 @@ export default async function DirectionPage({ params }: Props) {
     getTeamMembers(),
   ]);
 
-  // Кейсы направления: показываем один ряд, остальные — на /cases с фильтром.
-  const relatedCases = allCases
-    .filter((item) => item.directionSlug === slug)
-    .slice(0, 3);
+  // Кейсы направления: 3 на телефоне и десктопе, 4 на планшете.
+  // Остальные — по кнопке на /cases с фильтром.
+  const directionCases = allCases.filter((item) => item.directionSlug === slug);
+  const relatedCases = directionCases.slice(0, 3);
+  const tabletCases = directionCases.slice(0, 4);
 
   const doctorName = new Map(team.map((d) => [d.slug, d.name]));
 
   // Отзывы направления берём из БД (раньше читался пустой статический список).
-  const relatedReviews = allReviews
-    .filter((item) => item.directionSlugs?.includes(slug))
-    .slice(0, 2);
+  const directionReviews = allReviews.filter((item) =>
+    item.directionSlugs?.includes(slug)
+  );
+  // 3 отзыва на телефоне и десктопе, 4 на планшете — как на главной.
+  const relatedReviews = directionReviews.slice(0, 3);
+  const tabletReviews = directionReviews.slice(0, 4);
 
   return (
     <SiteShell>
@@ -62,27 +66,27 @@ export default async function DirectionPage({ params }: Props) {
       />
 
       <Section className="pb-20 md:pb-28">
-        <div className="grid gap-8">
-          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-stretch">
+        <div className="grid gap-16 sm:gap-20 lg:gap-24 [&>*]:min-w-0">
+          <div className="grid min-w-0 gap-6 sm:gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-stretch [&>*]:min-w-0">
             {/* Левая колонка */}
-            <div className="grid gap-8">
+            <div className="grid min-w-0 gap-6 sm:gap-8 [&>*]:min-w-0">
               <Card>
-                <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                   О направлении
                 </h2>
 
-                <p className="mt-4 leading-7 text-[var(--color-gray-700)]">
+                <p className="mt-3 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-4 sm:text-base sm:leading-7">
                   {direction.description}
                 </p>
               </Card>
 
               {direction.problems.length ? (
                 <Card>
-                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                  <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                     С какими проблемами приходят
                   </h2>
 
-                  <ul className="mt-4 space-y-3 leading-7 text-[var(--color-gray-700)]">
+                  <ul className="mt-3 space-y-2 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-4 sm:space-y-3 sm:text-base sm:leading-7">
                     {direction.problems.map((item) => (
                       <li key={item}>• {item}</li>
                     ))}
@@ -110,7 +114,7 @@ export default async function DirectionPage({ params }: Props) {
                       Специалист направления
                     </p>
 
-                    <h2 className="mt-3 text-2xl font-semibold text-[var(--color-navy)]">
+                    <h2 className="mt-3 text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                       {relatedDoctor.name}
                     </h2>
 
@@ -151,8 +155,10 @@ export default async function DirectionPage({ params }: Props) {
           </div>
 
           {direction.fears.length ? (
-            <Card className="bg-[var(--color-gray-50)]">
-              <h2 className="mt-3 text-2xl font-semibold text-[var(--color-navy)]">
+            /* Без внешнего контейнера: карточки страхов занимают всю ширину
+               колонки на любом экране. */
+            <div>
+              <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                 Что беспокоит пациентов
               </h2>
 
@@ -160,7 +166,7 @@ export default async function DirectionPage({ params }: Props) {
                 {direction.fears.map((item) => (
                   <div
                     key={item}
-                    className="rounded-2xl border border-[var(--color-gray-200)] bg-white px-5 py-5"
+                    className="rounded-2xl border border-[var(--color-gray-200)] bg-white px-4 py-4 sm:px-5 sm:py-5"
                   >
                     <div className="mb-3 h-1 w-10 rounded-full bg-[var(--color-teal)]" />
                     <p className="text-sm leading-7 text-[var(--color-gray-700)]">
@@ -169,16 +175,16 @@ export default async function DirectionPage({ params }: Props) {
                   </div>
                 ))}
               </div>
-            </Card>
+            </div>
           ) : null}
 
           {direction.approach.length ||
           (direction.insightTitle && direction.insightText.length) ? (
-            <div className="grid gap-8 lg:grid-cols-2">
+            <div className="grid min-w-0 gap-6 sm:gap-8 lg:grid-cols-2 [&>*]:min-w-0">
               {/* ЛЕВАЯ КОЛОНКА — подход */}
               {direction.approach.length ? (
                 <Card>
-                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                  <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                     Как мы подходим к лечению
                   </h2>
 
@@ -205,7 +211,7 @@ export default async function DirectionPage({ params }: Props) {
               {/* ПРАВАЯ КОЛОНКА — смысловой блок */}
               {direction.insightTitle && direction.insightText.length ? (
                 <Card className="bg-[var(--color-gray-50)]">
-                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                  <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                     {direction.insightTitle}
                   </h2>
 
@@ -220,24 +226,28 @@ export default async function DirectionPage({ params }: Props) {
           ) : null}
 
           {relatedCases.length ? (
-            <Card>
-              <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            /* Без внешнего контейнера: карточки кейсов занимают всю ширину. */
+            <div>
+              <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                  <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                     Клинические случаи по направлению
                   </h2>
 
-                  <p className="mt-3 leading-7 text-[var(--color-gray-700)]">
+                  <p className="mt-2 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-3 sm:text-base sm:leading-7">
                     Примеры клинических ситуаций, связанных с этим направлением.
                   </p>
                 </div>
 
-                <Button href={`/cases?direction=${slug}`} variant="secondary">
-                  Все кейсы направления
-                </Button>
+                <div className="shrink-0 [&>*]:w-full sm:[&>*]:w-auto">
+                  <Button href={`/cases?direction=${slug}`} variant="secondary">
+                    Все кейсы направления
+                  </Button>
+                </div>
               </div>
 
-              <div className="mt-8 grid gap-6 lg:grid-cols-3">
+              {/* Телефон: три кейса в один столбец */}
+              <div className="mt-8 grid gap-4 sm:hidden">
                 {relatedCases.map((item) => (
                   <CaseCard
                     key={item.slug}
@@ -249,38 +259,85 @@ export default async function DirectionPage({ params }: Props) {
                   />
                 ))}
               </div>
-            </Card>
+
+              {/* Планшет: четыре кейса в две колонки */}
+              <div className="mt-8 hidden gap-6 sm:grid sm:grid-cols-2 lg:hidden">
+                {tabletCases.map((item) => (
+                  <CaseCard
+                    key={item.slug}
+                    item={item}
+                    dirLabel={dirLabel}
+                    doctorName={
+                      item.doctorSlug ? doctorName.get(item.doctorSlug) : null
+                    }
+                  />
+                ))}
+              </div>
+
+              {/* Десктоп: три кейса в ряд */}
+              <div className="mt-8 hidden gap-6 lg:grid lg:grid-cols-3">
+                {relatedCases.map((item) => (
+                  <CaseCard
+                    key={item.slug}
+                    item={item}
+                    dirLabel={dirLabel}
+                    doctorName={
+                      item.doctorSlug ? doctorName.get(item.doctorSlug) : null
+                    }
+                  />
+                ))}
+              </div>
+            </div>
           ) : null}
 
           {relatedReviews.length ? (
-            <Card>
-              <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            /* Без внешнего контейнера: карточки отзывов занимают всю ширину. */
+            <div>
+              <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                  <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                     Отзывы по направлению
                   </h2>
 
-                  <p className="mt-3 leading-7 text-[var(--color-gray-700)]">
+                  <p className="mt-2 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-3 sm:text-base sm:leading-7">
                     Отзывы пациентов, связанные именно с этим направлением
                     лечения.
                   </p>
                 </div>
 
-                <Button href={`/reviews?direction=${slug}`} variant="secondary">
-                  Все отзывы направления
-                </Button>
+                <div className="shrink-0 [&>*]:w-full sm:[&>*]:w-auto">
+                  <Button href={`/reviews?direction=${slug}`} variant="secondary">
+                    Все отзывы направления
+                  </Button>
+                </div>
               </div>
 
-              <div className="mt-8 grid gap-6 lg:grid-cols-2">
+              {/* Телефон: три отзыва в один столбец */}
+              <div className="mt-8 grid gap-4 sm:hidden">
                 {relatedReviews.map((item) => (
                   <ReviewCard key={item.slug} review={item} />
                 ))}
               </div>
-            </Card>
+
+              {/* Планшет: четыре отзыва в две колонки */}
+              <div className="mt-8 hidden gap-6 sm:grid sm:grid-cols-2 lg:hidden">
+                {tabletReviews.map((item) => (
+                  <ReviewCard key={item.slug} review={item} />
+                ))}
+              </div>
+
+              {/* Десктоп: три отзыва в ряд */}
+              <div className="mt-8 hidden gap-6 lg:grid lg:grid-cols-3">
+                {relatedReviews.map((item) => (
+                  <ReviewCard key={item.slug} review={item} />
+                ))}
+              </div>
+            </div>
           ) : null}
 
-          <Card>
-            <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+          {/* Частые вопросы — тоже без внешнего контейнера */}
+          <div>
+            <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
               Частые вопросы
             </h2>
 
@@ -291,7 +348,7 @@ export default async function DirectionPage({ params }: Props) {
                   className="group rounded-2xl border border-[var(--color-gray-200)] bg-white px-5 py-4"
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left">
-                    <span className="text-base font-medium leading-7 text-[var(--color-navy)]">
+                    <span className="text-sm font-medium leading-6 text-[var(--color-navy)] sm:text-base sm:leading-7">
                       {q.question}
                     </span>
 
@@ -301,24 +358,24 @@ export default async function DirectionPage({ params }: Props) {
                   </summary>
 
                   <div className="pt-4">
-                    <p className="leading-7 text-[var(--color-gray-700)]">
+                    <p className="text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7">
                       {q.answer}
                     </p>
                   </div>
                 </details>
               ))}
             </div>
-          </Card>
+          </div>
 
-          <div className="rounded-[28px] bg-[var(--color-navy)] px-6 py-10 text-white md:px-10 md:py-12">
+          <div className="rounded-[28px] bg-[var(--color-navy)] px-5 py-8 text-white sm:px-6 sm:py-10 md:px-10 md:py-12">
             <div className="max-w-3xl">
-              <h2 className="text-3xl font-semibold leading-tight md:text-4xl">
+              <h2 className="text-2xl font-semibold leading-snug sm:text-3xl sm:leading-tight md:text-4xl">
                 {slug === "endodontics"
                   ? "Запись на консультацию по эндодонтическому лечению"
                   : "Запись на консультацию"}
               </h2>
 
-              <p className="mt-5 leading-7 text-white/80">
+              <p className="mt-4 text-sm leading-6 text-white/80 sm:mt-6 sm:text-base sm:leading-7">
                 {slug === "endodontics"
                   ? "Консультация позволяет оценить клиническую ситуацию, уточнить диагноз и определить, возможно ли сохранить зуб даже в тех случаях, где ранее рекомендовано удаление."
                   : "Консультация позволяет оценить клиническую ситуацию и определить возможные варианты лечения."}

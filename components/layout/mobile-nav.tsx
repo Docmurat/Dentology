@@ -13,7 +13,7 @@ export function MobileNav() {
     "text-base text-[var(--color-gray-700)] transition-colors hover:text-[var(--color-navy)]";
 
   return (
-    <div className="lg:hidden">
+    <div className="xl:hidden">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}

@@ -152,8 +152,9 @@ export default async function ReviewsPage({
     <SiteShell>
       <PageHero eyebrow={heading.eyebrow} title={title} description={description} />
 
-      <Section className="pt-8 pb-20 md:pt-10 md:pb-28">
-        <div className="mb-8 flex justify-end">
+      <Section className="pt-4 pb-20 sm:pt-8 md:pt-10 md:pb-28">
+        {/* На телефоне кнопка на всю ширину, от 640px — справа, как было */}
+        <div className="mb-6 flex sm:mb-8 sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
           <ReviewForm
             doctors={doctors}
             courseSlug={courseSlug}

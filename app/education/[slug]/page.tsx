@@ -140,7 +140,7 @@ export default async function CoursePage({
               Lucenta Обучение
             </p>
 
-            <h1 className="mt-4 text-3xl font-semibold leading-[1.1] text-[var(--color-navy)] md:text-5xl">
+            <h1 className="mt-4 text-2xl font-semibold leading-[1.15] text-[var(--color-navy)] sm:text-3xl sm:leading-[1.1] md:text-5xl">
               {course.title}
             </h1>
 
@@ -158,7 +158,7 @@ export default async function CoursePage({
             ) : null}
 
             {course.description ? (
-              <p className="mt-5 max-w-xl text-lg leading-8 text-[var(--color-gray-700)]">
+              <p className="mt-4 max-w-xl text-sm leading-6 text-[var(--color-gray-700)] sm:mt-5 sm:text-base sm:leading-7 lg:text-lg lg:leading-8">
                 {course.description}
               </p>
             ) : null}
@@ -225,14 +225,14 @@ export default async function CoursePage({
           >
             {showAudienceBlock ? (
               <Card>
-                <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                   {audienceTitle}
                 </h2>
                 <ul className="mt-6 space-y-3">
                   {audienceItems.map((item) => (
                     <li
                       key={item}
-                      className="flex gap-3 text-base leading-7 text-[var(--color-gray-700)]"
+                      className="flex gap-3 text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7"
                     >
                       <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)]" />
                       {item}
@@ -244,14 +244,14 @@ export default async function CoursePage({
 
             {showOutcomesBlock ? (
               <Card>
-                <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                   {outcomesTitle}
                 </h2>
                 <ul className="mt-6 space-y-3">
                   {outcomesItems.map((item) => (
                     <li
                       key={item}
-                      className="flex gap-3 text-base leading-7 text-[var(--color-gray-700)]"
+                      className="flex gap-3 text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7"
                     >
                       <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)]" />
                       {item}
@@ -268,17 +268,18 @@ export default async function CoursePage({
       {course.showQuote && (course.quote || course.quoteImage) ? (
         <Section className="py-8 md:py-12">
           <div
-            className={`grid items-center gap-8 md:gap-12 ${
+            className={`grid items-center gap-6 sm:gap-8 md:gap-12 ${
               course.quote && course.quoteImage ? "lg:grid-cols-2" : ""
             }`}
           >
             {course.quote ? (
-              <div>
+              /* На телефоне портрет идёт выше цитаты, на десктопе — прежний порядок */
+              <div className="order-2 lg:order-1">
                 <CourseQuote quote={course.quote} author={doctor?.name} />
               </div>
             ) : null}
             {course.quoteImage ? (
-              <div className="mx-auto w-full max-w-[340px] lg:ml-auto">
+              <div className="order-1 mx-auto w-full max-w-[260px] sm:max-w-[340px] lg:order-2 lg:ml-auto">
                 <div className="overflow-hidden rounded-[24px] bg-[var(--color-gray-100)]">
                   <div className="relative aspect-[3/4]">
                     <Image
@@ -299,7 +300,7 @@ export default async function CoursePage({
       {/* Программа */}
       {course.showProgram && programItems.length ? (
         <Section className="py-12 md:py-16">
-          <h2 className="text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
+          <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
             Программа курса
           </h2>
           <div className="mt-8 grid gap-5 md:grid-cols-2">
@@ -336,7 +337,7 @@ export default async function CoursePage({
       {/* Форматы обучения */}
       {formatCards.length ? (
         <Section className="py-12 md:py-16">
-          <h2 className="text-center text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
+          <h2 className="text-center text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
             Форматы обучения
           </h2>
           <div className="mt-8 flex flex-wrap items-start justify-center gap-6">
@@ -351,7 +352,7 @@ export default async function CoursePage({
                     : ""
                 }`}
               >
-                <h3 className="text-lg font-semibold text-[var(--color-navy)]">
+                <h3 className="text-base font-semibold leading-snug text-[var(--color-navy)] sm:text-lg">
                   {f.title}
                 </h3>
                 <p className="mt-2 text-sm leading-6 text-[var(--color-gray-700)]">
@@ -374,7 +375,7 @@ export default async function CoursePage({
                   <p className="text-xs text-[var(--color-gray-500)]">
                     {f.duration}
                   </p>
-                  <p className="mt-1 text-xl font-semibold text-[var(--color-navy)]">
+                  <p className="mt-1 text-lg font-semibold text-[var(--color-navy)] sm:text-xl">
                     {f.price}
                   </p>
                   {f.priceNote ? (
@@ -404,7 +405,7 @@ export default async function CoursePage({
       {course.showFaq && faqItems.length ? (
         <Section className="py-12 md:py-16">
           <Card>
-            <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+            <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
               Частые вопросы
             </h2>
 
@@ -444,7 +445,7 @@ export default async function CoursePage({
               <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-gold)]">
                 Клинические случаи
               </p>
-              <h2 className="mt-3 text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
+              <h2 className="mt-3 text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
                 Клинические случаи спикера
               </h2>
             </div>
@@ -468,11 +469,11 @@ export default async function CoursePage({
       {/* Финальный CTA */}
       <Section className="pb-28 pt-4 md:pb-28">
         <div className="rounded-[32px] bg-[var(--color-gold)]/10 px-6 py-12 text-center md:px-12">
-          <h2 className="text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
+          <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
             Готовы начать?
           </h2>
           {course.showCta && course.ctaNote ? (
-            <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-[var(--color-gray-700)]">
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7">
               {course.ctaNote}
             </p>
           ) : null}
@@ -486,17 +487,6 @@ export default async function CoursePage({
           </div>
         </div>
       </Section>
-
-      {/* Липкая кнопка на мобильном */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-gray-200)] bg-white/95 p-3 backdrop-blur md:hidden">
-        <ContactButton
-          label="Оставить заявку"
-          variant="gold"
-          context={`Курс «${course.title}»`}
-          title="Заявка на курс"
-          className="w-full py-3"
-        />
-      </div>
     </SiteShell>
   );
 }

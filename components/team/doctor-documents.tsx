@@ -76,16 +76,37 @@ export function DoctorDocuments({
 
   useEffect(() => {
     if (!zoom) return;
+
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setZoom(false);
     }
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+
+    // Фиксируем страницу под окном просмотра: на телефоне иначе фон
+    // прокручивается вместе с жестом. Позицию запоминаем и возвращаем.
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const prev = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      body.style.position = prev.position;
+      body.style.top = prev.top;
+      body.style.width = prev.width;
+      window.scrollTo(0, scrollY);
+    };
   }, [zoom]);
 
   const diplomaCard = (
     <Card>
-      <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+      <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
         Диплом специалиста
       </h2>
 
@@ -117,7 +138,7 @@ export function DoctorDocuments({
     zoom && diplomaSrc && typeof document !== "undefined"
       ? createPortal(
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+            className="fixed inset-0 z-[100] overflow-auto overscroll-contain bg-black/90 sm:p-4"
             onClick={() => setZoom(false)}
             role="dialog"
             aria-modal="true"
@@ -126,13 +147,15 @@ export function DoctorDocuments({
               type="button"
               onClick={() => setZoom(false)}
               aria-label="Закрыть"
-              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-lg text-white transition hover:bg-white/20"
+              className="fixed right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-lg text-white backdrop-blur transition hover:bg-white/25 sm:right-4 sm:top-4 sm:h-10 sm:w-10"
             >
               ✕
             </button>
 
+            {/* На телефоне диплом открывается во всю ширину и прокручивается,
+                чтобы текст можно было прочитать. От 640px — вписывается в экран. */}
             <div
-              className="relative flex max-h-[90vh] max-w-[92vw] items-center justify-center"
+              className="flex min-h-full items-center justify-center"
               onClick={(e) => e.stopPropagation()}
             >
               <Image
@@ -140,10 +163,9 @@ export function DoctorDocuments({
                 alt={diplomaAlt}
                 width={1600}
                 height={1200}
-                sizes="92vw"
+                sizes="(max-width: 1024px) 100vw, 1200px"
                 priority
-                style={{ width: "auto", height: "auto" }}
-                className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain"
+                className="h-auto w-full sm:max-h-[90vh] sm:rounded-lg sm:object-contain lg:max-w-[1200px]"
               />
             </div>
           </div>,

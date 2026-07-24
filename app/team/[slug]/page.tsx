@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteShell } from "@/components/layout/site-shell";
 import { Section } from "@/components/layout/section";
@@ -11,9 +10,9 @@ import { getTeamMemberBySlug } from "@/lib/team";
 import { getAllCases } from "@/lib/cases";
 import { getReviewsByDoctor } from "@/lib/reviews";
 import { getDirections, getDirectionLabelMap } from "@/lib/directions-db";
-import { directionLabel } from "@/lib/directions";
-import { CaseExcerpt } from "@/components/cases/case-excerpt";
+import { CaseCard } from "@/components/cases/case-card";
 import { ReviewCard } from "@/components/reviews/review-card";
+import { ReviewForm } from "@/components/reviews/review-form";
 import { ReviewsCarousel } from "@/components/reviews/reviews-carousel";
 import { DoctorDocuments } from "@/components/team/doctor-documents";
 import { JsonLd, physicianJsonLd } from "@/components/seo/json-ld";
@@ -119,30 +118,30 @@ export default async function DoctorPage({ params }: Props) {
       <Section className="pt-14 pb-16 md:pt-20 md:pb-24">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
           <div className="order-2 lg:order-1">
-            <p className="text-sm uppercase tracking-[0.22em] text-[var(--color-teal)]">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-teal)] sm:text-sm sm:tracking-[0.22em]">
               {doctor.featured ? "Ведущий специалист" : "Врач команды"}
             </p>
 
-            <h1 className="mt-5 text-4xl font-semibold leading-[1.08] text-[var(--color-navy)] md:text-6xl">
+            <h1 className="mt-4 text-2xl font-semibold leading-[1.15] text-[var(--color-navy)] sm:text-3xl sm:leading-[1.1] md:mt-5 md:text-4xl lg:text-5xl">
               {doctor.name}
             </h1>
 
-            <p className="mt-5 text-lg leading-8 text-[var(--color-navy-secondary)]">
+            <p className="mt-3 text-sm leading-6 text-[var(--color-navy-secondary)] sm:mt-5 sm:text-lg sm:leading-8">
               {doctor.role}
             </p>
 
-            <p className="mt-6 max-w-2xl whitespace-pre-line text-base leading-7 text-[var(--color-gray-700)]">
+            <p className="mt-4 max-w-2xl whitespace-pre-line text-sm leading-6 text-[var(--color-gray-700)] sm:mt-6 sm:text-base sm:leading-7">
               {doctor.description}
             </p>
 
             {doctorDirections.length ? (
-              <div className="mt-8 flex flex-wrap gap-2">
+              <div className="mt-6 flex flex-wrap gap-1.5 sm:mt-8 sm:gap-2">
                 {doctorDirections.map((direction) => (
                   <div
                     key={direction.slug}
-                    className="rounded-xl border border-[var(--color-gray-200)] bg-white px-3 py-1.5"
+                    className="rounded-lg border border-[var(--color-gray-200)] bg-white px-2 py-1 sm:rounded-xl sm:px-3 sm:py-1.5"
                   >
-                    <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-navy)]">
+                    <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--color-navy)] sm:text-xs sm:tracking-[0.08em]">
                       {direction.title}
                     </p>
                   </div>
@@ -151,16 +150,16 @@ export default async function DoctorPage({ params }: Props) {
             ) : null}
 
             {stats.length ? (
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <div className="mt-6 grid gap-2 sm:mt-8 sm:grid-cols-3 sm:gap-4">
                 {stats.map((stat, index) => (
                   <div
                     key={index}
-                    className="rounded-2xl bg-[var(--color-teal)]/5 px-5 py-5"
+                    className="rounded-2xl bg-[var(--color-teal)]/5 px-4 py-3 sm:px-5 sm:py-5 sm:text-center lg:px-3 lg:py-4 xl:px-5 xl:py-5"
                   >
-                    <p className="text-3xl font-light leading-none text-[var(--color-teal)]">
+                    <p className="text-lg font-light leading-none text-[var(--color-teal)] sm:text-2xl lg:text-base xl:text-xl">
                       {stat.value}
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--color-gray-600)]">
+                    <p className="mt-1 text-xs leading-5 text-[var(--color-gray-600)] sm:mt-2 sm:text-sm sm:leading-6 lg:text-xs lg:leading-5 xl:text-sm xl:leading-6">
                       {stat.label}
                     </p>
                   </div>
@@ -197,7 +196,7 @@ export default async function DoctorPage({ params }: Props) {
       {doctor.doctorQuote?.trim() ? (
         <Section className="pb-12 md:pb-16">
           <figure className="border-l-2 border-[var(--color-teal)] pl-6">
-            <blockquote className="whitespace-pre-line font-serif text-xl italic leading-8 text-[var(--color-navy)]">
+            <blockquote className="whitespace-pre-line font-serif text-base italic leading-7 text-[var(--color-navy)] sm:text-lg sm:leading-8 lg:text-xl">
               {doctor.doctorQuote}
             </blockquote>
           </figure>
@@ -205,13 +204,13 @@ export default async function DoctorPage({ params }: Props) {
       ) : null}
 
       <Section className="pb-20 md:pb-28">
-        <div className="grid gap-8">
-          <div className="grid gap-8 lg:grid-cols-2">
+        <div className="grid gap-6 sm:gap-8 [&>*]:min-w-0">
+          <div className="grid min-w-0 gap-4 sm:gap-8 lg:grid-cols-2 [&>*]:min-w-0">
             <Card>
-              <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+              <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                 Клинический фокус
               </h2>
-              <ul className="mt-5 space-y-3 text-base leading-7 text-[var(--color-gray-700)]">
+              <ul className="mt-4 space-y-2 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-5 sm:space-y-3 sm:text-base sm:leading-7">
                 {focusPoints.map((point) => (
                   <li key={point}>• {point}</li>
                 ))}
@@ -219,10 +218,10 @@ export default async function DoctorPage({ params }: Props) {
             </Card>
 
             <Card className="bg-[var(--color-gray-50)]">
-              <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+              <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                 Когда стоит обратиться
               </h2>
-              <ul className="mt-5 space-y-3 text-base leading-7 text-[var(--color-gray-700)]">
+              <ul className="mt-4 space-y-2 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-5 sm:space-y-3 sm:text-base sm:leading-7">
                 {visitPoints.map((point) => (
                   <li key={point}>• {point}</li>
                 ))}
@@ -231,54 +230,45 @@ export default async function DoctorPage({ params }: Props) {
           </div>
 
           {doctorCases.length ? (
-            <Card>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+            /* Оформление как на странице направления: без внешнего контейнера,
+               общая карточка кейса, разное количество под каждый экран. */
+            <div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+                <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                   Клинические случаи врача
                 </h2>
 
-                <Button
-                  href={`/cases?doctor=${doctor.slug}`}
-                  variant="secondary"
-                >
-                  Смотреть все случаи
-                </Button>
+                <div className="shrink-0 [&>*]:w-full sm:[&>*]:w-auto">
+                  <Button
+                    href={`/cases?doctor=${doctor.slug}`}
+                    variant="secondary"
+                  >
+                    Смотреть все случаи
+                  </Button>
+                </div>
               </div>
 
-              <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              {/* Телефон: три кейса в один столбец */}
+              <div className="mt-8 grid gap-4 sm:hidden">
                 {doctorCases.slice(0, 3).map((item) => (
-                  <Link
-                    key={item.slug}
-                    href={`/cases/${item.slug}`}
-                    className="group block h-full"
-                  >
-                    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-white p-5 transition group-hover:-translate-y-1 group-hover:shadow-lg">
-                      <div className="relative aspect-[3/2] w-full overflow-hidden rounded-xl bg-[var(--color-gray-100)]">
-                        {item.coverImage ? (
-                          <Image
-                            src={item.coverImage}
-                            alt={item.title}
-                            width={900}
-                            height={600}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : null}
-                      </div>
-
-                      <p className="mt-5 text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
-                        {directionLabel(item.directionSlug, dirLabel)}
-                      </p>
-
-                      <h3 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
-                        {item.title}
-                      </h3>
-
-                      <CaseExcerpt text={item.excerpt} />
-                    </div>
-                  </Link>
+                  <CaseCard key={item.slug} item={item} dirLabel={dirLabel} />
                 ))}
               </div>
-            </Card>
+
+              {/* Планшет: четыре кейса в две колонки */}
+              <div className="mt-8 hidden gap-6 sm:grid sm:grid-cols-2 lg:hidden">
+                {doctorCases.slice(0, 4).map((item) => (
+                  <CaseCard key={item.slug} item={item} dirLabel={dirLabel} />
+                ))}
+              </div>
+
+              {/* Десктоп: три кейса в ряд */}
+              <div className="mt-8 hidden gap-6 lg:grid lg:grid-cols-3">
+                {doctorCases.slice(0, 3).map((item) => (
+                  <CaseCard key={item.slug} item={item} dirLabel={dirLabel} />
+                ))}
+              </div>
+            </div>
           ) : null}
 
           <DoctorDocuments
@@ -287,12 +277,12 @@ export default async function DoctorPage({ params }: Props) {
             diplomaAlt={`Диплом — ${doctor.name}`}
             education={
               <Card>
-                <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
                   Дополнительное образование
                 </h2>
 
                 {courses.length ? (
-                  <ol className="mt-5 space-y-3 text-base leading-7 text-[var(--color-gray-700)]">
+                  <ol className="mt-4 space-y-2 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-5 sm:space-y-3 sm:text-base sm:leading-7">
                     {courses.map((course, index) => (
                       <li key={index} className="flex gap-3">
                         <span className="font-medium text-[var(--color-teal)]">
@@ -303,7 +293,7 @@ export default async function DoctorPage({ params }: Props) {
                     ))}
                   </ol>
                 ) : (
-                  <p className="mt-4 text-base leading-7 text-[var(--color-gray-700)]">
+                  <p className="mt-3 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-4 sm:text-base sm:leading-7">
                     Здесь можно разместить профильные курсы, обучение,
                     конференции и программы повышения квалификации врача.
                   </p>
@@ -313,20 +303,51 @@ export default async function DoctorPage({ params }: Props) {
             reviewsBeside={
               doctorReviews.length ? (
                 <div>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between lg:flex-col lg:items-end xl:flex-row xl:items-end">
+                    <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight lg:w-full xl:w-auto">
                       Отзывы о враче
                     </h2>
 
-                    <Button
-                      href={`/reviews?doctor=${doctor.slug}`}
-                      variant="secondary"
-                    >
-                      Смотреть все отзывы
-                    </Button>
+                    {/* Кнопки: на телефоне во всю ширину друг под другом,
+                        от 640px — в ряд справа. На планшете Pro «Оставить
+                        отзыв» уходит отдельной строкой под заголовок. */}
+                    <div className="flex w-full shrink-0 flex-col gap-3 [&>*]:w-full sm:w-auto sm:flex-row sm:items-center sm:[&>*]:w-auto lg:w-full lg:[&>*]:flex-1 lg:[&>*]:w-auto xl:w-auto xl:[&>*]:flex-none">
+                      <ReviewForm
+                        doctors={[{ slug: doctor.slug, name: doctor.name }]}
+                      />
+                      <Button
+                        href={`/reviews?doctor=${doctor.slug}`}
+                        variant="secondary"
+                      >
+                        Смотреть все отзывы
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="mt-6 grid gap-6">
+                  {/* Телефон: три отзыва в столбец */}
+                  <div className="mt-6 grid gap-4 sm:hidden">
+                    {doctorReviews.slice(0, 3).map((review) => (
+                      <ReviewCard
+                        key={review.slug}
+                        review={review}
+                        date={review.date}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Планшет: четыре отзыва в две колонки */}
+                  <div className="mt-6 hidden gap-6 sm:grid sm:grid-cols-2 lg:hidden">
+                    {doctorReviews.slice(0, 4).map((review) => (
+                      <ReviewCard
+                        key={review.slug}
+                        review={review}
+                        date={review.date}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Десктоп: три отзыва столбцом в узкой колонке */}
+                  <div className="mt-6 hidden gap-6 lg:grid">
                     {doctorReviews.slice(0, 3).map((review) => (
                       <ReviewCard
                         key={review.slug}
@@ -341,20 +362,51 @@ export default async function DoctorPage({ params }: Props) {
             reviewsWide={
               doctorReviews.length ? (
                 <div>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between lg:flex-col lg:items-end xl:flex-row xl:items-end">
+                    <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight lg:w-full xl:w-auto">
                       Отзывы о враче
                     </h2>
 
-                    <Button
-                      href={`/reviews?doctor=${doctor.slug}`}
-                      variant="secondary"
-                    >
-                      Смотреть все отзывы
-                    </Button>
+                    {/* Кнопки: на телефоне во всю ширину друг под другом,
+                        от 640px — в ряд справа. На планшете Pro «Оставить
+                        отзыв» уходит отдельной строкой под заголовок. */}
+                    <div className="flex w-full shrink-0 flex-col gap-3 [&>*]:w-full sm:w-auto sm:flex-row sm:items-center sm:[&>*]:w-auto lg:w-full lg:[&>*]:flex-1 lg:[&>*]:w-auto xl:w-auto xl:[&>*]:flex-none">
+                      <ReviewForm
+                        doctors={[{ slug: doctor.slug, name: doctor.name }]}
+                      />
+                      <Button
+                        href={`/reviews?doctor=${doctor.slug}`}
+                        variant="secondary"
+                      >
+                        Смотреть все отзывы
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="mt-6">
+                  {/* Телефон: три отзыва в столбец */}
+                  <div className="mt-6 grid gap-4 sm:hidden">
+                    {doctorReviews.slice(0, 3).map((review) => (
+                      <ReviewCard
+                        key={review.slug}
+                        review={review}
+                        date={review.date}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Планшет: четыре отзыва в две колонки */}
+                  <div className="mt-6 hidden gap-6 sm:grid sm:grid-cols-2 lg:hidden">
+                    {doctorReviews.slice(0, 4).map((review) => (
+                      <ReviewCard
+                        key={review.slug}
+                        review={review}
+                        date={review.date}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Десктоп: карусель, как было */}
+                  <div className="mt-6 hidden lg:block">
                     <ReviewsCarousel reviews={doctorReviews.slice(0, 9)} />
                   </div>
                 </div>
@@ -364,11 +416,11 @@ export default async function DoctorPage({ params }: Props) {
 
           <div className="rounded-[28px] bg-[var(--color-navy)] px-6 py-10 text-white md:px-10 md:py-12">
             <div className="max-w-3xl">
-              <h2 className="text-3xl font-semibold leading-tight md:text-4xl">
+              <h2 className="text-2xl font-semibold leading-snug sm:text-3xl sm:leading-tight md:text-4xl">
                 Запись на консультацию
               </h2>
 
-              <p className="mt-5 leading-7 text-white/80">
+              <p className="mt-4 text-sm leading-6 text-white/80 sm:mt-5 sm:text-base sm:leading-7">
                 Консультация помогает оценить клиническую ситуацию, определить
                 возможные варианты лечения и выбрать обоснованную тактику.
               </p>

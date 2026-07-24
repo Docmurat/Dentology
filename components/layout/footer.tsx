@@ -3,13 +3,28 @@ import Image from "next/image";
 import { Section } from "@/components/layout/section";
 import { COMPANY } from "@/lib/company";
 import { AccessibilityWidget } from "@/components/a11y/accessibility-widget";
+import { getDirections } from "@/lib/directions-db";
 
-export function Footer() {
+// Направления берём из базы, чтобы новые из админки появлялись здесь сами.
+// Если база недоступна — просто не показываем список, подвал не падает.
+async function safeDirections(): Promise<{ slug: string; title: string }[]> {
+  try {
+    return (await getDirections())
+      .slice(0, 6)
+      .map((d) => ({ slug: d.slug, title: d.title }));
+  } catch {
+    return [];
+  }
+}
+
+export async function Footer() {
+  const directions = await safeDirections();
+
   return (
     <footer className="mt-24 border-t border-[var(--color-gray-200)] bg-[var(--color-navy)] text-white">
       <Section className="py-16">
-        <div className="grid gap-12 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
-          <div>
+        <div className="grid gap-8 sm:grid-cols-2 sm:gap-10 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr] lg:gap-8 xl:gap-12">
+          <div className="sm:col-span-2 lg:col-span-1">
             <Image
               src="/logo-master.png"
               alt="Lucenta"
@@ -50,14 +65,15 @@ export function Footer() {
               Направления
             </h4>
             <div className="mt-5 flex flex-col gap-3 text-sm text-white/80">
-              <Link href="/directions/endodontics">Эндодонтия</Link>
-              <Link href="/directions/implantation">Имплантация</Link>
-              <Link href="/directions/orthodontics">Ортодонтия</Link>
-              <Link href="/directions/gnathology">Гнатология</Link>
+              {directions.map((d) => (
+                <Link key={d.slug} href={`/directions/${d.slug}`}>
+                  {d.title}
+                </Link>
+              ))}
             </div>
           </div>
 
-          <div>
+          <div className="sm:col-span-2 lg:col-span-1">
             <h4 className="text-sm uppercase tracking-[0.16em] text-white/50">
               Контакты
             </h4>

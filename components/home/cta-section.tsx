@@ -8,21 +8,21 @@ export async function CtaSection() {
 
   return (
     <Section className="py-20 md:py-28">
-      <div className="rounded-[32px] bg-[var(--color-navy)] px-6 py-12 text-white md:px-12 md:py-16">
+      <div className="rounded-[32px] bg-[var(--color-navy)] px-5 py-8 text-white sm:px-6 sm:py-12 md:px-12 md:py-16">
         <div className="max-w-3xl">
-          <h2 className="text-3xl font-semibold leading-tight md:text-4xl">
+          <h2 className="text-2xl font-semibold leading-snug sm:text-3xl sm:leading-tight md:text-4xl">
             {cta.title}
           </h2>
 
           {cta.text1 ? (
-            <p className="mt-6 text-base leading-7 text-white/80">{cta.text1}</p>
+            <p className="mt-4 text-sm leading-6 text-white/80 sm:mt-6 sm:text-base sm:leading-7">{cta.text1}</p>
           ) : null}
 
           {cta.text2 ? (
-            <p className="mt-4 text-base leading-7 text-white/80">{cta.text2}</p>
+            <p className="mt-3 text-sm leading-6 text-white/80 sm:mt-4 sm:text-base sm:leading-7">{cta.text2}</p>
           ) : null}
 
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:gap-4">
             <ContactButton label={cta.primaryLabel} variant="teal" />
 
             <Link

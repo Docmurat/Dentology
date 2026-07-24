@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ReviewCard } from "@/components/reviews/review-card";
 import type { ReviewItem } from "@/lib/reviews-data";
@@ -31,7 +31,6 @@ export function ReviewsPageContent({
 }: ReviewsPageContentProps) {
   const [activeFilter, setActiveFilter] = useState(initialFilter);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isMobile, setIsMobile] = useState(false);
 
   // Стиль кнопок-фильтров. Золотой режим — как кнопка gold-outline:
   // золотая обводка и золотой текст; активная — со светло-золотой заливкой.
@@ -55,16 +54,6 @@ export function ReviewsPageContent({
     ],
     [source]
   );
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 639px)");
-    const update = () => setIsMobile(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => {
-      media.removeEventListener("change", update);
-    };
-  }, []);
 
   const filteredReviews = useMemo(() => {
     if (doctorFilter) return reviews;
@@ -101,37 +90,8 @@ export function ReviewsPageContent({
             {doctorFilter.name}
           </span>
         </div>
-      ) : isMobile ? (
-        <div className="mb-8 mt-2 px-14">
-          <div
-            className="grid grid-cols-2"
-            style={{ columnGap: "12px", rowGap: "14px" }}
-          >
-            {filterOptions.map((option, index) => {
-              const isActive = activeFilter === option.value;
-              return (
-                <div
-                  key={option.value}
-                  style={{ marginLeft: index % 2 === 0 ? "50px" : "14px" }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => selectFilter(option.value)}
-                    className={
-                      isActive
-                        ? `inline-flex min-h-[36px] items-center justify-center rounded-full ${activeCls} px-4 py-1.5 text-[13px] font-medium`
-                        : `inline-flex min-h-[36px] items-center justify-center rounded-full ${inactiveCls} px-4 py-1.5 text-[13px] font-medium active:scale-[0.98]`
-                    }
-                  >
-                    {option.label}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       ) : (
-        <div className="mb-8 flex flex-wrap gap-3">
+        <div className="mb-6 flex flex-wrap gap-2 sm:mb-8 sm:gap-3">
           {filterOptions.map((option) => {
             const isActive = activeFilter === option.value;
             return (
@@ -141,8 +101,8 @@ export function ReviewsPageContent({
                 onClick={() => selectFilter(option.value)}
                 className={
                   isActive
-                    ? `inline-flex items-center justify-center rounded-full ${activeCls} px-5 py-2.5 text-sm font-medium`
-                    : `inline-flex items-center justify-center rounded-full ${inactiveCls} px-5 py-2.5 text-sm font-medium`
+                    ? `inline-flex items-center justify-center rounded-full ${activeCls} px-4 py-2 text-[13px] font-medium sm:px-5 sm:py-2.5 sm:text-sm`
+                    : `inline-flex items-center justify-center rounded-full ${inactiveCls} px-4 py-2 text-[13px] font-medium sm:px-5 sm:py-2.5 sm:text-sm`
                 }
               >
                 {option.label}
@@ -154,7 +114,7 @@ export function ReviewsPageContent({
 
       {paginatedReviews.length ? (
         <>
-          <div className="grid gap-8 lg:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 sm:gap-8">
             {paginatedReviews.map((item) => (
               <ReviewCard key={item.slug} review={item} />
             ))}

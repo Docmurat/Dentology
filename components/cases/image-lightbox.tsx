@@ -32,11 +32,45 @@ export function Lightbox({
       if (e.key === "ArrowLeft") go(index - 1);
     }
     document.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+
+    // Фиксируем страницу под окном: иначе на телефоне жест масштабирования
+    // увеличивает саму страницу, а не фотографию. Позицию запоминаем.
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const prev = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+
+    // Браузер обрабатывает щипок на уровне всей страницы, поэтому гасим жест
+    // вручную: двумя пальцами — блокируем, одним — оставляем прокрутку.
+    function onTouchMove(e: TouchEvent) {
+      if (e.touches.length > 1) e.preventDefault();
+    }
+    // Safari шлёт собственные события масштабирования.
+    function onGesture(e: Event) {
+      e.preventDefault();
+    }
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("gesturestart", onGesture as EventListener);
+    document.addEventListener("gesturechange", onGesture as EventListener);
+
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("gesturestart", onGesture as EventListener);
+      document.removeEventListener("gesturechange", onGesture as EventListener);
+      body.style.position = prev.position;
+      body.style.top = prev.top;
+      body.style.width = prev.width;
+      body.style.overflow = prev.overflow;
+      window.scrollTo(0, scrollY);
     };
   }, [index, go, onClose]);
 
@@ -46,7 +80,8 @@ export function Lightbox({
 
   const overlay = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+      className="fixed inset-0 z-[100] overflow-auto overscroll-contain bg-black/90 sm:p-4"
+      style={{ touchAction: "pan-x pan-y" }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -55,7 +90,7 @@ export function Lightbox({
         type="button"
         onClick={onClose}
         aria-label="Закрыть"
-        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-lg text-white transition hover:bg-white/20"
+        className="fixed right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-lg text-white backdrop-blur transition hover:bg-white/25 sm:right-4 sm:top-4 sm:h-10 sm:w-10"
       >
         ✕
       </button>
@@ -69,7 +104,7 @@ export function Lightbox({
               go(index - 1);
             }}
             aria-label="Предыдущее фото"
-            className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20"
+            className="fixed left-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20"
           >
             ‹
           </button>
@@ -80,15 +115,17 @@ export function Lightbox({
               go(index + 1);
             }}
             aria-label="Следующее фото"
-            className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20"
+            className="fixed right-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20"
           >
             ›
           </button>
         </>
       ) : null}
 
+      {/* На телефоне фото открывается во всю ширину и прокручивается,
+          от 640px — вписывается в экран целиком. */}
       <div
-        className="relative flex max-h-[90vh] max-w-[92vw] items-center justify-center"
+        className="flex min-h-full items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
         <Image
@@ -96,15 +133,14 @@ export function Lightbox({
           alt=""
           width={1600}
           height={1200}
-          sizes="92vw"
+          sizes="(max-width: 1024px) 100vw, 1200px"
           priority
-          style={{ width: "auto", height: "auto" }}
-          className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain"
+          className="h-auto w-full sm:max-h-[90vh] sm:rounded-lg sm:object-contain lg:max-w-[1200px]"
         />
       </div>
 
       {!single ? (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-sm text-white">
+        <div className="fixed bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white/15 px-3 py-1 text-sm text-white backdrop-blur">
           {index + 1} / {count}
         </div>
       ) : null}
@@ -121,6 +157,9 @@ export function CaseImages({ images }: { images: string[] }) {
   if (!images.length) return null;
 
   const single = images.length === 1;
+  // Одна картинка — во всю ширину, две и больше — сеткой по две в ряд.
+  // Три штуки укладываются как 2 + 1 (последняя занимает всю ширину).
+  const three = images.length === 3;
 
   return (
     <>
@@ -141,16 +180,18 @@ export function CaseImages({ images }: { images: string[] }) {
           />
         </button>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
           {images.map((url, i) => (
             <button
               key={url}
               type="button"
               onClick={() => setOpenIndex(i)}
               aria-label="Открыть фото"
-              className="group cursor-zoom-in overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-[var(--color-gray-100)]"
+              className={`group cursor-zoom-in overflow-hidden rounded-2xl border border-[var(--color-gray-200)] bg-[var(--color-gray-100)] ${
+                three && i === 2 ? "col-span-2" : ""
+              }`}
             >
-              <div className="aspect-[4/3]">
+              <div className={three && i === 2 ? "aspect-[16/9]" : "aspect-[4/3]"}>
                 <Image
                   src={url}
                   alt=""

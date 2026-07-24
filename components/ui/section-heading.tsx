@@ -24,17 +24,23 @@ export function SectionHeading({
   return (
     <div className={`max-w-3xl ${alignment}`}>
       {eyebrow ? (
-        <p className={`mb-4 text-sm uppercase tracking-[0.2em] ${eyebrowColor}`}>
+        <p
+          className={`mb-3 text-xs uppercase tracking-[0.18em] sm:mb-4 sm:text-sm sm:tracking-[0.2em] ${eyebrowColor}`}
+        >
           {eyebrow}
         </p>
       ) : null}
 
-      <h2 className={`text-3xl font-semibold leading-tight md:text-4xl ${titleColor}`}>
+      <h2
+        className={`break-words text-2xl font-semibold leading-snug sm:text-3xl sm:leading-tight md:text-4xl ${titleColor}`}
+      >
         {title}
       </h2>
 
       {description ? (
-        <p className={`mt-5 text-base leading-7 md:text-lg md:leading-8 ${descriptionColor}`}>
+        <p
+          className={`mt-4 text-base leading-7 sm:mt-5 md:text-lg md:leading-8 ${descriptionColor}`}
+        >
           {description}
         </p>
       ) : null}
