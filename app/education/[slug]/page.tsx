@@ -1,3 +1,4 @@
+// app/education/[slug]/page.tsx
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,12 +10,17 @@ import { Button } from "@/components/ui/button";
 import { getCourseBySlug, getCourseBySlugAdmin } from "@/lib/courses";
 import { getCurrentUser } from "@/lib/auth-guards";
 import { getTeamMemberBySlug } from "@/lib/team";
-import { CourseStats } from "@/components/education/course-stats";
+import {
+  CourseStats,
+  CourseEffectiveness,
+} from "@/components/education/course-stats";
 import { CourseQuote } from "@/components/education/course-quote";
+import { CourseProgram } from "@/components/education/course-program";
+import { CourseStickyCta } from "@/components/education/course-sticky-cta";
 import { CourseReviews } from "@/components/reviews/course-reviews";
 import { getAllCases } from "@/lib/cases";
 import { getDirectionLabelMap } from "@/lib/directions-db";
-import { CasesCarousel } from "@/components/cases/cases-carousel";
+import { CaseCard } from "@/components/cases/case-card";
 import { ContactButton } from "@/components/contact/contact-modal";
 
 export const dynamic = "force-dynamic";
@@ -73,7 +79,6 @@ export default async function CoursePage({
     : null;
   const photo = doctor?.image || null;
 
-
   // Блоки «Для кого» / «Что получите»: из полей курса (построчно).
   const toLines = (text: string) =>
     text
@@ -86,6 +91,8 @@ export default async function CoursePage({
   const outcomesItems = toLines(course.outcomesText);
   const showAudienceBlock = course.showAudience && audienceItems.length > 0;
   const showOutcomesBlock = course.showOutcomes && outcomesItems.length > 0;
+  const showEffectivenessBlock =
+    course.showEffectiveness && course.effectivenessPercent > 0;
   const faqItems = course.faq;
   const programItems = course.program;
   const formatCards = course.formats
@@ -100,6 +107,27 @@ export default async function CoursePage({
       ctaLabel: f.ctaLabel,
       recommended: f.recommended,
     }));
+
+  // Ширина карточек форматов зависит от их количества — иначе на 1024px
+  // три фиксированные карточки не помещаются в ряд и последняя уходит вниз.
+  const formatGridCols =
+    formatCards.length === 1
+      ? "mx-auto max-w-[420px]"
+      : formatCards.length === 2
+        ? "mx-auto max-w-[760px] sm:grid-cols-2"
+        : formatCards.length === 3
+          ? "sm:grid-cols-2 lg:grid-cols-3"
+          : "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+
+  // Общие классы списков «Для кого» / «Что вы получите».
+  // На планшете мини кегль возвращается к мобильному: две колонки по ~330px,
+  // 16px в них выглядят крупно и раздувают высоту блока.
+  const listTitleCls =
+    "text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-lg md:leading-snug lg:text-2xl lg:leading-tight";
+  const listItemCls =
+    "flex gap-3 text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7 md:gap-2.5 md:text-sm md:leading-6 lg:gap-3 lg:text-base lg:leading-7";
+  const listDotCls =
+    "mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)] md:mt-[9px] md:h-1 md:w-1 lg:mt-2 lg:h-1.5 lg:w-1.5";
 
   // Кейсы: только ведущего врача и по выбранным в настройках курса направлениям.
   const showCases = Boolean(doctor && course.directionSlugs.length);
@@ -118,9 +146,14 @@ export default async function CoursePage({
           c.directionSlug &&
           dirSet.has(c.directionSlug)
       )
-      .slice(0, 9);
+      .slice(0, 4);
     dirLabel = labels;
   }
+
+  // Раскладка как на странице направления: 3 кейса на телефоне и десктопе,
+  // 4 на планшете. Остальные — по кнопке на /cases с фильтром.
+  const relatedCases = courseCases.slice(0, 3);
+  const tabletCases = courseCases.slice(0, 4);
 
   return (
     <SiteShell>
@@ -132,15 +165,21 @@ export default async function CoursePage({
           </Link>
         </div>
       ) : null}
+
       {/* Hero */}
       <Section className="pt-10 pb-12 md:pt-14 md:pb-16">
-        <div className="grid items-center gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+        <div className="grid items-center gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-10">
           <div className="order-1 lg:order-2">
             <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-gold)]">
               Lucenta Обучение
             </p>
 
-            <h1 className="mt-4 text-2xl font-semibold leading-[1.15] text-[var(--color-navy)] sm:text-3xl sm:leading-[1.1] md:text-5xl">
+            {/*
+              На 768–1023px колонка одна и 48px заголовка съедают полэкрана,
+              на 1024px правая колонка ≈ 566px — там 36px читается лучше.
+              Полный размер возвращаем только с 1280px.
+            */}
+            <h1 className="mt-4 text-2xl font-semibold leading-[1.15] text-[var(--color-navy)] sm:text-3xl sm:leading-[1.1] md:text-4xl lg:text-4xl xl:text-5xl">
               {course.title}
             </h1>
 
@@ -158,7 +197,7 @@ export default async function CoursePage({
             ) : null}
 
             {course.description ? (
-              <p className="mt-4 max-w-xl text-sm leading-6 text-[var(--color-gray-700)] sm:mt-5 sm:text-base sm:leading-7 lg:text-lg lg:leading-8">
+              <p className="mt-4 max-w-xl text-sm leading-6 text-[var(--color-gray-700)] sm:mt-5 sm:text-base sm:leading-7 lg:text-lg lg:leading-8 xl:max-w-2xl">
                 {course.description}
               </p>
             ) : null}
@@ -179,31 +218,39 @@ export default async function CoursePage({
             </div>
           </div>
 
-          <div className="order-2 mx-auto w-full max-w-[380px] lg:order-1 lg:mx-0">
-            <div className="mx-auto w-full max-w-[300px] overflow-hidden rounded-full bg-[var(--color-gray-100)]">
+          {/*
+            Телефон: круг по центру, подписи по центру.
+            Планшет мини (768–1023): горизонтальная полоса — фото слева,
+              имя и био справа по левому краю (иначе 40% ширины пустует).
+            От 1024px: вертикальная колонка слева от текста.
+          */}
+          <div className="order-2 mx-auto w-full max-w-[380px] md:flex md:max-w-none md:items-center md:gap-6 lg:order-1 lg:mx-0 lg:block lg:max-w-[380px]">
+            <div className="mx-auto w-full max-w-[180px] shrink-0 overflow-hidden rounded-full bg-[var(--color-gray-100)] sm:max-w-[240px] md:mx-0 md:w-[160px] lg:mx-auto lg:w-full lg:max-w-[300px]">
               <div className="relative aspect-square">
                 {photo ? (
                   <Image
                     src={photo}
                     alt={doctor?.name || course.title}
                     fill
-                    sizes="(max-width: 1024px) 300px, 300px"
+                    sizes="(max-width: 640px) 180px, (max-width: 1024px) 160px, 300px"
                     className="object-cover"
-                    priority
                   />
                 ) : null}
               </div>
             </div>
-            {doctor ? (
-              <p className="mt-5 text-center text-base font-semibold text-[var(--color-navy)]">
-                Спикер — {doctor.name}
-              </p>
-            ) : null}
-            {course.showBio && course.instructorBio ? (
-              <p className="mt-2 text-center text-sm leading-7 text-[var(--color-gray-700)]">
-                {course.instructorBio}
-              </p>
-            ) : null}
+
+            <div className="md:min-w-0 md:flex-1">
+              {doctor ? (
+                <p className="mt-4 text-center text-sm font-semibold text-[var(--color-navy)] sm:mt-5 sm:text-base md:mt-0 md:text-left lg:mt-5 lg:text-center">
+                  Спикер — {doctor.name}
+                </p>
+              ) : null}
+              {course.showBio && course.instructorBio ? (
+                <p className="mt-2 text-center text-sm leading-6 text-[var(--color-gray-700)] sm:leading-7 md:text-left lg:text-center">
+                  {course.instructorBio}
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
       </Section>
@@ -217,24 +264,21 @@ export default async function CoursePage({
 
       {/* Для кого + Результат */}
       {showAudienceBlock || showOutcomesBlock ? (
-        <Section className="py-12 md:py-16">
+        <Section className="py-12 md:py-14 lg:py-16">
           <div
-            className={`grid items-start gap-6 ${
-              showAudienceBlock && showOutcomesBlock ? "lg:grid-cols-2" : ""
+            className={`grid items-start gap-6 lg:gap-8 ${
+              showAudienceBlock && showOutcomesBlock
+                ? "md:grid-cols-2 md:gap-5"
+                : "mx-auto max-w-3xl"
             }`}
           >
             {showAudienceBlock ? (
               <Card>
-                <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
-                  {audienceTitle}
-                </h2>
-                <ul className="mt-6 space-y-3">
+                <h2 className={listTitleCls}>{audienceTitle}</h2>
+                <ul className="mt-6 space-y-3 md:mt-4 md:space-y-2.5 lg:mt-6 lg:space-y-3">
                   {audienceItems.map((item) => (
-                    <li
-                      key={item}
-                      className="flex gap-3 text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7"
-                    >
-                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)]" />
+                    <li key={item} className={listItemCls}>
+                      <span className={listDotCls} />
                       {item}
                     </li>
                   ))}
@@ -244,16 +288,11 @@ export default async function CoursePage({
 
             {showOutcomesBlock ? (
               <Card>
-                <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
-                  {outcomesTitle}
-                </h2>
-                <ul className="mt-6 space-y-3">
+                <h2 className={listTitleCls}>{outcomesTitle}</h2>
+                <ul className="mt-6 space-y-3 md:mt-4 md:space-y-2.5 lg:mt-6 lg:space-y-3">
                   {outcomesItems.map((item) => (
-                    <li
-                      key={item}
-                      className="flex gap-3 text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7"
-                    >
-                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)]" />
+                    <li key={item} className={listItemCls}>
+                      <span className={listDotCls} />
                       {item}
                     </li>
                   ))}
@@ -264,29 +303,41 @@ export default async function CoursePage({
         </Section>
       ) : null}
 
-      {/* Цитата спикера + фото 3:4 (под метрикой) */}
+      {/* Эффективность — одна крупная цифра как якорь доверия */}
+      {showEffectivenessBlock ? (
+        <Section className="py-8 md:py-10 lg:py-12">
+          <CourseEffectiveness
+            percent={course.effectivenessPercent}
+            text={course.effectivenessText}
+          />
+        </Section>
+      ) : null}
+
+      {/* Цитата спикера + фото 3:4 */}
       {course.showQuote && (course.quote || course.quoteImage) ? (
         <Section className="py-8 md:py-12">
           <div
-            className={`grid items-center gap-6 sm:gap-8 md:gap-12 ${
-              course.quote && course.quoteImage ? "lg:grid-cols-2" : ""
+            className={`grid items-center gap-6 sm:gap-8 md:gap-10 lg:gap-12 ${
+              course.quote && course.quoteImage
+                ? "md:grid-cols-[1.15fr_0.85fr]"
+                : "mx-auto max-w-3xl"
             }`}
           >
             {course.quote ? (
-              /* На телефоне портрет идёт выше цитаты, на десктопе — прежний порядок */
-              <div className="order-2 lg:order-1">
+              /* Телефон: портрет выше цитаты. От 768px — цитата слева, портрет справа */
+              <div className="order-2 md:order-1">
                 <CourseQuote quote={course.quote} author={doctor?.name} />
               </div>
             ) : null}
             {course.quoteImage ? (
-              <div className="order-1 mx-auto w-full max-w-[260px] sm:max-w-[340px] lg:order-2 lg:ml-auto">
+              <div className="order-1 mx-auto w-full max-w-[260px] sm:max-w-[340px] md:order-2 md:ml-auto md:max-w-[260px] lg:max-w-[340px]">
                 <div className="overflow-hidden rounded-[24px] bg-[var(--color-gray-100)]">
                   <div className="relative aspect-[3/4]">
                     <Image
                       src={course.quoteImage}
                       alt={doctor?.name || course.title}
                       fill
-                      sizes="(max-width: 1024px) 100vw, 340px"
+                      sizes="(max-width: 767px) 100vw, (max-width: 1023px) 260px, 340px"
                       className="object-cover"
                     />
                   </div>
@@ -303,33 +354,8 @@ export default async function CoursePage({
           <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
             Программа курса
           </h2>
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
-            {programItems.map((mod, i) => (
-              <div
-                key={mod.title}
-                className="rounded-2xl border border-[var(--color-gray-200)] bg-white p-5"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-gold)]/10 text-xs font-semibold text-[var(--color-gold)]">
-                    {i + 1}
-                  </span>
-                  <h3 className="font-semibold text-[var(--color-navy)]">
-                    {mod.title}
-                  </h3>
-                </div>
-                <ul className="mt-3 space-y-2 pl-9">
-                  {mod.items.map((item) => (
-                    <li
-                      key={item}
-                      className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
-                    >
-                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--color-gold)]" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <div className="mt-6 sm:mt-8">
+            <CourseProgram modules={programItems} />
           </div>
         </Section>
       ) : null}
@@ -337,86 +363,95 @@ export default async function CoursePage({
       {/* Форматы обучения */}
       {formatCards.length ? (
         <Section className="py-12 md:py-16">
-          <h2 className="text-center text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
+          <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-center md:text-3xl">
             Форматы обучения
           </h2>
-          <div className="mt-8 flex flex-wrap items-start justify-center gap-6">
-          {formatCards.map((f) => {
-            const highlight = f.recommended;
-            return (
-              <Card
-                key={f.title}
-                className={`flex w-full flex-col sm:w-[320px] ${
-                  highlight
-                    ? "!border-[var(--color-gold)] !bg-[var(--color-gold)]/10"
-                    : ""
-                }`}
-              >
-                <h3 className="text-base font-semibold leading-snug text-[var(--color-navy)] sm:text-lg">
-                  {f.title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--color-gray-700)]">
-                  {f.summary}
-                </p>
-
-                <ul className="mt-4 space-y-2">
-                  {f.points.map((p) => (
-                    <li
-                      key={p}
-                      className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
-                    >
-                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--color-gold)]" />
-                      {p}
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mt-6 border-t border-[var(--color-gray-200)] pt-4">
-                  <p className="text-xs text-[var(--color-gray-500)]">
-                    {f.duration}
+          <div
+            className={`mt-6 grid items-stretch gap-5 sm:mt-8 sm:gap-6 ${formatGridCols}`}
+          >
+            {formatCards.map((f) => {
+              const highlight = f.recommended;
+              return (
+                <Card
+                  key={f.title}
+                  // На телефоне рекомендуемая карточка поднимается наверх,
+                  // от 640px — порядок из админки.
+                  className={`flex h-full w-full flex-col ${
+                    highlight
+                      ? "order-first !border-[var(--color-gold)] !bg-[var(--color-gold)]/10 sm:order-none"
+                      : ""
+                  }`}
+                >
+                  <h3 className="text-base font-semibold leading-snug text-[var(--color-navy)] sm:text-lg">
+                    {f.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[var(--color-gray-700)]">
+                    {f.summary}
                   </p>
-                  <p className="mt-1 text-lg font-semibold text-[var(--color-navy)] sm:text-xl">
-                    {f.price}
-                  </p>
-                  {f.priceNote ? (
-                    <p className="mt-2 text-xs leading-5 text-[var(--color-gray-600)]">
-                      {f.priceNote}
+
+                  {/* flex-1 прижимает цену и кнопку к низу — кнопки всех
+                      карточек встают на одну линию */}
+                  <ul className="mt-4 flex-1 space-y-2">
+                    {f.points.map((p) => (
+                      <li
+                        key={p}
+                        className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
+                      >
+                        <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--color-gold)]" />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-6 border-t border-[var(--color-gray-200)] pt-4">
+                    <p className="text-xs text-[var(--color-gray-500)]">
+                      {f.duration}
                     </p>
-                  ) : null}
-                </div>
+                    <p className="mt-1 text-lg font-semibold text-[var(--color-navy)] sm:text-xl">
+                      {f.price}
+                    </p>
+                    {f.priceNote ? (
+                      <p className="mt-2 text-xs leading-5 text-[var(--color-gray-600)]">
+                        {f.priceNote}
+                      </p>
+                    ) : null}
+                  </div>
 
-                <div className="mt-5">
-                  <ContactButton
-                    label={f.ctaLabel}
-                    variant={highlight ? "gold" : "gold-outline"}
-                    context={`Курс «${course.title}» — ${f.title}`}
-                    title="Заявка на курс"
-                    className="w-full"
-                  />
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                  <div className="mt-5">
+                    <ContactButton
+                      label={f.ctaLabel}
+                      variant={highlight ? "gold" : "gold-outline"}
+                      context={`Курс «${course.title}» — ${f.title}`}
+                      title="Заявка на курс"
+                      className="w-full"
+                    />
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         </Section>
       ) : null}
 
-      {/* FAQ */}
+      {/* FAQ — оформление один в один со страницей направления:
+          без внешней карточки, кегль вопроса и ответа 14px на телефоне
+          и 16px от 640px. На вебе ограничиваем ширину, иначе строка
+          ответа растягивается на всю секцию. */}
       {course.showFaq && faqItems.length ? (
         <Section className="py-12 md:py-16">
-          <Card>
-            <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+          <div className="mx-auto w-full min-[834px]:max-w-2xl lg:max-w-4xl xl:max-w-5xl">
+            <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
               Частые вопросы
             </h2>
 
-            <div className="mt-6 space-y-4">
+            <div className="mt-6 space-y-4 md:mt-8">
               {faqItems.map((item) => (
                 <details
                   key={item.q}
                   className="group rounded-2xl border border-[var(--color-gray-200)] bg-white px-5 py-4"
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left">
-                    <span className="text-base font-medium leading-7 text-[var(--color-navy)]">
+                    <span className="text-sm font-medium leading-6 text-[var(--color-navy)] sm:text-base sm:leading-7">
                       {item.q}
                     </span>
 
@@ -426,21 +461,23 @@ export default async function CoursePage({
                   </summary>
 
                   <div className="pt-4">
-                    <p className="leading-7 text-[var(--color-gray-700)]">
+                    <p className="text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7">
                       {item.a}
                     </p>
                   </div>
                 </details>
               ))}
             </div>
-          </Card>
+          </div>
         </Section>
       ) : null}
 
       {/* Клинические случаи ведущего по направлениям курса */}
       {showCases && courseCases.length ? (
         <Section className="py-12 md:py-16">
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          {/* В один ряд только с 1024px — на планшете мини заголовок и кнопка
+              в строку не помещаются */}
+          <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-gold)]">
                 Клинические случаи
@@ -449,16 +486,36 @@ export default async function CoursePage({
                 Клинические случаи спикера
               </h2>
             </div>
-            <Button
-              href={`/cases?doctor=${course.doctorSlug}&direction=${course.directionSlugs.join(",")}`}
-              variant="gold-outline"
-            >
-              Смотреть все случаи
-            </Button>
+
+            <div className="shrink-0 [&>*]:w-full sm:[&>*]:w-auto">
+              <Button
+                href={`/cases?doctor=${course.doctorSlug}&direction=${course.directionSlugs.join(",")}`}
+                variant="gold-outline"
+              >
+                Смотреть все случаи
+              </Button>
+            </div>
           </div>
 
-          <div className="mt-10">
-            <CasesCarousel cases={courseCases} dirLabel={dirLabel} />
+          {/* Телефон: три кейса в один столбец */}
+          <div className="mt-8 grid gap-4 sm:hidden">
+            {relatedCases.map((item) => (
+              <CaseCard key={item.slug} item={item} dirLabel={dirLabel} />
+            ))}
+          </div>
+
+          {/* Планшет: четыре кейса в две колонки */}
+          <div className="mt-8 hidden gap-6 sm:grid sm:grid-cols-2 lg:hidden">
+            {tabletCases.map((item) => (
+              <CaseCard key={item.slug} item={item} dirLabel={dirLabel} />
+            ))}
+          </div>
+
+          {/* Десктоп: три кейса в ряд */}
+          <div className="mt-8 hidden gap-6 lg:grid lg:grid-cols-3">
+            {relatedCases.map((item) => (
+              <CaseCard key={item.slug} item={item} dirLabel={dirLabel} />
+            ))}
           </div>
         </Section>
       ) : null}
@@ -467,26 +524,32 @@ export default async function CoursePage({
       <CourseReviews courseSlug={course.slug} />
 
       {/* Финальный CTA */}
-      <Section className="pb-28 pt-4 md:pb-28">
-        <div className="rounded-[32px] bg-[var(--color-gold)]/10 px-6 py-12 text-center md:px-12">
+      <Section className="pb-20 pt-4 md:pb-28">
+        <div
+          id="course-final-cta"
+          className="rounded-[24px] bg-[var(--color-gold)]/10 px-5 py-10 text-center sm:rounded-[32px] sm:px-8 sm:py-12 md:px-12 xl:py-16"
+        >
           <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
             Готовы начать?
           </h2>
           {course.showCta && course.ctaNote ? (
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7">
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7 xl:max-w-2xl">
               {course.ctaNote}
             </p>
           ) : null}
-          <div className="mt-8 flex justify-center">
+          <div className="mt-7 flex justify-center sm:mt-8">
             <ContactButton
               label="Оставить заявку"
               variant="gold"
               context={`Курс «${course.title}»`}
               title="Заявка на курс"
+              className="w-full sm:w-auto"
             />
           </div>
         </div>
       </Section>
+
+      <CourseStickyCta courseTitle={course.title} />
     </SiteShell>
   );
 }

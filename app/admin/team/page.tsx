@@ -2,6 +2,7 @@ import Link from "next/link";
 import { query } from "@/lib/db";
 import { deleteTeamMember } from "./actions";
 import { AdminThumb } from "@/components/admin/admin-thumb";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -91,9 +92,10 @@ export default async function AdminTeamPage() {
                   </Link>
                   <form action={deleteTeamMember}>
                     <input type="hidden" name="slug" value={item.slug} />
-                    <button className="text-sm font-medium text-red-600 hover:text-red-700">
-                      Удалить
-                    </button>
+                    <ConfirmDeleteButton
+                      title={item.name}
+                      className="text-sm font-medium text-red-600 hover:text-red-700"
+                    />
                   </form>
                 </div>
               </li>

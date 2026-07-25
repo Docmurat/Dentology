@@ -1,6 +1,8 @@
+// app/admin/education/page.tsx
 import Link from "next/link";
 import { query } from "@/lib/db";
 import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { getTeamMembers } from "@/lib/team";
 import { deleteCourse, toggleArchiveAction } from "./actions";
 
@@ -46,7 +48,7 @@ export default async function AdminEducationPage() {
             {rows.map((row) => (
               <li
                 key={row.slug}
-                className="flex items-center justify-between gap-4 px-5 py-4"
+                className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium text-[var(--color-navy)]">
@@ -69,7 +71,8 @@ export default async function AdminEducationPage() {
                   </p>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-3 text-sm">
+                {/* flex-wrap — иначе на узком экране действия уезжают за край */}
+                <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm sm:justify-end">
                   <Link
                     href={`/education/${row.slug}`}
                     target="_blank"
@@ -94,12 +97,22 @@ export default async function AdminEducationPage() {
                       {row.archived ? "Вернуть из архива" : "Архивировать"}
                     </button>
                   </form>
-                  <form action={deleteCourse}>
-                    <input type="hidden" name="slug" value={row.slug} />
-                    <button className="text-red-600 hover:text-red-700">
+
+                  {/* Удалить можно только архивный курс: сначала архив, потом
+                      удаление. В общем списке промахнуться уже нечем. */}
+                  {row.archived ? (
+                    <form action={deleteCourse}>
+                      <input type="hidden" name="slug" value={row.slug} />
+                      <ConfirmDeleteButton title={row.title} />
+                    </form>
+                  ) : (
+                    <span
+                      className="cursor-not-allowed text-[var(--color-gray-400)]"
+                      title="Чтобы удалить курс, сначала переведите его в архив"
+                    >
                       Удалить
-                    </button>
-                  </form>
+                    </span>
+                  )}
                 </div>
               </li>
             ))}

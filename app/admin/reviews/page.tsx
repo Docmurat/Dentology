@@ -1,3 +1,4 @@
+// app/admin/reviews/page.tsx
 import Link from "next/link";
 import { query } from "@/lib/db";
 import { getTeamMembers } from "@/lib/team";
@@ -10,6 +11,7 @@ import {
 } from "./actions";
 import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
 import { AdminThumb } from "@/components/admin/admin-thumb";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -312,9 +314,7 @@ export default async function AdminReviewsPage() {
                 </form>
                 <form action={deleteReview}>
                   <input type="hidden" name="id" value={row.id} />
-                  <button className="text-sm text-red-600 hover:text-red-700">
-                    Удалить
-                  </button>
+                  <ConfirmDeleteButton title={`отзыв — ${row.author}`} />
                 </form>
               </Card>
             ))}
@@ -349,9 +349,7 @@ export default async function AdminReviewsPage() {
                 </form>
                 <form action={deleteReview}>
                   <input type="hidden" name="id" value={row.id} />
-                  <button className="text-sm text-red-600 hover:text-red-700">
-                    Удалить
-                  </button>
+                  <ConfirmDeleteButton title={`отзыв — ${row.author}`} />
                 </form>
               </Card>
             ))}
@@ -380,9 +378,7 @@ export default async function AdminReviewsPage() {
                 <EditLink id={row.id} />
                 <form action={deleteReview}>
                   <input type="hidden" name="id" value={row.id} />
-                  <button className="text-sm text-red-600 hover:text-red-700">
-                    Удалить
-                  </button>
+                  <ConfirmDeleteButton title={`отзыв — ${row.author}`} />
                 </form>
               </Card>
             ))}

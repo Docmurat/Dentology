@@ -1,7 +1,8 @@
+// app/admin/education/actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { query } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import { buildInsert, buildUpdate } from "@/lib/sql-helpers";
 import { requireStaff, requireAdmin } from "@/lib/auth-guards";
 import { slugify } from "@/lib/slugify";
@@ -82,11 +83,23 @@ export async function toggleArchiveAction(formData: FormData) {
   await setCourseArchived(slug, archived);
 }
 
-// Удаление курса — только администратор.
+// Удаление курса — только администратор и только из архива.
+// Проверка в разметке ненадёжна: форму можно отправить в обход кнопки,
+// поэтому условие дублируется здесь.
 export async function deleteCourse(formData: FormData) {
   await requireAdmin();
   const slug = String(formData.get("slug") || "");
   if (!slug) return;
+
+  const row = await queryOne<{ archived: boolean | null }>(
+    `select archived from courses where slug = $1`,
+    [slug]
+  );
+  if (!row) return;
+  if (!row.archived) {
+    console.warn(`deleteCourse: попытка удалить неархивный курс ${slug}`);
+    return;
+  }
 
   await query(`delete from courses where slug = $1`, [slug]);
   revalidateCourses(slug);

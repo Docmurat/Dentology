@@ -1,3 +1,4 @@
+// app/admin/cases/page.tsx
 import Link from "next/link";
 import { query } from "@/lib/db";
 import { directionLabel } from "@/lib/directions";
@@ -5,6 +6,7 @@ import { getTeamMembers } from "@/lib/team";
 import { approveCase, deleteCase } from "./actions";
 import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
 import { AdminThumb } from "@/components/admin/admin-thumb";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +61,9 @@ export default async function AdminCasesPage() {
           Добавить кейс
         </Link>
       </div>
-<PageHeadingEditor pageKey="cases" />
+
+      <PageHeadingEditor pageKey="cases" />
+
       {/* --- На модерации --- */}
       {pending.length ? (
         <section>
@@ -114,9 +118,10 @@ export default async function AdminCasesPage() {
                     </form>
                     <form action={deleteCase}>
                       <input type="hidden" name="slug" value={row.slug} />
-                      <button className="text-red-600 hover:text-red-700">
-                        Удалить
-                      </button>
+                      <ConfirmDeleteButton
+                        title={row.title}
+                        className="text-red-600 hover:text-red-700"
+                      />
                     </form>
                   </div>
                 </li>
@@ -169,9 +174,10 @@ export default async function AdminCasesPage() {
                     </Link>
                     <form action={deleteCase}>
                       <input type="hidden" name="slug" value={row.slug} />
-                      <button className="text-red-600 hover:text-red-700">
-                        Удалить
-                      </button>
+                      <ConfirmDeleteButton
+                        title={row.title}
+                        className="text-red-600 hover:text-red-700"
+                      />
                     </form>
                   </div>
                 </li>

@@ -369,6 +369,8 @@ export function CourseForm({
       <FormSection
         title="Блок «Эффективность»"
         hint="Крупная цифра. Оставьте процент 0, чтобы скрыть блок."
+        toggleName="showEffectiveness"
+        toggleDefault={show(initial?.showEffectiveness)}
       >
         <div className="grid gap-4 sm:grid-cols-[140px_1fr]">
           <div>

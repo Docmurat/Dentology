@@ -336,7 +336,10 @@ export default async function DirectionPage({ params }: Props) {
           ) : null}
 
           {/* Частые вопросы — тоже без внешнего контейнера */}
-          <div>
+          {/* Частые вопросы — без внешнего контейнера.
+              От 834px (iPad Pro портрет) ограничиваем ширину: строка ответа
+              в 1200px — это ~150 символов, читается тяжело. */}
+          <div className="mx-auto w-full min-[834px]:max-w-2xl lg:max-w-4xl xl:max-w-5xl">
             <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
               Частые вопросы
             </h2>
