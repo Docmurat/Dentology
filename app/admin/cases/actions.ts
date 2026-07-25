@@ -1,7 +1,8 @@
+// app/admin/cases/actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { query } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import { buildInsert, buildUpdate, pgErrorCode } from "@/lib/sql-helpers";
 import { requireStaff, requireAdmin } from "@/lib/auth-guards";
 import { slugify } from "@/lib/slugify";
@@ -33,6 +34,36 @@ function parseBlocks(value: FormDataEntryValue | null) {
   }
 }
 
+/**
+ * Дополняет поля кейса снимком имени врача.
+ *
+ * Клинический случай — самодостаточный документ: он должен пережить
+ * удаление карточки врача и сохранить, кто был автором.
+ *
+ * Если карточка не найдена, doctor_name в набор не попадает вовсе: при
+ * обновлении это сохранит ранее записанный снимок вместо того, чтобы
+ * затереть его пустым значением.
+ */
+async function withDoctorName(
+  fields: ReturnType<typeof readFields>
+): Promise<Record<string, unknown>> {
+  if (!fields.doctor_slug) return { ...fields, doctor_name: null };
+
+  const row = await queryOne<{ name: string }>(
+    `select name from team_members where slug = $1`,
+    [fields.doctor_slug]
+  );
+  if (!row) return { ...fields };
+
+  return { ...fields, doctor_name: row.name };
+}
+
+function revalidateCases(slug?: string) {
+  revalidatePath("/cases");
+  revalidatePath("/admin/cases");
+  if (slug) revalidatePath(`/cases/${slug}`);
+}
+
 export async function createCase(
   formData: FormData
 ): Promise<{ error?: string; slug?: string }> {
@@ -48,9 +79,10 @@ export async function createCase(
 
   // Кейс, созданный сотрудником, публикуется сразу.
   try {
+    const data = await withDoctorName(fields);
     const { text, values } = buildInsert("cases", {
       slug,
-      ...fields,
+      ...data,
       published: true,
       created_by: user.id,
     });
@@ -61,9 +93,7 @@ export async function createCase(
     return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
   }
 
-  revalidatePath("/cases");
-  revalidatePath(`/cases/${slug}`);
-  revalidatePath("/admin/cases");
+  revalidateCases(slug);
   return { slug };
 }
 
@@ -80,15 +110,14 @@ export async function updateCase(
 
   // published не трогаем — статус публикации меняется только модерацией.
   try {
-    const { text, values } = buildUpdate("cases", fields, "slug", originalSlug);
+    const data = await withDoctorName(fields);
+    const { text, values } = buildUpdate("cases", data, "slug", originalSlug);
     await query(text, values);
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
   }
 
-  revalidatePath("/cases");
-  revalidatePath(`/cases/${originalSlug}`);
-  revalidatePath("/admin/cases");
+  revalidateCases(originalSlug);
   return { slug: originalSlug };
 }
 
@@ -99,18 +128,47 @@ export async function approveCase(formData: FormData) {
 
   await query(`update cases set published = true where slug = $1`, [slug]);
 
-  revalidatePath("/cases");
-  revalidatePath(`/cases/${slug}`);
-  revalidatePath("/admin/cases");
+  revalidateCases(slug);
 }
 
-// Удаление кейса — только администратор (раньше это задавала RLS-политика).
+// Архивация: кейс пропадает из списков и карты сайта, но остаётся
+// доступен по прямой ссылке. Обратимо одним кликом.
+export async function setCaseArchived(slug: string, archived: boolean) {
+  await requireStaff();
+  if (!slug) return;
+
+  await query(`update cases set archived = $1 where slug = $2`, [
+    archived,
+    slug,
+  ]);
+
+  revalidateCases(slug);
+}
+
+export async function toggleCaseArchiveAction(formData: FormData) {
+  const slug = String(formData.get("slug") || "");
+  const archived = String(formData.get("archived") || "") === "true";
+  await setCaseArchived(slug, archived);
+}
+
+// Удаление кейса — только администратор и только из архива.
+// Проверка в разметке ненадёжна: форму можно отправить в обход кнопки,
+// поэтому условие дублируется здесь.
 export async function deleteCase(formData: FormData) {
   await requireAdmin();
   const slug = String(formData.get("slug") || "");
+  if (!slug) return;
+
+  const row = await queryOne<{ archived: boolean | null }>(
+    `select archived from cases where slug = $1`,
+    [slug]
+  );
+  if (!row) return;
+  if (!row.archived) {
+    console.warn(`deleteCase: попытка удалить неархивный кейс ${slug}`);
+    return;
+  }
 
   await query(`delete from cases where slug = $1`, [slug]);
-
-  revalidatePath("/cases");
-  revalidatePath("/admin/cases");
+  revalidateCases(slug);
 }

@@ -1,15 +1,17 @@
+// components/reviews/review-form.tsx
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { submitReview } from "@/app/reviews/actions";
 import { compressImage } from "@/lib/image-compress";
+import { useModalA11y } from "@/lib/use-modal-a11y";
 
 type State = { error?: string; ok?: boolean };
 type DoctorOption = { slug: string; name: string };
 
 const labelCls = "text-sm font-medium text-[var(--color-navy)]";
 const inputCls =
-  "mt-1 w-full rounded-lg border border-[var(--color-gray-200)] px-3 py-2 text-sm outline-none focus:border-[var(--color-teal)]";
+  "mt-1 w-full rounded-lg border border-[var(--color-gray-200)] px-3 py-2.5 text-base outline-none focus:border-[var(--color-teal)] sm:py-2 sm:text-sm";
 
 function ReviewModal({
   doctors,
@@ -24,6 +26,10 @@ function ReviewModal({
     submitReview,
     {}
   );
+  const ref = useModalA11y<HTMLDivElement>(onClose);
+  const titleId = useId();
+  // Антиспам: момент открытия формы. Отправка за пару секунд — бот.
+  const [startedAt] = useState(() => Date.now());
   const [photoName, setPhotoName] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -58,15 +64,32 @@ function ReviewModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+      {/* Клик по фону окно не закрывает: форма длинная, случайный промах
+          стоил бы пользователю всего набранного текста. Escape работает. */}
+      <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        // dvh вместо vh: на iOS при открытой клавиатуре низ формы
+        // уезжает под неё, потому что vh считается от полного экрана.
+        className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+      >
         {state.ok ? (
-          <p className="py-10 text-center text-lg font-medium text-[var(--color-navy)]">
+          <p
+            id={titleId}
+            className="py-10 text-center text-lg font-medium text-[var(--color-navy)]"
+          >
             Спасибо за отзыв
           </p>
         ) : (
           <>
             <div className="flex items-start justify-between gap-4">
-              <h3 className="text-lg font-semibold text-[var(--color-navy)]">
+              <h3
+                id={titleId}
+                className="text-lg font-semibold text-[var(--color-navy)]"
+              >
                 Оставить отзыв
               </h3>
               <button
@@ -80,6 +103,7 @@ function ReviewModal({
             </div>
 
             <form action={action} className="mt-4 space-y-4">
+              {/* Ловушка для ботов: человек это поле не видит. */}
               <input
                 type="text"
                 name="company"
@@ -88,6 +112,7 @@ function ReviewModal({
                 className="hidden"
                 aria-hidden="true"
               />
+              <input type="hidden" name="startedAt" value={startedAt} />
 
               {courseSlug ? (
                 <input type="hidden" name="courseSlug" value={courseSlug} />
@@ -263,7 +288,7 @@ export function ReviewForm({
 
   const triggerClass =
     variant === "gold"
-      ? "bg-[var(--color-gold)] hover:opacity-90"
+      ? "bg-[var(--color-gold-strong)] hover:opacity-90"
       : "bg-[var(--color-teal)] hover:opacity-90";
 
   return (

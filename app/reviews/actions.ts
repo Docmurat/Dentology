@@ -1,3 +1,4 @@
+// app/reviews/actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -6,6 +7,12 @@ import { query } from "@/lib/db";
 import { uploadFile } from "@/lib/storage";
 import { getCourseBySlug } from "@/lib/courses";
 import { getTeamMembers } from "@/lib/team";
+import {
+  isHoneypotFilled,
+  isTooFast,
+  rateLimit,
+  formatRetryAfter,
+} from "@/lib/anti-spam";
 
 type Result = { error?: string; ok?: boolean };
 
@@ -20,8 +27,23 @@ export async function submitReview(
   _prev: Result,
   formData: FormData
 ): Promise<Result> {
-  if (String(formData.get("company") || "").trim()) {
+  // Скрытое поле заполнено — это бот. Отвечаем «успехом», чтобы он
+  // не подбирал обход.
+  if (isHoneypotFilled(formData.get("company"))) {
     return { ok: true };
+  }
+
+  // Форма отправлена быстрее, чем её физически можно заполнить.
+  if (isTooFast(formData.get("startedAt"))) {
+    return { ok: true };
+  }
+
+  // Три отзыва с одного адреса в час — с запасом для честного человека.
+  const limit = await rateLimit("review", { limit: 3, windowSec: 3600 });
+  if (!limit.allowed) {
+    return {
+      error: `Слишком много отправок. Попробуйте через ${formatRetryAfter(limit.retryAfterSec)}`,
+    };
   }
 
   // Согласие на обработку персональных данных (152-ФЗ) — обязательно.

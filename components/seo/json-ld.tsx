@@ -1,3 +1,4 @@
+// components/seo/json-ld.tsx
 import { COMPANY } from "@/lib/company";
 
 const SITE = "https://lucenta.ru";
@@ -93,5 +94,107 @@ export function caseJsonLd(opts: {
     },
     ...(opts.excerpt ? { description: opts.excerpt } : {}),
     ...(opts.image ? { image: opts.image } : {}),
+  };
+}
+
+/**
+ * Цена формата обучения в форме, пригодной для schema.org.
+ *
+ * В базе это свободный текст: «150 000 ₽», «по запросу», «от 90 000».
+ * Отдаём число только когда уверены: есть цифры и нет слов, означающих
+ * неопределённость. Неверная цена в разметке хуже её отсутствия.
+ */
+function parsePrice(raw: string): number | null {
+  const text = raw.toLowerCase();
+  if (/запрос|договор|индивидуальн|от\s/.test(text)) return null;
+
+  const digits = text.replace(/[^\d]/g, "");
+  if (!digits) return null;
+
+  const value = Number(digits);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+// Курс (Course) — на странице курса.
+export function courseJsonLd(opts: {
+  title: string;
+  slug: string;
+  description?: string;
+  image?: string;
+  instructorName?: string | null;
+  instructorSlug?: string | null;
+  formats?: { type: string; price: string }[];
+}): Record<string, unknown> {
+  const offers = (opts.formats ?? [])
+    .map((f) => ({ name: f.type, price: parsePrice(f.price) }))
+    .filter((o): o is { name: string; price: number } => o.price !== null)
+    .map((o) => ({
+      "@type": "Offer",
+      name: o.name,
+      price: o.price,
+      priceCurrency: "RUB",
+      category: "Professional education",
+    }));
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: opts.title,
+    url: `${SITE}/education/${opts.slug}`,
+    inLanguage: "ru-RU",
+    provider: {
+      "@type": "Dentist",
+      "@id": `${SITE}/#dentist`,
+      name: "Lucenta",
+    },
+    ...(opts.description ? { description: opts.description } : {}),
+    ...(opts.image ? { image: opts.image } : {}),
+    ...(opts.instructorName
+      ? {
+          instructor: {
+            "@type": "Person",
+            name: opts.instructorName,
+            ...(opts.instructorSlug
+              ? { url: `${SITE}/team/${opts.instructorSlug}` }
+              : {}),
+          },
+        }
+      : {}),
+    ...(offers.length ? { offers } : {}),
+  };
+}
+
+/**
+ * Блок вопросов и ответов (FAQPage).
+ *
+ * Google с 2023 года показывает расширенный сниппет FAQ только для
+ * государственных и медицинских сайтов из своего списка, так что на
+ * богатый результат в нём рассчитывать не стоит. Разметка всё равно
+ * полезна: её читают Яндекс и голосовые ассистенты, и она делает
+ * содержимое страницы машинно-понятным.
+ */
+export function faqJsonLd(
+  items: { question: string; answer: string }[]
+): Record<string, unknown> | null {
+  const clean = items
+    .map((i) => ({
+      question: i.question?.trim() ?? "",
+      answer: i.answer?.trim() ?? "",
+    }))
+    .filter((i) => i.question && i.answer);
+
+  if (!clean.length) return null;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: clean.map((i) => ({
+      "@type": "Question",
+      name: i.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: i.answer,
+      },
+    })),
   };
 }

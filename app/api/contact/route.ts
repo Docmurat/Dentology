@@ -1,6 +1,13 @@
+// app/api/contact/route.ts
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { sendTelegramMessage, tgEscape } from "@/lib/telegram";
+import {
+  isHoneypotFilled,
+  isTooFast,
+  rateLimit,
+  formatRetryAfter,
+} from "@/lib/anti-spam";
 
 type ContactPayload = {
   name: string;
@@ -9,15 +16,74 @@ type ContactPayload = {
   message?: string;
   consent?: boolean;
   context?: string;
+  // Антиспам: скрытое поле и метка времени открытия формы.
+  website?: string;
+  startedAt?: number;
 };
 
 function isValidPayload(data: ContactPayload) {
   return Boolean(data.name?.trim() && data.phone?.trim());
 }
 
+// Ограничения длины: раньше их не было вовсе, и в теле запроса могло
+// приехать сколько угодно текста — прямо в письмо и в Telegram.
+const MAX_LENGTH: Record<string, number> = {
+  name: 120,
+  phone: 40,
+  contactMethod: 120,
+  message: 4000,
+  context: 200,
+};
+
+function isTooLong(data: ContactPayload): boolean {
+  return (
+    (data.name?.length ?? 0) > MAX_LENGTH.name ||
+    (data.phone?.length ?? 0) > MAX_LENGTH.phone ||
+    (data.contactMethod?.length ?? 0) > MAX_LENGTH.contactMethod ||
+    (data.message?.length ?? 0) > MAX_LENGTH.message ||
+    (data.context?.length ?? 0) > MAX_LENGTH.context
+  );
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ContactPayload;
+
+    // Скрытое поле заполнено — бот. Отвечаем «успехом», чтобы он
+    // не подбирал обход.
+    if (isHoneypotFilled(body.website)) {
+      return NextResponse.json({
+        ok: true,
+        message: "Запрос отправлен. Мы свяжемся с вами.",
+      });
+    }
+
+    // Форма отправлена быстрее, чем её физически можно заполнить.
+    if (isTooFast(body.startedAt)) {
+      return NextResponse.json({
+        ok: true,
+        message: "Запрос отправлен. Мы свяжемся с вами.",
+      });
+    }
+
+    if (isTooLong(body)) {
+      return NextResponse.json(
+        { ok: false, message: "Слишком длинный текст в одном из полей." },
+        { status: 400 }
+      );
+    }
+
+    // Пять заявок с одного адреса в час.
+    const limit = await rateLimit("contact", { limit: 5, windowSec: 3600 });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: `Слишком много заявок. Попробуйте через ${formatRetryAfter(limit.retryAfterSec)} или позвоните нам.`,
+        },
+        { status: 429 }
+      );
+    }
 
     if (!isValidPayload(body)) {
       return NextResponse.json(

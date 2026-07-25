@@ -1,3 +1,4 @@
+// lib/team.ts
 import type { TeamMember } from "@/lib/team-data";
 import { query, queryOne } from "@/lib/db";
 
@@ -91,7 +92,25 @@ function sortTeam(members: TeamMember[]): TeamMember[] {
   });
 }
 
+/**
+ * Публичные списки: без архивных сотрудников.
+ * Используется на /team, главной, в форме отзыва и карте сайта.
+ */
 export async function getTeamMembers(): Promise<TeamMember[]> {
+  const rows = await query<TeamRow>(
+    `select ${COLUMNS} from team_members where archived = false`
+  );
+  return sortTeam(rows.map(mapRow));
+}
+
+/**
+ * Все сотрудники, включая архивных.
+ *
+ * Нужен админке и любым картам «слаг -> имя»: у кейсов, отзывов и курсов
+ * архивного врача иначе появилось бы «Врач не найден». Публичные страницы
+ * этой функцией пользоваться не должны.
+ */
+export async function getTeamMembersAll(): Promise<TeamMember[]> {
   const rows = await query<TeamRow>(`select ${COLUMNS} from team_members`);
   return sortTeam(rows.map(mapRow));
 }
@@ -103,6 +122,13 @@ export async function getFeaturedTeam(): Promise<TeamMember[]> {
     .slice(0, HOMEPAGE_LIMIT);
 }
 
+/**
+ * Карточка по слагу — архив НЕ фильтруется сознательно.
+ *
+ * Архивный врач пропадает из списка команды, но его имя должно
+ * по-прежнему подставляться в кейсы и курсы, а страница — открываться
+ * по прямой ссылке. Та же логика, что у архивных курсов и кейсов.
+ */
 export async function getTeamMemberBySlug(
   slug: string
 ): Promise<TeamMember | null> {
@@ -113,16 +139,24 @@ export async function getTeamMemberBySlug(
   return row ? mapRow(row) : null;
 }
 
+/** Слаги для карты сайта и generateStaticParams — без архивных. */
 export async function getTeamSlugs(): Promise<string[]> {
-  const rows = await query<{ slug: string }>(`select slug from team_members`);
+  const rows = await query<{ slug: string }>(
+    `select slug from team_members where archived = false`
+  );
   return rows.map((row) => row.slug);
 }
 
+/**
+ * Ведущий направления — архивные исключены: архивный врач не должен
+ * оставаться лицом направления на публичной странице.
+ */
 export async function getLeadByDirection(
   directionSlug: string
 ): Promise<TeamMember | null> {
   const row = await queryOne<TeamRow>(
-    `select ${COLUMNS} from team_members where is_lead = true and lead_direction_slug = $1`,
+    `select ${COLUMNS} from team_members
+      where is_lead = true and lead_direction_slug = $1 and archived = false`,
     [directionSlug]
   );
   return row ? mapRow(row) : null;

@@ -13,16 +13,21 @@ type Row = {
   title: string;
   doctor_slug: string | null;
   published: boolean;
-  archived?: boolean | null;
+  archived: boolean | null;
   sort_order: number | null;
 };
 
 export default async function AdminEducationPage() {
-  const rows = await query<Row>(
-    `select * from courses order by sort_order asc, created_at desc`
-  );
+  // Явные колонки вместо select *: списку не нужны program, faq, metrics
+  // и прочие jsonb-поля курса.
+  const [rows, team] = await Promise.all([
+    query<Row>(
+      `select slug, title, doctor_slug, published, archived, sort_order
+         from courses order by sort_order asc, created_at desc`
+    ),
+    getTeamMembers(),
+  ]);
 
-  const team = await getTeamMembers();
   const doctorName = new Map(team.map((d) => [d.slug, d.name]));
 
   return (
@@ -73,13 +78,26 @@ export default async function AdminEducationPage() {
 
                 {/* flex-wrap — иначе на узком экране действия уезжают за край */}
                 <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm sm:justify-end">
-                  <Link
-                    href={`/education/${row.slug}`}
-                    target="_blank"
-                    className="text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
-                  >
-                    Открыть
-                  </Link>
+                  {/* Опубликованный курс открываем на публичном адресе,
+                      черновик — на маршруте предпросмотра: публичная
+                      страница теперь кешируется и черновик отдаёт 404. */}
+                  {row.published ? (
+                    <Link
+                      href={`/education/${row.slug}`}
+                      target="_blank"
+                      className="text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
+                    >
+                      Открыть
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/education/${row.slug}/preview`}
+                      target="_blank"
+                      className="text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
+                    >
+                      Предпросмотр
+                    </Link>
+                  )}
                   <Link
                     href={`/admin/education/${row.slug}/edit`}
                     className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"

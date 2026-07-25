@@ -1,20 +1,26 @@
+// components/home/cases-preview.tsx
 import { Section } from "@/components/layout/section";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
-import { getAllCases } from "@/lib/cases";
+import { getCasesForCards } from "@/lib/cases";
 import { getDirectionLabelMap } from "@/lib/directions-db";
 import { getSectionHeadingContent } from "@/lib/homepage";
 import { CasesCarousel } from "@/components/cases/cases-carousel";
 import { CaseCard } from "@/components/cases/case-card";
 
 export async function CasesPreview() {
-  const allCases = await getAllCases();
-  const previewCases = allCases.slice(0, 9);
+  // Девять кейсов нужны карусели на десктопе, до 1024px показываем четыре.
+  // Читаем только поля карточки: раньше getAllCases() тянул content_blocks
+  // и полный разбор по всем опубликованным кейсам.
+  const [previewCases, dirLabel, heading] = await Promise.all([
+    getCasesForCards({ limit: 9 }),
+    getDirectionLabelMap(),
+    getSectionHeadingContent("cases"),
+  ]);
+
   // Карусель неудобна на сенсорных экранах: до 1024px показываем четыре
   // кейса списком — в один столбец на телефоне и в две колонки на планшете.
-  const mobileCases = allCases.slice(0, 4);
-  const dirLabel = await getDirectionLabelMap();
-  const heading = await getSectionHeadingContent("cases");
+  const mobileCases = previewCases.slice(0, 4);
 
   return (
     <Section id="cases" className="pt-20 pb-12 md:pt-28 md:pb-16">

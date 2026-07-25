@@ -1,7 +1,8 @@
+// app/admin/team/actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { query } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import { buildInsert, buildUpdate, pgErrorCode } from "@/lib/sql-helpers";
 import { requireStaff, requireAdmin } from "@/lib/auth-guards";
 import { slugify } from "@/lib/slugify";
@@ -150,16 +151,85 @@ export async function updateTeamMember(
     return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
   }
 
+  // Имя могло измениться — обновляем снимки в кейсах и курсах,
+  // чтобы живые записи не расходились с карточкой.
+  await query(`update cases set doctor_name = $1 where doctor_slug = $2`, [
+    fields.name,
+    originalSlug,
+  ]);
+  await query(`update courses set doctor_name = $1 where doctor_slug = $2`, [
+    fields.name,
+    originalSlug,
+  ]);
+
   revalidateTeam(originalSlug);
   return { slug: originalSlug };
 }
 
-// Удаление сотрудника — только администратор.
+/**
+ * Архивация сотрудника: пропадает из списка команды, главной и формы
+ * отзыва, но остаётся в базе. Имя продолжает подставляться в кейсы,
+ * отзывы и курсы, страница открывается по прямой ссылке.
+ *
+ * Архив — рекомендуемая замена удалению: связи не рвутся.
+ */
+export async function setTeamMemberArchived(slug: string, archived: boolean) {
+  await requireStaff();
+  if (!slug) return;
+
+  await query(`update team_members set archived = $1 where slug = $2`, [
+    archived,
+    slug,
+  ]);
+
+  revalidateTeam(slug);
+}
+
+export async function toggleTeamArchiveAction(formData: FormData) {
+  const slug = String(formData.get("slug") || "");
+  const archived = String(formData.get("archived") || "") === "true";
+  await setTeamMemberArchived(slug, archived);
+}
+
+/**
+ * Удаление сотрудника — только администратор, только из архива
+ * и только при отсутствии связей.
+ *
+ * На doctor_slug завязаны кейсы, отзывы и курсы. Удаление карточки
+ * со связями оставило бы висящие ссылки, поэтому такой сотрудник
+ * может быть только архивным.
+ */
 export async function deleteTeamMember(formData: FormData) {
   await requireAdmin();
   const slug = String(formData.get("slug") || "");
+  if (!slug) return;
+
+  const row = await queryOne<{
+    archived: boolean | null;
+    links: string | number;
+  }>(
+    `select archived,
+            (select count(*) from cases   where doctor_slug = $1)
+          + (select count(*) from reviews where doctor_slug = $1)
+          + (select count(*) from courses where doctor_slug = $1) as links
+       from team_members where slug = $1`,
+    [slug]
+  );
+
+  if (!row) return;
+
+  if (!row.archived) {
+    console.warn(`deleteTeamMember: сотрудник ${slug} не в архиве`);
+    return;
+  }
+
+  if (Number(row.links) > 0) {
+    console.warn(
+      `deleteTeamMember: у сотрудника ${slug} есть связи (${row.links}), удаление отклонено`
+    );
+    return;
+  }
 
   await query(`delete from team_members where slug = $1`, [slug]);
-
   revalidateTeam(slug);
 }

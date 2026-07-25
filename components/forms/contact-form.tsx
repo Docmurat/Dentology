@@ -1,3 +1,4 @@
+// components/forms/contact-form.tsx
 "use client";
 
 import { FormEvent, useState } from "react";
@@ -32,6 +33,9 @@ export function ContactForm({
 }) {
   const [form, setForm] = useState<FormState>(initialState);
   const [consent, setConsent] = useState(false);
+  // Антиспам: скрытое поле-ловушка и момент открытия формы.
+  const [honeypot, setHoneypot] = useState("");
+  const [startedAt] = useState(() => Date.now());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverMessage, setServerMessage] = useState("");
   const [serverError, setServerError] = useState("");
@@ -65,7 +69,13 @@ export function ContactForm({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ...form, consent, context: context ?? "" }),
+        body: JSON.stringify({
+          ...form,
+          consent,
+          context: context ?? "",
+          website: honeypot,
+          startedAt,
+        }),
         signal: controller.signal,
       });
 
@@ -110,12 +120,27 @@ export function ContactForm({
         </div>
       ) : null}
 
+      {/* Ловушка для ботов: человек это поле не видит и не заполняет.
+          Не type="hidden" — часть скриптов такие поля пропускает. */}
+      <input
+        type="text"
+        name="website"
+        value={honeypot}
+        onChange={(e) => setHoneypot(e.target.value)}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="hidden"
+      />
+
+      {/* text-base на телефоне: при шрифте меньше 16px iOS Safari
+          зумит страницу на фокусе и поле уезжает из виду. */}
       <input
         type="text"
         placeholder="Имя"
         value={form.name}
         onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-        className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-sm outline-none transition focus:border-[var(--color-teal)]"
+        className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-base outline-none transition focus:border-[var(--color-teal)] sm:text-sm"
       />
 
       <input
@@ -125,7 +150,7 @@ export function ContactForm({
         onChange={(e) =>
           setForm((prev) => ({ ...prev, phone: e.target.value }))
         }
-        className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-sm outline-none transition focus:border-[var(--color-teal)]"
+        className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-base outline-none transition focus:border-[var(--color-teal)] sm:text-sm"
       />
 
       <input
@@ -135,7 +160,7 @@ export function ContactForm({
         onChange={(e) =>
           setForm((prev) => ({ ...prev, contactMethod: e.target.value }))
         }
-        className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-sm outline-none transition focus:border-[var(--color-teal)]"
+        className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-base outline-none transition focus:border-[var(--color-teal)] sm:text-sm"
       />
 
       <textarea
@@ -145,7 +170,7 @@ export function ContactForm({
         onChange={(e) =>
           setForm((prev) => ({ ...prev, message: e.target.value }))
         }
-        className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-sm outline-none transition focus:border-[var(--color-teal)]"
+        className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-base outline-none transition focus:border-[var(--color-teal)] sm:text-sm"
       />
 
       <label className="flex items-start gap-2 text-xs leading-5 text-[var(--color-gray-600)]">

@@ -1,3 +1,4 @@
+// components/cases/case-card.tsx
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -16,6 +17,11 @@ export function CaseCard({
   dirLabel?: Record<string, string>;
   doctorName?: string | null;
 }) {
+  // Явно переданное имя (карта «слаг -> имя» на странице) важнее: там
+  // живые данные. Снимок в кейсе — запасной вариант на случай, когда
+  // карточки врача уже нет.
+  const authorName = doctorName ?? item.doctorName ?? null;
+
   return (
     <Link href={`/cases/${item.slug}`} className="group block h-full">
       <Card className="flex h-full flex-col overflow-hidden transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg">
@@ -43,9 +49,9 @@ export function CaseCard({
 
         <CaseExcerpt text={item.excerpt} />
 
-        {doctorName ? (
+        {authorName ? (
           <p className="mt-5 text-sm font-medium text-[var(--color-navy-secondary)]">
-            {doctorName}
+            {authorName}
           </p>
         ) : null}
       </Card>

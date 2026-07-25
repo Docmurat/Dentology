@@ -1,3 +1,4 @@
+// app/doctor/courses/page.tsx
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-guards";
@@ -32,7 +33,7 @@ export default async function SpeakerCoursesPage() {
             {courses.map((c) => (
               <li
                 key={c.slug}
-                className="flex items-center justify-between gap-4 px-5 py-4"
+                className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium text-[var(--color-navy)]">
@@ -49,14 +50,28 @@ export default async function SpeakerCoursesPage() {
                     ) : null}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-3 text-sm">
-                  <Link
-                    href={`/education/${c.slug}`}
-                    target="_blank"
-                    className="text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
-                  >
-                    Открыть
-                  </Link>
+
+                <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm sm:justify-end">
+                  {/* Опубликованный курс открываем на публичном адресе,
+                      черновик — на маршруте предпросмотра: публичная
+                      страница кешируется и черновик отдаёт 404. */}
+                  {c.published ? (
+                    <Link
+                      href={`/education/${c.slug}`}
+                      target="_blank"
+                      className="text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
+                    >
+                      Открыть
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/education/${c.slug}/preview`}
+                      target="_blank"
+                      className="text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
+                    >
+                      Предпросмотр
+                    </Link>
+                  )}
                   <Link
                     href={`/doctor/courses/${c.slug}/edit`}
                     className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"

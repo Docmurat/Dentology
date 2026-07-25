@@ -8,12 +8,27 @@
   --color-navy-secondary: #1f4a6d;
   --color-teal: #2fa4a9;
   --color-teal-hover: #27979c;
+
+  /* Фирменный золотой. Оставлен как есть: он хорош как заливка-подложка
+     (--color-gold/10), рамка и крупная цифра на тёмно-синем — там 5.7:1.
+     Но как текст на белом и как фон под белым текстом даёт лишь 2.9:1
+     при норме AA 4.5:1. */
   --color-gold: #b8923c;
 
+  /* Затемнённый вариант для текста и заливок под белым текстом: 4.8:1
+     в обе стороны. Используется в кнопках, надзаголовках и ссылках. */
+  --color-gold-strong: #8f6d20;
+
+  /* Палитра серого задана целиком, а не наполовину: раньше 300, 400 и 600
+     не были объявлены и подхватывались из стандартной темы Tailwind.
+     Работало, но смешивало два источника. Значения те же. */
   --color-gray-50: #fafbfc;
   --color-gray-100: #f2f4f7;
   --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
   --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
   --color-gray-700: #374151;
 }
 
@@ -40,10 +55,33 @@ img {
     color: inherit;
     text-decoration: none;
   }
+
+  /* Ссылки лишены подчёркивания и собственного цвета, поэтому при
+     навигации с клавиатуры без видимого кольца непонятно, где ты
+     находишься. Только :focus-visible — мышью кольцо не появляется. */
+  :focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }
+
 /* Золотой билет: блик */
 @keyframes gold-sheen {
   0%   { transform: translateX(-160%) skewX(-20deg); }
   60%  { transform: translateX(260%) skewX(-20deg); }
   100% { transform: translateX(260%) skewX(-20deg); }
+}
+
+/* Анимацию блика отключаем тем, кто просил меньше движения в системе. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

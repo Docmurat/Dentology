@@ -1,3 +1,4 @@
+// components/cases/cases-carousel.tsx
 "use client";
 
 import { useRef } from "react";
@@ -23,11 +24,27 @@ export function CasesCarousel({
     el.scrollBy({ left: el.clientWidth * 0.9 * dir, behavior: "smooth" });
   };
 
+  // Прокручиваемая область без клавиатуры недоступна: мышью её листают,
+  // с клавиатуры — нечем. Даём фокус и стрелки.
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      scroll(1);
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      scroll(-1);
+    }
+  };
+
   return (
     <div>
       <div
         ref={ref}
-        className="flex snap-x snap-mandatory gap-6 overflow-x-auto px-1 py-8 -mx-1 -my-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        role="region"
+        aria-label="Клинические случаи, листается стрелками влево и вправо"
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        className="flex snap-x snap-mandatory gap-6 overflow-x-auto px-1 py-8 -mx-1 -my-8 outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-[var(--color-teal)] [&::-webkit-scrollbar]:hidden"
       >
         {cases.map((item) => (
           <div

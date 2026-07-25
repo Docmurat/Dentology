@@ -1,3 +1,4 @@
+// app/team/[slug]/page.tsx
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -7,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ContactButton } from "@/components/contact/contact-modal";
 import { getTeamMemberBySlug } from "@/lib/team";
-import { getAllCases } from "@/lib/cases";
+import { getCasesForCards } from "@/lib/cases";
 import { getReviewsByDoctor } from "@/lib/reviews";
 import { getDirections, getDirectionLabelMap } from "@/lib/directions-db";
 import { CaseCard } from "@/components/cases/case-card";
@@ -76,14 +77,16 @@ export default async function DoctorPage({ params }: Props) {
     notFound();
   }
 
-  const [allCases, doctorReviews, allDirections, dirLabel] = await Promise.all([
-    getAllCases(),
-    getReviewsByDoctor(doctor.slug),
-    getDirections(),
-    getDirectionLabelMap(),
-  ]);
-
-  const doctorCases = allCases.filter((item) => item.doctorSlug === doctor.slug);
+  // Кейсы врача: фильтр и лимит в SQL. Раньше здесь читались все
+  // опубликованные кейсы целиком (вместе с content_blocks) и отсеивались в JS.
+  // Больше четырёх ни одна раскладка не показывает.
+  const [doctorCases, doctorReviews, allDirections, dirLabel] =
+    await Promise.all([
+      getCasesForCards({ doctorSlug: doctor.slug, limit: 4 }),
+      getReviewsByDoctor(doctor.slug),
+      getDirections(),
+      getDirectionLabelMap(),
+    ]);
 
   // Направления из профиля: чекбоксы «участвует» + направление-«ведущий».
   const profileDirectionSlugs = new Set([

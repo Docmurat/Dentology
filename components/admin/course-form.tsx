@@ -1,3 +1,4 @@
+// components/admin/course-form.tsx
 "use client";
 
 import { useState } from "react";
@@ -16,7 +17,13 @@ const inputCls =
 
 type DoctorOption = { slug: string; name: string };
 type DirectionOption = { slug: string; label: string };
-type CourseAction = (formData: FormData) => void | Promise<void>;
+// Экшен возвращает { error } при неудаче. Раньше он всегда завершался
+// успешно, даже если запись в базу падала, — форма закрывалась,
+// а данные терялись без всякого сообщения.
+type CourseActionResult = { error?: string } | void;
+type CourseAction = (
+  formData: FormData
+) => CourseActionResult | Promise<CourseActionResult>;
 
 // Управляемая сворачиваемая секция. Контент остаётся в DOM (hidden) —
 // значения полей сохраняются при сворачивании. В шапке — необязательный
@@ -143,7 +150,13 @@ export function CourseForm({
       else if (quoteRemoved) quoteImage = "";
       formData.set("quoteImage", quoteImage);
 
-      await action(formData);
+      const result = await action(formData);
+      if (result?.error) {
+        setError(result.error);
+        setSaving(false);
+        return;
+      }
+
       router.push(redirectTo);
       router.refresh();
     } catch (err) {

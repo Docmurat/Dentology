@@ -1,9 +1,13 @@
 // app/admin/cases/page.tsx
 import Link from "next/link";
 import { query } from "@/lib/db";
-import { directionLabel } from "@/lib/directions";
-import { getTeamMembers } from "@/lib/team";
-import { approveCase, deleteCase } from "./actions";
+import { getTeamMembersAll } from "@/lib/team";
+import { getDirectionLabelMap } from "@/lib/directions-db";
+import {
+  approveCase,
+  deleteCase,
+  toggleCaseArchiveAction,
+} from "./actions";
 import { PageHeadingEditor } from "@/components/admin/page-heading-editor";
 import { AdminThumb } from "@/components/admin/admin-thumb";
 import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
@@ -15,34 +19,58 @@ type Row = {
   title: string;
   direction_slug: string | null;
   doctor_slug: string | null;
+  doctor_name: string | null;
   cover_image: string | null;
   published: boolean;
+  archived: boolean | null;
 };
 
 function Cover({ url }: { url: string | null }) {
   return <AdminThumb url={url} className="h-12 w-16" sizes="80px" />;
 }
 
-function Meta({ doctorName, direction }: { doctorName: string; direction: string | null }) {
+// Название направления приходит уже готовым: справочник берётся из базы,
+// иначе направления, добавленные через админку, показывались слагом.
+function Meta({
+  doctorName,
+  directionLabel,
+}: {
+  doctorName: string;
+  directionLabel: string | null;
+}) {
   return (
     <p className="text-xs text-[var(--color-gray-500)]">
       {doctorName}
-      {direction ? ` · ${directionLabel(direction)}` : ""}
+      {directionLabel ? ` · ${directionLabel}` : ""}
     </p>
   );
 }
 
 export default async function AdminCasesPage() {
-  const rows = await query<Row>(
-    `select slug, title, direction_slug, doctor_slug, cover_image, published
-       from cases order by created_at desc`
-  );
+  const [rows, team, dirLabel] = await Promise.all([
+    query<Row>(
+      `select slug, title, direction_slug, doctor_slug, doctor_name,
+              cover_image, published, archived
+         from cases order by created_at desc`
+    ),
+    // Со всеми, включая архивных: иначе у кейсов архивного врача
+    // появилось бы «Врач не указан».
+    getTeamMembersAll(),
+    getDirectionLabelMap(),
+  ]);
 
-  // Карта slug врача -> «Фамилия Имя».
-  const team = await getTeamMembers();
   const doctorName = new Map(team.map((d) => [d.slug, d.name]));
-  const nameOf = (slug: string | null) =>
-    (slug ? doctorName.get(slug) : null) ?? "Врач не указан";
+
+  // Живое имя важнее — фамилия могла измениться. Снимок в кейсе
+  // подстраховывает, если карточки врача уже нет.
+  const nameOf = (row: Row) =>
+    (row.doctor_slug ? doctorName.get(row.doctor_slug) : null) ??
+    row.doctor_name ??
+    "Врач не указан";
+
+  // Архивное направление в справочнике есть, удалённое — нет: показываем слаг.
+  const labelOf = (slug: string | null) =>
+    slug ? dirLabel[slug] ?? slug : null;
 
   const pending = rows.filter((r) => !r.published);
   const published = rows.filter((r) => r.published);
@@ -81,7 +109,7 @@ export default async function AdminCasesPage() {
               {pending.map((row) => (
                 <li
                   key={row.slug}
-                  className="flex items-center justify-between gap-4 px-5 py-4"
+                  className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                 >
                   <div className="flex min-w-0 items-center gap-4">
                     <Cover url={row.cover_image} />
@@ -90,13 +118,13 @@ export default async function AdminCasesPage() {
                         {row.title}
                       </p>
                       <Meta
-                        doctorName={nameOf(row.doctor_slug)}
-                        direction={row.direction_slug}
+                        doctorName={nameOf(row)}
+                        directionLabel={labelOf(row.direction_slug)}
                       />
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-3 text-sm">
+                  <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm sm:justify-end">
                     <Link
                       href={`/cases/${row.slug}/preview`}
                       target="_blank"
@@ -116,13 +144,34 @@ export default async function AdminCasesPage() {
                         Подтвердить и опубликовать
                       </button>
                     </form>
-                    <form action={deleteCase}>
+                    <form action={toggleCaseArchiveAction}>
                       <input type="hidden" name="slug" value={row.slug} />
-                      <ConfirmDeleteButton
-                        title={row.title}
-                        className="text-red-600 hover:text-red-700"
+                      <input
+                        type="hidden"
+                        name="archived"
+                        value={row.archived ? "false" : "true"}
                       />
+                      <button className="text-[var(--color-gold)] hover:opacity-80">
+                        {row.archived ? "Вернуть из архива" : "Архивировать"}
+                      </button>
                     </form>
+
+                    {row.archived ? (
+                      <form action={deleteCase}>
+                        <input type="hidden" name="slug" value={row.slug} />
+                        <ConfirmDeleteButton
+                          title={row.title}
+                          className="text-red-600 hover:text-red-700"
+                        />
+                      </form>
+                    ) : (
+                      <span
+                        className="cursor-not-allowed text-[var(--color-gray-400)]"
+                        title="Чтобы удалить кейс, сначала переведите его в архив"
+                      >
+                        Удалить
+                      </span>
+                    )}
                   </div>
                 </li>
               ))}
@@ -143,22 +192,27 @@ export default async function AdminCasesPage() {
               {published.map((row) => (
                 <li
                   key={row.slug}
-                  className="flex items-center justify-between gap-4 px-5 py-4"
+                  className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                 >
                   <div className="flex min-w-0 items-center gap-4">
                     <Cover url={row.cover_image} />
                     <div className="min-w-0">
                       <p className="truncate font-medium text-[var(--color-navy)]">
                         {row.title}
+                        {row.archived ? (
+                          <span className="ml-2 rounded-full bg-[var(--color-gold)]/15 px-2 py-0.5 text-xs font-medium text-[var(--color-gold)]">
+                            в архиве
+                          </span>
+                        ) : null}
                       </p>
                       <Meta
-                        doctorName={nameOf(row.doctor_slug)}
-                        direction={row.direction_slug}
+                        doctorName={nameOf(row)}
+                        directionLabel={labelOf(row.direction_slug)}
                       />
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-3 text-sm">
+                  <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm sm:justify-end">
                     <Link
                       href={`/admin/cases/${row.slug}/edit`}
                       className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
@@ -172,13 +226,36 @@ export default async function AdminCasesPage() {
                     >
                       Открыть
                     </Link>
-                    <form action={deleteCase}>
+                    <form action={toggleCaseArchiveAction}>
                       <input type="hidden" name="slug" value={row.slug} />
-                      <ConfirmDeleteButton
-                        title={row.title}
-                        className="text-red-600 hover:text-red-700"
+                      <input
+                        type="hidden"
+                        name="archived"
+                        value={row.archived ? "false" : "true"}
                       />
+                      <button className="text-[var(--color-gold)] hover:opacity-80">
+                        {row.archived ? "Вернуть из архива" : "Архивировать"}
+                      </button>
                     </form>
+
+                    {/* Удалить можно только архивный кейс: сначала архив,
+                        потом удаление. Промахнуться в общем списке нечем. */}
+                    {row.archived ? (
+                      <form action={deleteCase}>
+                        <input type="hidden" name="slug" value={row.slug} />
+                        <ConfirmDeleteButton
+                          title={row.title}
+                          className="text-red-600 hover:text-red-700"
+                        />
+                      </form>
+                    ) : (
+                      <span
+                        className="cursor-not-allowed text-[var(--color-gray-400)]"
+                        title="Чтобы удалить кейс, сначала переведите его в архив"
+                      >
+                        Удалить
+                      </span>
+                    )}
                   </div>
                 </li>
               ))}

@@ -1,3 +1,5 @@
+// app/directions/[slug]/page.tsx
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,13 +9,18 @@ import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ContactButton } from "@/components/contact/contact-modal";
-import { getDirectionBySlug, getDirectionLabelMap } from "@/lib/directions-db";
+import {
+  getDirectionBySlug,
+  getDirectionLabelMap,
+  getDirectionSlugs,
+} from "@/lib/directions-db";
 import { getLeadByDirection, getTeamMembers } from "@/lib/team";
-import { getAllCases } from "@/lib/cases";
+import { getCasesForCards } from "@/lib/cases";
 import { getApprovedReviews } from "@/lib/reviews";
 import { CaseCard } from "@/components/cases/case-card";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { ContraindicationsNote } from "@/components/legal/contraindications-note";
+import { FaqSection } from "@/components/ui/faq-section";
 
 export const revalidate = 60;
 
@@ -22,6 +29,46 @@ type Props = {
     slug: string;
   }>;
 };
+
+// Страницы направлений собираются заранее, новые подхватываются по ISR.
+export async function generateStaticParams() {
+  try {
+    const slugs = await getDirectionSlugs();
+    return slugs.map((slug) => ({ slug }));
+  } catch {
+    // База недоступна на сборке — страницы отрисуются по запросу.
+    return [];
+  }
+}
+
+// Без этого все направления наследовали заголовок и описание из корневого
+// layout: в выдаче и при шаринге страницы выглядели одинаково.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const direction = await getDirectionBySlug(slug);
+  if (!direction) return {};
+
+  const description =
+    direction.heroDescription || direction.description || undefined;
+  const url = `/directions/${slug}`;
+
+  return {
+    title: direction.title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: direction.title,
+      description,
+      url,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: direction.title,
+      description,
+    },
+  };
+}
 
 export default async function DirectionPage({ params }: Props) {
   const { slug } = await params;
@@ -34,8 +81,11 @@ export default async function DirectionPage({ params }: Props) {
 
   const relatedDoctor = await getLeadByDirection(slug);
 
-  const [allCases, dirLabel, allReviews, team] = await Promise.all([
-    getAllCases(),
+  // Кейсы направления: фильтр и лимит в SQL. Раньше читались все
+  // опубликованные кейсы целиком (вместе с content_blocks) и отсеивались в JS.
+  // Больше четырёх ни одна раскладка не показывает.
+  const [directionCases, dirLabel, allReviews, team] = await Promise.all([
+    getCasesForCards({ directionSlug: slug, limit: 4 }),
     getDirectionLabelMap(),
     getApprovedReviews(),
     getTeamMembers(),
@@ -43,7 +93,6 @@ export default async function DirectionPage({ params }: Props) {
 
   // Кейсы направления: 3 на телефоне и десктопе, 4 на планшете.
   // Остальные — по кнопке на /cases с фильтром.
-  const directionCases = allCases.filter((item) => item.directionSlug === slug);
   const relatedCases = directionCases.slice(0, 3);
   const tabletCases = directionCases.slice(0, 4);
 
@@ -335,40 +384,9 @@ export default async function DirectionPage({ params }: Props) {
             </div>
           ) : null}
 
-          {/* Частые вопросы — тоже без внешнего контейнера */}
-          {/* Частые вопросы — без внешнего контейнера.
-              От 834px (iPad Pro портрет) ограничиваем ширину: строка ответа
-              в 1200px — это ~150 символов, читается тяжело. */}
-          <div className="mx-auto w-full min-[834px]:max-w-2xl lg:max-w-4xl xl:max-w-5xl">
-            <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
-              Частые вопросы
-            </h2>
-
-            <div className="mt-6 space-y-4">
-              {direction.faq.map((q) => (
-                <details
-                  key={q.question}
-                  className="group rounded-2xl border border-[var(--color-gray-200)] bg-white px-5 py-4"
-                >
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left">
-                    <span className="text-sm font-medium leading-6 text-[var(--color-navy)] sm:text-base sm:leading-7">
-                      {q.question}
-                    </span>
-
-                    <span className="shrink-0 text-[var(--color-gray-400)] transition group-open:rotate-45">
-                      +
-                    </span>
-                  </summary>
-
-                  <div className="pt-4">
-                    <p className="text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7">
-                      {q.answer}
-                    </p>
-                  </div>
-                </details>
-              ))}
-            </div>
-          </div>
+          {/* Частые вопросы — общий компонент, он же отдаёт разметку FAQPage.
+              Разметка была продублирована со страницей курса; теперь одно место. */}
+          <FaqSection items={direction.faq} />
 
           <div className="rounded-[28px] bg-[var(--color-navy)] px-5 py-8 text-white sm:px-6 sm:py-10 md:px-10 md:py-12">
             <div className="max-w-3xl">

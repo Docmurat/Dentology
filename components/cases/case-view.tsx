@@ -1,3 +1,4 @@
+// components/cases/case-view.tsx
 import Image from "next/image";
 import Link from "next/link";
 import { SiteShell } from "@/components/layout/site-shell";
@@ -119,6 +120,14 @@ export function CaseView({
             ) : null}
 
             <div className="space-y-10">
+              {/* Карточки врача нет, но кейс помнит автора: показываем имя
+                  из снимка без ссылки — вести на 404 хуже, чем дать текст. */}
+              {!doctor && item.doctorName ? (
+                <p className="text-sm font-medium text-[var(--color-navy-secondary)]">
+                  Автор случая — {item.doctorName}
+                </p>
+              ) : null}
+
               {item.doctorWords ? (
                 <figure className="hidden min-w-0 border-l-2 border-[var(--color-teal)] pl-4 sm:pl-6 lg:block">
                   <span
