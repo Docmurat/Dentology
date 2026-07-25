@@ -1,7 +1,7 @@
 // app/admin/reviews/page.tsx
 import Link from "next/link";
 import { query } from "@/lib/db";
-import { getTeamMembers } from "@/lib/team";
+import { getTeamMembersAll } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
 import {
   approveReview,
@@ -253,7 +253,9 @@ export default async function AdminReviewsPage() {
        from reviews order by created_at desc`
   );
 
-  const team = await getTeamMembers();
+  // Со всеми, включая архивных: иначе у отзывов архивного врача
+  // вместо имени осталось бы пусто.
+  const team = await getTeamMembersAll();
   const doctorName = new Map(team.map((d) => [d.slug, d.name]));
 
   // Направления берём из базы, а не из фиксированного списка,

@@ -1,8 +1,9 @@
+// app/admin/education/[slug]/edit/page.tsx
 import { notFound } from "next/navigation";
 import { CourseForm } from "@/components/admin/course-form";
 import { updateCourse } from "../../actions";
 import { getCourseBySlug } from "@/lib/courses";
-import { getTeamMembers } from "@/lib/team";
+import { getDoctors } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
 
 export const dynamic = "force-dynamic";
@@ -16,10 +17,11 @@ export default async function EditCoursePage({
   const course = await getCourseBySlug(slug);
   if (!course) notFound();
 
-  const team = await getTeamMembers();
-  const doctors = team
-    .filter((m) => m.category === "doctor")
-    .map((m) => ({ slug: m.slug, name: m.name }));
+  // Только врачи: спикером курса ассистент быть не может.
+  const doctors = (await getDoctors()).map((m) => ({
+    slug: m.slug,
+    name: m.name,
+  }));
   const directions = (await getDirections()).map((d) => ({
     slug: d.slug,
     label: d.title,

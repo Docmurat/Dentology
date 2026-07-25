@@ -1,11 +1,15 @@
-import { teamData } from "@/lib/team-data";
+// app/admin/cases/new/page.tsx
 import { CaseForm } from "@/components/admin/case-form";
+import { getDoctors } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewCasePage() {
-  const doctors = teamData.map((doctor) => ({
+  // Раньше здесь стоял teamData — статический демо-массив из lib/team-data.ts.
+  // В списке врачей показывались пять выдуманных карточек вместо реальных,
+  // и выбранный слаг мог не существовать в базе. Читаем из базы.
+  const doctors = (await getDoctors()).map((doctor) => ({
     slug: doctor.slug,
     name: doctor.name,
     position: doctor.position,

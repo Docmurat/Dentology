@@ -13,6 +13,7 @@ type CaseRow = {
   cover_image: string | null;
   image_before: string | null;
   image_after: string | null;
+  show_before_after: boolean | null;
   protocol_images: string[] | null;
   situation: string;
   diagnostics: string | null;
@@ -33,6 +34,7 @@ function mapRow(row: CaseRow): CaseItem {
     coverImage: row.cover_image ?? undefined,
     imageBefore: row.image_before ?? undefined,
     imageAfter: row.image_after ?? undefined,
+    showBeforeAfter: row.show_before_after ?? true,
     protocolImages: row.protocol_images ?? undefined,
     situation: row.situation,
     diagnostics: row.diagnostics ?? "",
@@ -45,7 +47,7 @@ function mapRow(row: CaseRow): CaseItem {
 }
 
 const COLUMNS =
-  "slug, title, excerpt, direction_slug, doctor_slug, doctor_name, cover_image, image_before, image_after, protocol_images, situation, diagnostics, decision, result, doctor_words, content_blocks";
+  "slug, title, excerpt, direction_slug, doctor_slug, doctor_name, cover_image, image_before, image_after, show_before_after, protocol_images, situation, diagnostics, decision, result, doctor_words, content_blocks";
 
 // Условие видимости в списках: опубликован и не в архиве.
 // Архивный кейс остаётся доступен по прямой ссылке — так внешние ссылки
@@ -202,6 +204,7 @@ function mapCardRow(row: CaseCardRow): CaseItem {
     coverImage: row.cover_image ?? undefined,
     imageBefore: undefined,
     imageAfter: undefined,
+    showBeforeAfter: false,
     protocolImages: undefined,
     situation: "",
     diagnostics: "",

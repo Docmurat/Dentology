@@ -1,3 +1,4 @@
+// components/team/team-card.tsx
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { MemberPhoto } from "@/components/team/member-photo";
@@ -14,10 +15,20 @@ export function TeamCard({ member, compact = false }: TeamCardProps) {
     ? "Главный врач"
     : member.shortRole || member.position;
 
+  // У персонала своей страницы нет: карточка показывается на странице
+  // «Команда» после врачей, но кликать по ней некуда — внутри всё равно
+  // не будет ни описания, ни кейсов, ни курсов.
+  const isClickable = member.category === "doctor";
+  const description = member.excerpt || member.description;
+
   return (
     <Card
       id={member.slug}
-      className="group relative flex h-full flex-col overflow-hidden p-0 transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-[var(--color-teal)]"
+      className={`relative flex h-full flex-col overflow-hidden p-0 ${
+        isClickable
+          ? "group transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-[var(--color-teal)]"
+          : ""
+      }`}
     >
       <MemberPhoto src={member.image} name={member.name} />
 
@@ -38,22 +49,26 @@ export function TeamCard({ member, compact = false }: TeamCardProps) {
           {member.position}
         </p>
 
-        <p
-          className={`mt-2 text-sm leading-6 text-[var(--color-gray-700)] ${
-            compact ? "line-clamp-2" : "line-clamp-4"
-          }`}
-        >
-          {member.excerpt || member.description}
-        </p>
-
-        <div className={`mt-auto ${compact ? "pt-4" : "pt-5"}`}>
-          <Link
-            href={`/team/${member.slug}`}
-            className="inline-flex text-sm font-medium text-[var(--color-navy-secondary)] after:absolute after:inset-0 group-hover:text-[var(--color-navy)] group-hover:underline focus:outline-none"
+        {description ? (
+          <p
+            className={`mt-2 text-sm leading-6 text-[var(--color-gray-700)] ${
+              compact ? "line-clamp-2" : "line-clamp-4"
+            }`}
           >
-            Подробнее о враче
-          </Link>
-        </div>
+            {description}
+          </p>
+        ) : null}
+
+        {isClickable ? (
+          <div className={`mt-auto ${compact ? "pt-4" : "pt-5"}`}>
+            <Link
+              href={`/team/${member.slug}`}
+              className="inline-flex text-sm font-medium text-[var(--color-navy-secondary)] after:absolute after:inset-0 group-hover:text-[var(--color-navy)] group-hover:underline focus:outline-none"
+            >
+              Подробнее о враче
+            </Link>
+          </div>
+        ) : null}
       </div>
     </Card>
   );

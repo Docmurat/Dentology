@@ -1,3 +1,4 @@
+// lib/auth.ts
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -40,12 +41,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const ok = await bcrypt.compare(password, profile.password_hash);
         if (!ok) return null;
 
+        // Доступ к заявкам и отзывам приходит из двух мест: роль
+        // «moderator» у самой учётной записи ИЛИ галочка в карточке
+        // команды, к которой аккаунт привязан. Так модератором можно
+        // сделать и врача, и ассистента, не меняя им роль.
+        let isModerator = profile.role === "moderator";
+        if (!isModerator && profile.doctor_slug) {
+          const card = await queryOne<{ is_moderator: boolean | null }>(
+            `select is_moderator from team_members where slug = $1`,
+            [profile.doctor_slug]
+          );
+          isModerator = Boolean(card?.is_moderator);
+        }
+
         return {
           id: profile.id,
           email: profile.email,
           name: profile.full_name ?? profile.email,
           role: profile.role,
           doctorSlug: profile.doctor_slug,
+          isModerator,
         };
       },
     }),

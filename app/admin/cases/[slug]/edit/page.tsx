@@ -1,7 +1,8 @@
+// app/admin/cases/[slug]/edit/page.tsx
 import { notFound } from "next/navigation";
 import { CaseForm } from "@/components/admin/case-form";
 import { getCaseBySlugAuthed } from "@/lib/cases";
-import { getTeamMembers } from "@/lib/team";
+import { getDoctors } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +16,8 @@ export default async function AdminEditCasePage({
   const item = await getCaseBySlugAuthed(slug);
   if (!item) notFound();
 
-  const team = await getTeamMembers();
-  const doctors = team.map((d) => ({
+  // Только врачи: ассистент клинический случай не ведёт.
+  const doctors = (await getDoctors()).map((d) => ({
     slug: d.slug,
     name: d.name,
     position: d.position,

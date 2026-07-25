@@ -1,3 +1,4 @@
+// components/admin/review-edit-form.tsx
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
@@ -15,6 +16,7 @@ export function ReviewEditForm({
   review,
   doctors,
   directions,
+  backTo = "/admin/reviews",
 }: {
   review: {
     id: string;
@@ -34,6 +36,8 @@ export function ReviewEditForm({
   };
   doctors: { slug: string; name: string }[];
   directions: { slug: string; label: string }[];
+  /** Куда вернуться после сохранения. У модератора свой раздел. */
+  backTo?: string;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<State, FormData>(
@@ -46,10 +50,10 @@ export function ReviewEditForm({
 
   useEffect(() => {
     if (state.ok) {
-      router.push("/admin/reviews");
+      router.push(backTo);
       router.refresh();
     }
-  }, [state.ok, router]);
+  }, [state.ok, router, backTo]);
 
   const toggle = (slug: string) =>
     setDirs((prev) =>
@@ -235,7 +239,7 @@ export function ReviewEditForm({
         </button>
         <button
           type="button"
-          onClick={() => router.push("/admin/reviews")}
+          onClick={() => router.push(backTo)}
           className="text-sm text-[var(--color-gray-600)] hover:text-[var(--color-navy)]"
         >
           Отмена

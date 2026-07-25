@@ -1,6 +1,13 @@
+// lib/auth.config.ts
 import type { NextAuthConfig } from "next-auth";
 
-export type UserRole = "admin" | "editor" | "doctor" | "patient";
+export type UserRole =
+  | "admin"
+  | "editor"
+  | "doctor"
+  | "patient"
+  // Обрабатывает заявки и отзывы. Своей карточки на сайте не имеет.
+  | "moderator";
 
 // Лёгкая конфигурация без обращения к БД и bcrypt — её использует middleware,
 // который выполняется в Edge-среде (там нет драйвера PostgreSQL).
@@ -18,10 +25,14 @@ export const authConfig = {
           id?: string;
           role?: UserRole;
           doctorSlug?: string | null;
+          isModerator?: boolean;
         };
         token.uid = u.id;
         token.role = u.role;
         token.doctorSlug = u.doctorSlug ?? null;
+        // Доступ к заявкам и отзывам. Считается один раз при входе:
+        // иначе пришлось бы ходить в базу на каждый запрос.
+        token.isModerator = Boolean(u.isModerator);
       }
       return token;
     },
@@ -32,6 +43,9 @@ export const authConfig = {
         (session.user as { role?: UserRole }).role = token.role as UserRole;
         (session.user as { doctorSlug?: string | null }).doctorSlug =
           (token.doctorSlug as string | null) ?? null;
+        (session.user as { isModerator?: boolean }).isModerator = Boolean(
+          token.isModerator
+        );
       }
       return session;
     },

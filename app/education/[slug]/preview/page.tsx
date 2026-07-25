@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CourseView } from "@/components/education/course-view";
-import { getCourseBySlugAdmin } from "@/lib/courses";
+import { getCourseBySlugAdmin, canEditCourse } from "@/lib/courses";
 import { getCurrentUser } from "@/lib/auth-guards";
 
 // Предпросмотр всегда свежий и всегда персональный: нужно знать,
@@ -26,14 +26,21 @@ export default async function CoursePreviewPage({ params }: Props) {
   if (!course) notFound();
 
   const user = await getCurrentUser();
-  const isStaff = user ? ["admin", "editor"].includes(user.role) : false;
-  const isAuthor = Boolean(
-    user && course.createdBy !== null && course.createdBy === user.id
-  );
-
   // Посторонним отдаём 404, а не 403: существование черновика
   // не должно подтверждаться.
-  if (!isStaff && !isAuthor) notFound();
+  if (!user) notFound();
+
+  const isStaff = ["admin", "editor"].includes(user.role);
+
+  // Владение: курс мой, если я его создал ИЛИ он привязан к моей карточке
+  // врача. Раньше здесь сравнивался только createdBy, и врач, назначенный
+  // спикером, получал 404 на предпросмотре собственного черновика.
+  const allowed = await canEditCourse(slug, {
+    id: user.id,
+    role: user.role,
+    doctorSlug: user.doctorSlug,
+  });
+  if (!allowed) notFound();
 
   return (
     <CourseView

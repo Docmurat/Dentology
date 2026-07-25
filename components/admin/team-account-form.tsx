@@ -1,3 +1,4 @@
+// components/admin/team-account-form.tsx
 "use client";
 
 import { useActionState } from "react";
@@ -44,8 +45,9 @@ export function TeamAccountForm({
       </div>
 
       <p className="mt-1 text-xs text-[var(--color-gray-500)]">
-        Логин и пароль для входа этого сотрудника как врача. Менять может только
-        администратор.
+        Логин и пароль для входа. Роль назначается по карточке: врач попадает
+        в кабинет врача, модератор — в раздел заявок и отзывов. Менять может
+        только администратор.
       </p>
 
       <form action={action} className="mt-4 space-y-4">

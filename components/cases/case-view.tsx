@@ -92,7 +92,10 @@ export function CaseView({
 
       <Section>
         <div className="grid gap-8 [&>*]:min-w-0">
-          {item.imageBefore || item.imageAfter ? (
+          {/* Блок показываем, только когда он включён И обе картинки на
+              месте. Раньше хватало любой одной, и на странице оставался
+              наполовину пустой контейнер сравнения. */}
+          {item.showBeforeAfter !== false && item.imageBefore && item.imageAfter ? (
             <Card>
               <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
                 Визуальная динамика

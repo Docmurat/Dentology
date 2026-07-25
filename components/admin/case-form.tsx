@@ -1,3 +1,4 @@
+// components/admin/case-form.tsx
 "use client";
 import { ContentBlocksEditor } from "@/components/admin/content-blocks-editor";
 import { CropField } from "@/components/admin/crop-field";
@@ -7,6 +8,7 @@ import { createCase, updateCase } from "@/app/admin/cases/actions";
 import { slugify } from "@/lib/slugify";
 import { uploadImageBlob } from "@/lib/upload-client";
 import type { CaseItem } from "@/lib/cases-data";
+import { CASE_ERRORS } from "@/lib/case-validation";
 
 type DoctorOption = { slug: string; name: string; position: string };
 type CaseAction = (
@@ -68,6 +70,25 @@ export function CaseForm({
 
   const [baAspect, setBaAspect] = useState<number | "free" | null>(null);
 
+  // Блок «до / после» можно выключить: не в каждом случае есть пара
+  // сопоставимых снимков. По умолчанию включён — так же, как у кейсов,
+  // созданных до появления переключателя.
+  const [showBeforeAfter, setShowBeforeAfter] = useState(
+    initial?.showBeforeAfter ?? true
+  );
+
+  // Картинка считается загруженной, если её только что обрезали ИЛИ она
+  // уже была у кейса и её не удалили. Значения нужны и при отправке,
+  // и в разметке — для живого предупреждения под полями.
+  const hasCover =
+    Boolean(coverBlob) || (Boolean(initial?.coverImage) && !coverRemoved);
+  const hasBefore =
+    Boolean(beforeBlob) || (Boolean(initial?.imageBefore) && !beforeRemoved);
+  const hasAfter =
+    Boolean(afterBlob) || (Boolean(initial?.imageAfter) && !afterRemoved);
+  const beforeAfterIncomplete =
+    showBeforeAfter && (!hasBefore || !hasAfter);
+
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +103,20 @@ export function CaseForm({
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+
+    // Проверяем ДО загрузки в хранилище: иначе снимки уедут в бакет,
+    // сохранение отвалится, и там останутся файлы от несохранённого кейса.
+    if (!hasCover) {
+      setError(CASE_ERRORS.cover);
+      setSubmitting(false);
+      return;
+    }
+
+    if (beforeAfterIncomplete) {
+      setError(CASE_ERRORS.beforeAfter);
+      setSubmitting(false);
+      return;
+    }
 
     const raw = new FormData(e.currentTarget);
     const finalSlug = isEdit
@@ -139,6 +174,7 @@ export function CaseForm({
       payload.set("coverImage", coverUrl);
       payload.set("imageBefore", beforeUrl);
       payload.set("imageAfter", afterUrl);
+      payload.set("showBeforeAfter", showBeforeAfter ? "on" : "");
 
       const result = isEdit
         ? await updateAction(payload)
@@ -167,42 +203,83 @@ export function CaseForm({
           Изображения
         </p>
 
+        {/* Поля «до / после» появляются только при включённом блоке —
+            иначе они занимают место и провоцируют загрузить одну картинку
+            из пары. */}
         <div className="grid gap-6 sm:grid-cols-3">
           <CropField
-            label="Обложка (3:2)"
+            label="Обложка (3:2) *"
             aspect={COVER_ASPECT}
             existingUrl={initial?.coverImage}
             onCropped={(blob) => setCoverBlob(blob)}
             onRemovedToggle={setCoverRemoved}
           />
 
-          <CropField
-            label="Фото «До»"
-            aspect={baAspect}
-            existingUrl={initial?.imageBefore}
-            onCropped={(blob, a) => {
-              setBeforeBlob(blob);
-              setBaAspect(a);
-            }}
-            onRemovedToggle={setBeforeRemoved}
-          />
+          {showBeforeAfter ? (
+            <>
+              <CropField
+                label="Фото «До» *"
+                aspect={baAspect}
+                existingUrl={initial?.imageBefore}
+                onCropped={(blob, a) => {
+                  setBeforeBlob(blob);
+                  setBaAspect(a);
+                }}
+                onRemovedToggle={setBeforeRemoved}
+              />
 
-          <CropField
-            label="Фото «После»"
-            aspect={baAspect}
-            existingUrl={initial?.imageAfter}
-            onCropped={(blob, a) => {
-              setAfterBlob(blob);
-              setBaAspect(a);
-            }}
-            onRemovedToggle={setAfterRemoved}
-          />
+              <CropField
+                label="Фото «После» *"
+                aspect={baAspect}
+                existingUrl={initial?.imageAfter}
+                onCropped={(blob, a) => {
+                  setAfterBlob(blob);
+                  setBaAspect(a);
+                }}
+                onRemovedToggle={setAfterRemoved}
+              />
+            </>
+          ) : null}
         </div>
 
-        <p className="text-xs text-[var(--color-gray-500)]">
-          Формат «до/после» задаёт та картинка, которую обрежете первой; вторая
-          наследует его — у неё можно поменять только область кропа.
-        </p>
+        <label className="flex items-start gap-2 text-sm text-[var(--color-navy)]">
+          <input
+            type="checkbox"
+            checked={showBeforeAfter}
+            onChange={(e) => setShowBeforeAfter(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            Показывать блок «до / после»
+            <span className="mt-0.5 block text-xs text-[var(--color-gray-500)]">
+              Нужны оба снимка. Выключите, если в этом случае пары нет —
+              иначе на странице останется наполовину пустой блок сравнения.
+            </span>
+          </span>
+        </label>
+
+        {showBeforeAfter ? (
+          <>
+            {/* Предупреждение видно сразу, а не в момент отправки. */}
+            {beforeAfterIncomplete ? (
+              <p
+                role="status"
+                className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800"
+              >
+                {!hasBefore && !hasAfter
+                  ? "Загрузите оба снимка — «До» и «После». Или выключите блок, если пары нет."
+                  : !hasAfter
+                    ? "Не загружено фото «После». Добавьте его или выключите блок — сохранить так не получится."
+                    : "Не загружено фото «До». Добавьте его или выключите блок — сохранить так не получится."}
+              </p>
+            ) : null}
+
+            <p className="text-xs text-[var(--color-gray-500)]">
+              Формат «до/после» задаёт та картинка, которую обрежете первой;
+              вторая наследует его — у неё можно поменять только область кропа.
+            </p>
+          </>
+        ) : null}
       </div>
 
       <div className={cardCls}>
@@ -315,8 +392,15 @@ export function CaseForm({
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          disabled={submitting}
-          className="rounded-lg bg-[var(--color-navy)] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+          disabled={submitting || !hasCover || beforeAfterIncomplete}
+          className="rounded-lg bg-[var(--color-navy)] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          title={
+            !hasCover
+              ? CASE_ERRORS.cover
+              : beforeAfterIncomplete
+                ? CASE_ERRORS.beforeAfter
+                : undefined
+          }
         >
           {submitting
             ? status || "Сохранение…"

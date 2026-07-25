@@ -6,6 +6,7 @@ import { query, queryOne } from "@/lib/db";
 import { buildInsert, buildUpdate, pgErrorCode } from "@/lib/sql-helpers";
 import { requireDoctor } from "@/lib/auth-guards";
 import { canEditCase } from "@/lib/cases";
+import { validateCaseImages } from "@/lib/case-validation";
 import { slugify } from "@/lib/slugify";
 
 function parseBlocks(value: FormDataEntryValue | null) {
@@ -26,6 +27,7 @@ function readFields(formData: FormData) {
     cover_image: String(formData.get("coverImage") || "") || null,
     image_before: String(formData.get("imageBefore") || "") || null,
     image_after: String(formData.get("imageAfter") || "") || null,
+    show_before_after: formData.get("showBeforeAfter") === "on",
     doctor_words: String(formData.get("doctorWords") || "") || null,
     content_blocks: parseBlocks(formData.get("contentBlocks")),
   };
@@ -69,6 +71,11 @@ export async function createDoctorCase(
   const fields = readFields(formData);
   if (!fields.title) return { error: "Заголовок обязателен" };
 
+  // Те же правила, что проверяет форма. Дублируем на сервере: разметку
+  // можно обойти, а кейс без обложки ломает вид всех списков.
+  const imageError = validateCaseImages(fields);
+  if (imageError) return { error: imageError };
+
   const slug =
     slugify(String(formData.get("slug") || "")) ||
     slugify(fields.title) ||
@@ -107,6 +114,9 @@ export async function updateDoctorCase(
 
   const fields = readFields(formData);
   if (!fields.title) return { error: "Заголовок обязателен" };
+
+  const imageError = validateCaseImages(fields);
+  if (imageError) return { error: imageError };
 
   const existing = await queryOne<{ published: boolean }>(
     `select published from cases where slug = $1`,

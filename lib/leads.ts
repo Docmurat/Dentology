@@ -25,6 +25,8 @@ export type Lead = {
   notifiedTelegram: boolean;
   createdAt: string;
   handledAt: string | null;
+  /** Кто последним менял статус — имя из профиля, иначе почта. */
+  handledByName: string | null;
 };
 
 type Row = {
@@ -41,6 +43,8 @@ type Row = {
   notified_telegram: boolean;
   created_at: string;
   handled_at: string | null;
+  handled_by_name: string | null;
+  handled_by_email: string | null;
 };
 
 function mapRow(row: Row): Lead {
@@ -60,11 +64,19 @@ function mapRow(row: Row): Lead {
     notifiedTelegram: row.notified_telegram,
     createdAt: row.created_at,
     handledAt: row.handled_at,
+    handledByName: row.handled_by_name || row.handled_by_email || null,
   };
 }
 
-const COLUMNS =
-  "id, name, phone, contact_method, message, context, status, source_ip, user_agent, notified_email, notified_telegram, created_at, handled_at";
+// Имя обработавшего берём из profiles: в самой заявке лежит только id.
+const SELECT = `
+  select l.id, l.name, l.phone, l.contact_method, l.message, l.context,
+         l.status, l.source_ip, l.user_agent, l.notified_email,
+         l.notified_telegram, l.created_at, l.handled_at,
+         p.full_name as handled_by_name,
+         p.email     as handled_by_email
+    from leads l
+    left join profiles p on p.id = l.handled_by`;
 
 export type NewLead = {
   id: string;
@@ -116,12 +128,10 @@ export async function markLeadNotified(
 export async function getLeads(status?: LeadStatus): Promise<Lead[]> {
   const rows = status
     ? await query<Row>(
-        `select ${COLUMNS} from leads where status = $1 order by created_at desc limit 500`,
+        `${SELECT} where l.status = $1 order by l.created_at desc limit 500`,
         [status]
       )
-    : await query<Row>(
-        `select ${COLUMNS} from leads order by created_at desc limit 500`
-      );
+    : await query<Row>(`${SELECT} order by l.created_at desc limit 500`);
   return rows.map(mapRow);
 }
 

@@ -1,7 +1,8 @@
+// app/doctor/cases/new/page.tsx
 import { redirect } from "next/navigation";
 import { CaseForm } from "@/components/admin/case-form";
 import { createDoctorCase } from "../../actions";
-import { getTeamMembers } from "@/lib/team";
+import { getDoctors } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
 import { getCurrentUser } from "@/lib/auth-guards";
 
@@ -11,8 +12,8 @@ export default async function DoctorNewCasePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/admin/login");
 
-  const team = await getTeamMembers();
-  const doctors = team.map((d) => ({
+  // Только врачи: ассистент клинический случай не ведёт.
+  const doctors = (await getDoctors()).map((d) => ({
     slug: d.slug,
     name: d.name,
     position: d.position,

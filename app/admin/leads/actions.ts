@@ -3,15 +3,22 @@
 
 import { revalidatePath } from "next/cache";
 import { query, queryOne } from "@/lib/db";
-import { requireStaff, requireAdmin } from "@/lib/auth-guards";
+import { requireModerator, requireAdmin } from "@/lib/auth-guards";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads";
 
 function isStatus(value: string): value is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(value);
 }
 
+function revalidateLeads() {
+  revalidatePath("/admin/leads");
+  revalidatePath("/admin");
+  revalidatePath("/moderator");
+}
+
 export async function setLeadStatusAction(formData: FormData) {
-  const user = await requireStaff();
+  // Модератор — тот, ради кого раздел и существует.
+  const user = await requireModerator();
 
   const id = String(formData.get("id") || "");
   const status = String(formData.get("status") || "");
@@ -28,8 +35,7 @@ export async function setLeadStatusAction(formData: FormData) {
     [status, user.id, id]
   );
 
-  revalidatePath("/admin/leads");
-  revalidatePath("/admin");
+  revalidateLeads();
 }
 
 /**
@@ -57,6 +63,5 @@ export async function deleteLead(formData: FormData) {
 
   await query(`delete from leads where id = $1`, [id]);
 
-  revalidatePath("/admin/leads");
-  revalidatePath("/admin");
+  revalidateLeads();
 }

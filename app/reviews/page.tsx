@@ -1,3 +1,4 @@
+// app/reviews/page.tsx
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
@@ -9,7 +10,7 @@ import {
   getCourseReviewsByDoctor,
 } from "@/lib/reviews";
 import { getDirections, getDirectionLabelMap } from "@/lib/directions-db";
-import { getTeamMembers, getTeamMemberBySlug } from "@/lib/team";
+import { getDoctors, getTeamMemberBySlug } from "@/lib/team";
 import { getCourseBySlug } from "@/lib/courses";
 import { ReviewsPageContent } from "@/components/reviews/reviews-page-content";
 import { ReviewForm } from "@/components/reviews/review-form";
@@ -56,7 +57,7 @@ export default async function ReviewsPage({
     courseOwn,
     courseByDoctor,
     patientReviews,
-    team,
+    doctors,
     doctor,
     allDirections,
     labelMap,
@@ -71,7 +72,8 @@ export default async function ReviewsPage({
       : doctorSlug
         ? getReviewsByDoctor(doctorSlug)
         : getApprovedReviews(),
-    getTeamMembers(),
+    // Только врачи: в форме отзыва ассистента выбирать не из чего.
+    getDoctors(),
     doctorSlug ? getTeamMemberBySlug(doctorSlug) : Promise.resolve(null),
     getDirections(),
     getDirectionLabelMap(),
@@ -124,10 +126,6 @@ export default async function ReviewsPage({
     .map((slug) => ({ slug, label: labelMap[slug] ?? slug }));
   const directions = [...activeDirections, ...archivedDirections];
 
-  const doctors = team
-    .filter((m) => m.category === "doctor")
-    .map((m) => ({ slug: m.slug, name: m.name }));
-
   // Переход со страницы направления: фильтр предвыбран, но кнопки остаются —
   // можно посмотреть отзывы и по другим направлениям.
   const preselected =
@@ -156,7 +154,7 @@ export default async function ReviewsPage({
         {/* На телефоне кнопка на всю ширину, от 640px — справа, как было */}
         <div className="mb-6 flex sm:mb-8 sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
           <ReviewForm
-            doctors={doctors}
+            doctors={doctors.map((m) => ({ slug: m.slug, name: m.name }))}
             courseSlug={courseSlug}
             variant={courseSlug ? "gold" : "teal"}
           />

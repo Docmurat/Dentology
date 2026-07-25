@@ -25,11 +25,33 @@ function readStats(formData: FormData) {
 }
 
 function readFields(formData: FormData) {
-  const isLead = formData.get("isLead") === "on";
+  const category =
+    String(formData.get("category") || "doctor") === "staff"
+      ? "staff"
+      : "doctor";
+  const isDoctor = category === "doctor";
+
+  // Тип записи только у персонала. У врачей поле пустое.
+  const rawKind = String(formData.get("staffKind") || "");
+  const staffKind = isDoctor
+    ? null
+    : rawKind === "moderator"
+      ? "moderator"
+      : "assistant";
+
+  // Доступ к заявкам и отзывам. У типа «Модератор» включён всегда:
+  // без него учётная запись не имеет смысла.
+  const isModerator =
+    staffKind === "moderator" || formData.get("isModerator") === "on";
+
+  // Врачебные пометки к персоналу не применяются, даже если поле как-то
+  // просочилось в запрос: форма их не показывает, но полагаться только
+  // на разметку нельзя.
+  const isLead = isDoctor && formData.get("isLead") === "on";
   const leadDirection = String(formData.get("leadDirectionSlug") || "") || null;
-  const directionSlugs = (formData.getAll("directionSlugs") as string[]).filter(
-    Boolean
-  );
+  const directionSlugs = isDoctor
+    ? (formData.getAll("directionSlugs") as string[]).filter(Boolean)
+    : [];
 
   return {
     name: String(formData.get("name") || "").trim(),
@@ -39,26 +61,31 @@ function readFields(formData: FormData) {
     excerpt: String(formData.get("excerpt") || "").trim(),
     description: String(formData.get("description") || "").trim(),
     image: String(formData.get("image") || "") || null,
-    category: (String(formData.get("category") || "doctor") === "staff"
-      ? "staff"
-      : "doctor") as "doctor" | "staff",
-    is_chief: formData.get("isChief") === "on",
+    category: category as "doctor" | "staff",
+    staff_kind: staffKind,
+    is_moderator: isModerator,
+    is_chief: isDoctor && formData.get("isChief") === "on",
     is_lead: isLead,
     lead_direction_slug: isLead ? leadDirection : null,
     direction_slugs: directionSlugs,
     sort_order: Number(formData.get("sortOrder") || 0) || 0,
-    stats: readStats(formData),
-    focus_points: parseLines(String(formData.get("focusPoints") || "")),
-    visit_points: parseLines(String(formData.get("visitPoints") || "")),
+    stats: isDoctor ? readStats(formData) : [],
+    focus_points: isDoctor
+      ? parseLines(String(formData.get("focusPoints") || ""))
+      : [],
+    visit_points: isDoctor
+      ? parseLines(String(formData.get("visitPoints") || ""))
+      : [],
     quote: String(formData.get("quote") || "").trim() || null,
     lead_image: String(formData.get("leadImage") || "") || null,
     lead_quote: String(formData.get("leadQuote") || "").trim() || null,
     doctor_quote: String(formData.get("doctorQuote") || "").trim() || null,
-    courses: parseLines(String(formData.get("courses") || "")),
+    courses: isDoctor ? parseLines(String(formData.get("courses") || "")) : [],
     diploma_image: String(formData.get("diplomaImage") || "") || null,
     name_genitive: String(formData.get("nameGenitive") || "").trim() || null,
-    show_on_homepage: formData.get("showOnHomepage") === "on",
-    is_speaker: formData.get("isSpeaker") === "on",
+    // На главную выводятся только врачи.
+    show_on_homepage: isDoctor && formData.get("showOnHomepage") === "on",
+    is_speaker: isDoctor && formData.get("isSpeaker") === "on",
   };
 }
 

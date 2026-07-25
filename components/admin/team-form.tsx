@@ -1,3 +1,4 @@
+// components/admin/team-form.tsx
 "use client";
 
 import { useState } from "react";
@@ -6,7 +7,7 @@ import { createTeamMember, updateTeamMember } from "@/app/admin/team/actions";
 import { CropField } from "@/components/admin/crop-field";
 import { slugify } from "@/lib/slugify";
 import { uploadImageBlob } from "@/lib/upload-client";
-import type { TeamMember } from "@/lib/team-data";
+import type { TeamMember, TeamCategory, StaffKind } from "@/lib/team-data";
 
 const labelCls = "text-sm font-medium text-[var(--color-navy)]";
 const inputCls =
@@ -35,6 +36,18 @@ export function TeamForm({
 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Тип карточки определяет всё остальное: какие поля показывать,
+  // попадёт ли человек на страницу команды и будет ли карточка кликабельной.
+  const [category, setCategory] = useState<TeamCategory>(
+    initial?.category ?? "doctor"
+  );
+  const [staffKind, setStaffKind] = useState<StaffKind>(
+    initial?.staffKind ?? "assistant"
+  );
+  const [isModerator, setIsModerator] = useState<boolean>(
+    initial?.isModerator ?? false
+  );
+
   const [isLead, setIsLead] = useState<boolean>(initial?.isLead ?? false);
   const [isChief, setIsChief] = useState<boolean>(initial?.isChief ?? false);
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null);
@@ -43,6 +56,21 @@ export function TeamForm({
   const [diplomaRemoved, setDiplomaRemoved] = useState(false);
   const [leadPhotoBlob, setLeadPhotoBlob] = useState<Blob | null>(null);
   const [leadPhotoRemoved, setLeadPhotoRemoved] = useState(false);
+
+  const isDoctor = category === "doctor";
+  const isModeratorOnly = category === "staff" && staffKind === "moderator";
+  const moderatorChecked = isModeratorOnly || isModerator;
+  // Карточка на сайте есть у врача и ассистента, у модератора — нет.
+  const hasPublicCard = isDoctor || !isModeratorOnly;
+
+  function changeCategory(next: TeamCategory) {
+    setCategory(next);
+    // Пометки врача не должны «прилипнуть» к персоналу.
+    if (next === "staff") {
+      setIsChief(false);
+      setIsLead(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -106,277 +134,15 @@ export function TeamForm({
         <input type="hidden" name="originalSlug" value={initial.slug} />
       ) : null}
 
-      {/* Основное */}
-      <div className={cardCls}>
-        <div>
-          <label className={labelCls}>Имя</label>
-          <input
-            name="name"
-            defaultValue={initial?.name}
-            required
-            className={inputCls}
-            placeholder="Мурат Курджиев"
-          />
-        </div>
-
-        <div>
-          <label className={labelCls}>
-            Имя в родительном падеже (для заголовка «Все кейсы …»)
-          </label>
-          <input
-            name="nameGenitive"
-            defaultValue={initial?.nameGenitive ?? ""}
-            className={inputCls}
-            placeholder="Мурата Курджиева"
-          />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelCls}>Должность</label>
-            <input
-              name="position"
-              defaultValue={initial?.position}
-              className={inputCls}
-              placeholder="Врач-имплантолог"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Slug (необязательно)</label>
-            <input
-              name="slug"
-              defaultValue={initial?.slug}
-              className={inputCls}
-              placeholder="сгенерируется из имени"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelCls}>Роль (подпись)</label>
-            <input
-              name="role"
-              defaultValue={initial?.role}
-              className={inputCls}
-              placeholder="Имплантация и реабилитация"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Короткая роль</label>
-            <input
-              name="shortRole"
-              defaultValue={initial?.shortRole}
-              className={inputCls}
-              placeholder="Имплантация"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Тексты */}
-      <div className={cardCls}>
-        <div>
-          <label className={labelCls}>Краткое описание (для карточки)</label>
-          <textarea
-            name="excerpt"
-            defaultValue={initial?.excerpt}
-            rows={2}
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Полное описание (для страницы)</label>
-          <textarea
-            name="description"
-            defaultValue={initial?.description}
-            rows={6}
-            className={inputCls}
-          />
-        </div>
-      </div>
-
-      {/* Фотографии — каждый контекст со своим кропом */}
-      <div className={cardCls}>
-        <p className="text-sm font-semibold text-[var(--color-navy)]">
-          Фотографии
-        </p>
-
-        <div>
-          <label className={labelCls}>
-            Основное фото — страница «Команда» и страница врача (3:4)
-          </label>
-          <div className="mt-2 max-w-[180px]">
-            <CropField
-              label="Основное фото (3:4, вертикальная)"
-              aspect={3 / 4}
-              existingUrl={initial?.image}
-              onCropped={(blob) => setPhotoBlob(blob)}
-              onRemovedToggle={setPhotoRemoved}
-            />
-          </div>
-        </div>
-
-        {isLead ? (
-          <div>
-            <label className={labelCls}>
-              Фото для страницы направления (4:3, горизонтальная)
-            </label>
-            <div className="mt-2 max-w-[260px]">
-              <CropField
-                label="Фото для направления (4:3)"
-                aspect={4 / 3}
-                existingUrl={initial?.leadImage}
-                onCropped={(blob) => setLeadPhotoBlob(blob)}
-                onRemovedToggle={setLeadPhotoRemoved}
-              />
-            </div>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Цитаты — каждый контекст отдельно, чтобы не путаться */}
-      <div className={cardCls}>
-        <p className="text-sm font-semibold text-[var(--color-navy)]">
-          Цитаты
-        </p>
-
-        {isChief ? (
-          <div>
-            <label className={labelCls}>
-              Цитата на странице «Команда» (только главный врач)
-            </label>
-            <textarea
-              name="quote"
-              rows={3}
-              defaultValue={initial?.quote ?? ""}
-              className={inputCls}
-              placeholder="Показывается в блоке главного врача на странице «Команда»"
-            />
-          </div>
-        ) : null}
-
-        <div>
-          <label className={labelCls}>Цитата на странице врача</label>
-          <textarea
-            name="doctorQuote"
-            rows={3}
-            defaultValue={initial?.doctorQuote ?? ""}
-            className={inputCls}
-            placeholder="Показывается на личной странице врача /team/…"
-          />
-        </div>
-
-        {isLead ? (
-          <div>
-            <label className={labelCls}>
-              Цитата на странице направления (ведущий специалист)
-            </label>
-            <textarea
-              name="leadQuote"
-              rows={3}
-              defaultValue={initial?.leadQuote ?? ""}
-              className={inputCls}
-              placeholder="Показывается под фото на странице направления /directions/…"
-            />
-          </div>
-        ) : null}
-      </div>
-
-      {/* Дополнительное образование */}
-      <div className={cardCls}>
-        <div>
-          <label className={labelCls}>
-            Пройденные курсы (по одному на строку: «Название, где пройден»)
-          </label>
-          <textarea
-            name="courses"
-            rows={5}
-            defaultValue={initial?.courses?.join("\n") ?? ""}
-            className={inputCls}
-            placeholder={"Эндодонтия под микроскопом, Москва\nИмплантология, курс, Берлин"}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>
-            Диплом специалиста (кроп 4:3, горизонтально)
-          </label>
-          <div className="mt-2 max-w-[320px]">
-            <CropField
-              label="Картинка диплома"
-              aspect={4 / 3}
-              existingUrl={initial?.diplomaImage}
-              onCropped={(blob) => setDiplomaBlob(blob)}
-              onRemovedToggle={setDiplomaRemoved}
-              compress={{ maxDimension: 2400, quality: 0.92 }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Счётчики (показатели) */}
-      <div className={cardCls}>
-        <p className="text-sm font-semibold text-[var(--color-navy)]">
-          Счётчики на странице врача
-        </p>
-        <p className="text-xs text-[var(--color-gray-500)]">
-          Значение и подпись. Например: «12» — «лет практики», «5000» —
-          «пролеченных зубов». До трёх.
-        </p>
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="grid gap-3 sm:grid-cols-[160px_1fr]">
-            <input
-              name={`statValue${i + 1}`}
-              defaultValue={initial?.stats?.[i]?.value ?? ""}
-              className={inputCls}
-              placeholder="напр. 12"
-            />
-            <input
-              name={`statLabel${i + 1}`}
-              defaultValue={initial?.stats?.[i]?.label ?? ""}
-              className={inputCls}
-              placeholder="напр. лет практики"
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Клинический фокус / когда обратиться */}
-      <div className={cardCls}>
-        <div>
-          <label className={labelCls}>
-            Клинический фокус (по одному пункту на строку)
-          </label>
-          <textarea
-            name="focusPoints"
-            rows={4}
-            defaultValue={initial?.focusPoints?.join("\n") ?? ""}
-            className={inputCls}
-            placeholder={"Работа со сложными случаями\nДиагностика и тактика лечения"}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>
-            Когда стоит обратиться (по одному пункту на строку)
-          </label>
-          <textarea
-            name="visitPoints"
-            rows={4}
-            defaultValue={initial?.visitPoints?.join("\n") ?? ""}
-            className={inputCls}
-            placeholder={"Нужно экспертное мнение по сложному случаю\nРанее предложенное решение вызывает сомнения"}
-          />
-        </div>
-      </div>
-
-      {/* Иерархия и направления */}
+      {/* Тип карточки — наверху: от него зависит, какие поля нужны ниже */}
       <div className={cardCls}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={labelCls}>Категория</label>
             <select
               name="category"
-              defaultValue={initial?.category ?? "doctor"}
+              value={category}
+              onChange={(e) => changeCategory(e.target.value as TeamCategory)}
               className={inputCls}
             >
               <option value="doctor">Врач</option>
@@ -391,91 +157,459 @@ export function TeamForm({
               defaultValue={initial?.sortOrder ?? 0}
               className={inputCls}
             />
+            <p className="mt-1 text-xs text-[var(--color-gray-500)]">
+              Врачи всегда выше персонала. Число задаёт порядок только внутри
+              своей группы.
+            </p>
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
-          <input
-            type="checkbox"
-            name="showOnHomepage"
-            defaultChecked={initial?.showOnHomepage ?? true}
-          />
-          Показывать на главной странице (не более 5 карточек)
-        </label>
-
-        <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
-          <input
-            type="checkbox"
-            name="isSpeaker"
-            defaultChecked={initial?.isSpeaker ?? false}
-          />
-          Спикер (может добавлять курсы в своём кабинете)
-        </label>
-
-        <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
-          <input
-            type="checkbox"
-            name="isChief"
-            checked={isChief}
-            onChange={(e) => setIsChief(e.target.checked)}
-          />
-          Главный врач (всегда первый, может быть только один)
-        </label>
-
-        <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
-          <input
-            type="checkbox"
-            name="isLead"
-            checked={isLead}
-            onChange={(e) => setIsLead(e.target.checked)}
-          />
-          Ведущий специалист направления
-        </label>
-
-        {isLead ? (
+        {category === "staff" ? (
           <div>
-            <label className={labelCls}>Ведущий по направлению</label>
-            <select
-              name="leadDirectionSlug"
-              defaultValue={initial?.leadDirectionSlug ?? ""}
-              className={inputCls}
-            >
-              <option value="">— выберите —</option>
-              {directions.map((d) => (
-                <option key={d.slug} value={d.slug}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-[var(--color-gray-500)]">
-              На каждое направление допускается один ведущий. Предыдущий ведущий
-              этого направления будет снят автоматически.
-            </p>
+            <label className={labelCls}>Кто это</label>
+            <div className="mt-2 space-y-2">
+              <label className="flex items-start gap-2 text-sm text-[var(--color-navy)]">
+                <input
+                  type="radio"
+                  name="staffKind"
+                  value="assistant"
+                  checked={staffKind === "assistant"}
+                  onChange={() => setStaffKind("assistant")}
+                  className="mt-0.5"
+                />
+                <span>
+                  Ассистент
+                  <span className="mt-0.5 block text-xs text-[var(--color-gray-500)]">
+                    Карточка на странице «Команда» после врачей. Своей страницы
+                    нет, карточка не кликабельна.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2 text-sm text-[var(--color-navy)]">
+                <input
+                  type="radio"
+                  name="staffKind"
+                  value="moderator"
+                  checked={staffKind === "moderator"}
+                  onChange={() => setStaffKind("moderator")}
+                  className="mt-0.5"
+                />
+                <span>
+                  Модератор
+                  <span className="mt-0.5 block text-xs text-[var(--color-gray-500)]">
+                    Только учётная запись, на сайте не показывается. Нужно лишь
+                    имя — чтобы понимать, кто обработал заявку.
+                  </span>
+                </span>
+              </label>
+            </div>
           </div>
         ) : null}
 
-        <div>
-          <label className={labelCls}>Участвует в направлениях</label>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {directions.map((d) => (
-              <label
-                key={d.slug}
-                className="flex items-center gap-2 text-sm text-[var(--color-gray-700)]"
-              >
-                <input
-                  type="checkbox"
-                  name="directionSlugs"
-                  value={d.slug}
-                  defaultChecked={initial?.directionSlugs?.includes(d.slug)}
-                />
-                {d.label}
-              </label>
-            ))}
-          </div>
-        </div>
+        <label className="flex items-start gap-2 text-sm text-[var(--color-navy)]">
+          <input
+            type="checkbox"
+            name="isModerator"
+            checked={moderatorChecked}
+            disabled={isModeratorOnly}
+            onChange={(e) => setIsModerator(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            Модератор — доступ к заявкам и отзывам на модерации
+            <span className="mt-0.5 block text-xs text-[var(--color-gray-500)]">
+              {isModeratorOnly
+                ? "Для типа «Модератор» включено всегда."
+                : "Можно включить и врачу, и ассистенту. Действует сразу, перезаходить не нужно."}
+            </span>
+          </span>
+        </label>
+
+        {/* Отключённый чекбокс не отправляется — дублируем скрытым полем */}
+        {isModeratorOnly ? (
+          <input type="hidden" name="isModerator" value="on" />
+        ) : null}
+
+        {isDoctor ? (
+          <>
+            <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
+              <input
+                type="checkbox"
+                name="showOnHomepage"
+                defaultChecked={initial?.showOnHomepage ?? true}
+              />
+              Показывать на главной странице (не более 5 карточек)
+            </label>
+
+            <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
+              <input
+                type="checkbox"
+                name="isSpeaker"
+                defaultChecked={initial?.isSpeaker ?? false}
+              />
+              Спикер (может добавлять курсы в своём кабинете)
+            </label>
+
+            <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
+              <input
+                type="checkbox"
+                name="isChief"
+                checked={isChief}
+                onChange={(e) => setIsChief(e.target.checked)}
+              />
+              Главный врач (всегда первый, может быть только один)
+            </label>
+
+            <label className="flex items-center gap-2 text-sm text-[var(--color-navy)]">
+              <input
+                type="checkbox"
+                name="isLead"
+                checked={isLead}
+                onChange={(e) => setIsLead(e.target.checked)}
+              />
+              Ведущий специалист направления
+            </label>
+
+            {isLead ? (
+              <div>
+                <label className={labelCls}>Ведущий по направлению</label>
+                <select
+                  name="leadDirectionSlug"
+                  defaultValue={initial?.leadDirectionSlug ?? ""}
+                  className={inputCls}
+                >
+                  <option value="">— выберите —</option>
+                  {directions.map((d) => (
+                    <option key={d.slug} value={d.slug}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-[var(--color-gray-500)]">
+                  На каждое направление допускается один ведущий. Предыдущий
+                  ведущий этого направления будет снят автоматически.
+                </p>
+              </div>
+            ) : null}
+
+            <div>
+              <label className={labelCls}>Участвует в направлениях</label>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {directions.map((d) => (
+                  <label
+                    key={d.slug}
+                    className="flex items-center gap-2 text-sm text-[var(--color-gray-700)]"
+                  >
+                    <input
+                      type="checkbox"
+                      name="directionSlugs"
+                      value={d.slug}
+                      defaultChecked={initial?.directionSlugs?.includes(d.slug)}
+                    />
+                    {d.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
 
+      {/* Основное */}
+      <div className={cardCls}>
+        <div>
+          <label className={labelCls}>Имя</label>
+          <input
+            name="name"
+            defaultValue={initial?.name}
+            required
+            className={inputCls}
+            placeholder="Мурат Курджиев"
+          />
+        </div>
 
+        {/* Родительный падеж нужен для заголовка «Все кейсы …» на странице
+            врача — у персонала такой страницы нет. */}
+        {isDoctor ? (
+          <div>
+            <label className={labelCls}>
+              Имя в родительном падеже (для заголовка «Все кейсы …»)
+            </label>
+            <input
+              name="nameGenitive"
+              defaultValue={initial?.nameGenitive ?? ""}
+              className={inputCls}
+              placeholder="Мурата Курджиева"
+            />
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Должность видна на карточке — нужна врачу и ассистенту. */}
+          {hasPublicCard ? (
+            <div>
+              <label className={labelCls}>Должность</label>
+              <input
+                name="position"
+                defaultValue={initial?.position}
+                className={inputCls}
+                placeholder={isDoctor ? "Врач-имплантолог" : "Ассистент врача"}
+              />
+            </div>
+          ) : null}
+
+          {/* Slug нужен всегда: это идентификатор записи. */}
+          <div>
+            <label className={labelCls}>Slug (необязательно)</label>
+            <input
+              name="slug"
+              defaultValue={initial?.slug}
+              className={inputCls}
+              placeholder="сгенерируется из имени"
+            />
+          </div>
+        </div>
+
+        {isDoctor ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelCls}>Роль (подпись)</label>
+              <input
+                name="role"
+                defaultValue={initial?.role}
+                className={inputCls}
+                placeholder="Имплантация и реабилитация"
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Короткая роль</label>
+              <input
+                name="shortRole"
+                defaultValue={initial?.shortRole}
+                className={inputCls}
+                placeholder="Имплантация"
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Тексты. Краткое описание видно на карточке, поэтому нужно и
+          ассистенту. Полное описание — только для страницы врача. */}
+      {hasPublicCard ? (
+        <div className={cardCls}>
+          <div>
+            <label className={labelCls}>Краткое описание (для карточки)</label>
+            <textarea
+              name="excerpt"
+              rows={2}
+              defaultValue={initial?.excerpt}
+              className={inputCls}
+              placeholder={
+                isDoctor
+                  ? "Одна-две строки о клиническом фокусе"
+                  : "Одна-две строки: чем помогает пациенту"
+              }
+            />
+          </div>
+
+          {isDoctor ? (
+            <div>
+              <label className={labelCls}>Полное описание (для страницы)</label>
+              <textarea
+                name="description"
+                rows={5}
+                defaultValue={initial?.description}
+                className={inputCls}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Фотографии — каждый контекст со своим кропом */}
+      {hasPublicCard ? (
+        <div className={cardCls}>
+          <p className="text-sm font-semibold text-[var(--color-navy)]">
+            Фотографии
+          </p>
+
+          <div>
+            <label className={labelCls}>
+              Основное фото — страница «Команда» и страница врача (3:4)
+            </label>
+            <div className="mt-2 max-w-[180px]">
+              <CropField
+                label="Основное фото (3:4, вертикальная)"
+                aspect={3 / 4}
+                existingUrl={initial?.image}
+                onCropped={(blob) => setPhotoBlob(blob)}
+                onRemovedToggle={setPhotoRemoved}
+              />
+            </div>
+          </div>
+
+          {isLead ? (
+            <div>
+              <label className={labelCls}>
+                Фото для страницы направления (4:3, горизонтальная)
+              </label>
+              <div className="mt-2 max-w-[260px]">
+                <CropField
+                  label="Фото для направления (4:3)"
+                  aspect={4 / 3}
+                  existingUrl={initial?.leadImage}
+                  onCropped={(blob) => setLeadPhotoBlob(blob)}
+                  onRemovedToggle={setLeadPhotoRemoved}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Цитаты — каждый контекст отдельно, чтобы не путаться */}
+      {isDoctor ? (
+        <div className={cardCls}>
+          <p className="text-sm font-semibold text-[var(--color-navy)]">
+            Цитаты
+          </p>
+
+          {isChief ? (
+            <div>
+              <label className={labelCls}>
+                Цитата на странице «Команда» (только главный врач)
+              </label>
+              <textarea
+                name="quote"
+                rows={3}
+                defaultValue={initial?.quote ?? ""}
+                className={inputCls}
+                placeholder="Показывается в блоке главного врача на странице «Команда»"
+              />
+            </div>
+          ) : null}
+
+          <div>
+            <label className={labelCls}>Цитата на странице врача</label>
+            <textarea
+              name="doctorQuote"
+              rows={3}
+              defaultValue={initial?.doctorQuote ?? ""}
+              className={inputCls}
+              placeholder="Показывается на личной странице врача /team/…"
+            />
+          </div>
+
+          {isLead ? (
+            <div>
+              <label className={labelCls}>
+                Цитата на странице направления (ведущий специалист)
+              </label>
+              <textarea
+                name="leadQuote"
+                rows={3}
+                defaultValue={initial?.leadQuote ?? ""}
+                className={inputCls}
+                placeholder="Показывается под фото на странице направления /directions/…"
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Дополнительное образование */}
+      {isDoctor ? (
+        <div className={cardCls}>
+          <div>
+            <label className={labelCls}>
+              Пройденные курсы (по одному на строку: «Название, где пройден»)
+            </label>
+            <textarea
+              name="courses"
+              rows={5}
+              defaultValue={initial?.courses?.join("\n") ?? ""}
+              className={inputCls}
+              placeholder={"Эндодонтия под микроскопом, Москва\nИмплантология, курс, Берлин"}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>
+              Диплом специалиста (кроп 4:3, горизонтально)
+            </label>
+            <div className="mt-2 max-w-[320px]">
+              <CropField
+                label="Картинка диплома"
+                aspect={4 / 3}
+                existingUrl={initial?.diplomaImage}
+                onCropped={(blob) => setDiplomaBlob(blob)}
+                onRemovedToggle={setDiplomaRemoved}
+                compress={{ maxDimension: 2400, quality: 0.92 }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Счётчики (показатели) */}
+      {isDoctor ? (
+        <div className={cardCls}>
+          <p className="text-sm font-semibold text-[var(--color-navy)]">
+            Счётчики на странице врача
+          </p>
+          <p className="text-xs text-[var(--color-gray-500)]">
+            Значение и подпись. Например: «12» — «лет практики», «5000» —
+            «пролеченных зубов». До трёх.
+          </p>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="grid gap-3 sm:grid-cols-[160px_1fr]">
+              <input
+                name={`statValue${i + 1}`}
+                defaultValue={initial?.stats?.[i]?.value ?? ""}
+                className={inputCls}
+                placeholder="напр. 12"
+              />
+              <input
+                name={`statLabel${i + 1}`}
+                defaultValue={initial?.stats?.[i]?.label ?? ""}
+                className={inputCls}
+                placeholder="напр. лет практики"
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Клинический фокус / когда обратиться */}
+      {isDoctor ? (
+        <div className={cardCls}>
+          <div>
+            <label className={labelCls}>
+              Клинический фокус (по одному пункту на строку)
+            </label>
+            <textarea
+              name="focusPoints"
+              rows={4}
+              defaultValue={initial?.focusPoints?.join("\n") ?? ""}
+              className={inputCls}
+              placeholder={"Работа со сложными случаями\nДиагностика и тактика лечения"}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>
+              Когда стоит обратиться (по одному пункту на строку)
+            </label>
+            <textarea
+              name="visitPoints"
+              rows={4}
+              defaultValue={initial?.visitPoints?.join("\n") ?? ""}
+              className={inputCls}
+              placeholder={"Нужно экспертное мнение по сложному случаю\nРанее предложенное решение вызывает сомнения"}
+            />
+          </div>
+        </div>
+      ) : null}
 
       {error ? (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">

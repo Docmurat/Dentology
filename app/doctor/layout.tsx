@@ -1,7 +1,9 @@
-import Link from "next/link";
+// app/doctor/layout.tsx
 import { redirect } from "next/navigation";
 import { queryOne } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth-guards";
+import { getCurrentUser, canModerate } from "@/lib/auth-guards";
+import { getNewLeadCount } from "@/lib/leads";
+import { CabinetNav, type CabinetLink } from "@/components/admin/cabinet-nav";
 import { signOut } from "@/app/admin/actions";
 import { roleHome } from "@/lib/role-home";
 
@@ -32,54 +34,32 @@ export default async function DoctorLayout({
     canCourses = Boolean(card?.is_speaker);
   }
 
+  const links: CabinetLink[] = [{ href: "/doctor", label: "Мои кейсы" }];
+  if (canCourses) {
+    links.push({ href: "/doctor/courses", label: "Мои курсы" });
+  }
+
+  // Врач с галочкой модератора попадает в раздел заявок отсюда:
+  // отдельного входа у него нет.
+  if (canModerate(user)) {
+    const newLeads = await getNewLeadCount();
+    links.push({
+      href: "/moderator",
+      label: "Заявки и отзывы",
+      badge: newLeads,
+    });
+  }
+
   return (
     <div className="min-h-screen bg-[var(--color-gray-50)]">
-      <header className="border-b border-[var(--color-gray-200)] bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-6">
-            <p className="font-semibold text-[var(--color-navy)]">
-              {/* «Lucenta» ведёт на публичный сайт, «Врач» — в корень кабинета */}
-              <Link href="/" className="hover:text-[var(--color-navy-secondary)]">
-                Lucenta
-              </Link>
-              <span className="text-[var(--color-gray-400)]"> · </span>
-              <Link
-                href="/doctor"
-                className="hover:text-[var(--color-navy-secondary)]"
-              >
-                Врач
-              </Link>
-            </p>
-            <nav className="flex items-center gap-3 text-sm">
-              <Link
-                href="/doctor"
-                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
-              >
-                Мои кейсы
-              </Link>
-              {canCourses ? (
-                <Link
-                  href="/doctor/courses"
-                  className="font-medium text-[var(--color-gold)] hover:opacity-80"
-                >
-                  Мои курсы
-                </Link>
-              ) : null}
-            </nav>
-          </div>
+      <CabinetNav
+        brandTitle="Врач"
+        brandHref="/doctor"
+        userLabel={profile?.full_name || user.email}
+        signOutAction={signOut}
+        links={links}
+      />
 
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-[var(--color-gray-500)]">
-              {profile?.full_name || user.email}
-            </span>
-            <form action={signOut}>
-              <button className="font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]">
-                Выйти
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
       <main className="mx-auto max-w-5xl px-6 py-10">{children}</main>
     </div>
   );

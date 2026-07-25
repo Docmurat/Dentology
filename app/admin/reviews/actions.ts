@@ -1,9 +1,17 @@
+// app/admin/reviews/actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { query, queryOne } from "@/lib/db";
 import { buildUpdate } from "@/lib/sql-helpers";
-import { requireStaff, requireAdmin } from "@/lib/auth-guards";
+import {
+  requireStaff,
+  requireAdmin,
+  requireModerator,
+  getCurrentUser,
+  isStaff,
+  canModerate,
+} from "@/lib/auth-guards";
 
 type Result = { error?: string; ok?: boolean };
 
@@ -16,8 +24,36 @@ function normalizeInstagram(value: string): string | null {
 
 function revalidateReviews() {
   revalidatePath("/admin/reviews");
+  revalidatePath("/moderator/reviews");
   revalidatePath("/reviews");
   revalidatePath("/");
+}
+
+/**
+ * Право на правку конкретного отзыва.
+ *
+ * Сотрудник правит любой. Модератор — только неопубликованный: то, что
+ * уже висит на сайте, менять должен тот, кто отвечает за содержание,
+ * иначе текст на публичной странице может тихо измениться.
+ */
+async function requireReviewEditor(id: string) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Не авторизован");
+  if (isStaff(user)) return user;
+  if (!canModerate(user)) throw new Error("Недостаточно прав");
+
+  const row = await queryOne<{ status: string }>(
+    `select status from reviews where id = $1`,
+    [id]
+  );
+  if (!row) throw new Error("Отзыв не найден");
+  if (row.status === "approved") {
+    throw new Error(
+      "Опубликованный отзыв меняет сотрудник. Снимите с публикации или обратитесь к администратору."
+    );
+  }
+
+  return user;
 }
 
 // Курс-отзыв определяется по course_slug в БД, а не по полям формы.
@@ -29,8 +65,9 @@ async function isCourseReview(id: string): Promise<boolean> {
   return Boolean(row?.course_slug);
 }
 
+// Публикация, отклонение и снятие с публикации — работа модератора.
 export async function approveReview(formData: FormData) {
-  await requireStaff();
+  await requireModerator();
   const id = String(formData.get("id") || "");
   const dirs = formData
     .getAll("directionSlug")
@@ -52,7 +89,7 @@ export async function approveReview(formData: FormData) {
 }
 
 export async function rejectReview(formData: FormData) {
-  await requireStaff();
+  await requireModerator();
   await query(`update reviews set status = 'rejected' where id = $1`, [
     String(formData.get("id") || ""),
   ]);
@@ -60,7 +97,7 @@ export async function rejectReview(formData: FormData) {
 }
 
 export async function unpublishReview(formData: FormData) {
-  await requireStaff();
+  await requireModerator();
   await query(`update reviews set status = 'pending' where id = $1`, [
     String(formData.get("id") || ""),
   ]);
@@ -77,7 +114,7 @@ export async function deleteReview(formData: FormData) {
 }
 
 export async function setReviewVerified(formData: FormData) {
-  await requireStaff();
+  await requireModerator();
   await query(`update reviews set verified = $1 where id = $2`, [
     String(formData.get("verified") || "") === "true",
     String(formData.get("id") || ""),
@@ -86,10 +123,12 @@ export async function setReviewVerified(formData: FormData) {
 }
 
 export async function setReviewImage(formData: FormData) {
-  await requireStaff();
+  const id = String(formData.get("id") || "");
+  await requireReviewEditor(id);
+
   await query(`update reviews set image = $1 where id = $2`, [
     String(formData.get("url") || "") || null,
-    String(formData.get("id") || ""),
+    id,
   ]);
   revalidateReviews();
 }
@@ -98,13 +137,14 @@ export async function updateReview(
   _prev: Result,
   formData: FormData
 ): Promise<Result> {
+  const id = String(formData.get("id") || "");
+
   try {
-    await requireStaff();
+    await requireReviewEditor(id);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Ошибка" };
   }
 
-  const id = String(formData.get("id") || "");
   const author = String(formData.get("author") || "").trim();
   const text = String(formData.get("text") || "").trim();
   const reviewDate = String(formData.get("reviewDate") || "") || null;

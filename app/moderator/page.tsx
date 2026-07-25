@@ -1,17 +1,15 @@
-// app/admin/leads/page.tsx
+// app/moderator/page.tsx
 import { LeadsBoard, isLeadStatus } from "@/components/admin/leads-board";
-import { getCurrentUser } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminLeadsPage({
+export default async function ModeratorLeadsPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
   const { status } = await searchParams;
   const active = status && isLeadStatus(status) ? status : null;
-  const user = await getCurrentUser();
 
   return (
     <div>
@@ -20,16 +18,14 @@ export default async function AdminLeadsPage({
           Заявки
         </h1>
         <p className="text-sm text-[var(--color-gray-600)]">
-          Все обращения с форм сайта. Сохраняются в базе независимо от того,
-          дошло ли уведомление в почту и Telegram.
+          Обращения с форм сайта. Возьмите заявку в работу, чтобы коллеги
+          видели, что ей занимаются.
         </p>
       </div>
 
-      <LeadsBoard
-        active={active}
-        basePath="/admin/leads"
-        canDelete={user?.role === "admin"}
-      />
+      {/* Удаление заявок оставлено администратору: это персональные
+          данные и след обращения пациента. */}
+      <LeadsBoard active={active} basePath="/moderator" />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+// components/admin/review-image-field.tsx
 "use client";
 
 import { useState } from "react";
@@ -47,8 +48,16 @@ export function ReviewImageField({
 
   async function remove() {
     setBusy(true);
-    await save("");
-    setBusy(false);
+    setError(null);
+    try {
+      await save("");
+    } catch (err) {
+      // Модератору могут отказать, если отзыв уже опубликован —
+      // показываем причину вместо необработанной ошибки.
+      setError(err instanceof Error ? err.message : "Не удалось убрать фото");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

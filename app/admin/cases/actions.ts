@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { query, queryOne } from "@/lib/db";
 import { buildInsert, buildUpdate, pgErrorCode } from "@/lib/sql-helpers";
 import { requireStaff, requireAdmin } from "@/lib/auth-guards";
+import { validateCaseImages, CASE_ERRORS } from "@/lib/case-validation";
 import { slugify } from "@/lib/slugify";
 
 // Общий набор полей из формы (картинки приходят уже ссылками).
@@ -17,6 +18,7 @@ function readFields(formData: FormData) {
     cover_image: String(formData.get("coverImage") || "") || null,
     image_before: String(formData.get("imageBefore") || "") || null,
     image_after: String(formData.get("imageAfter") || "") || null,
+    show_before_after: formData.get("showBeforeAfter") === "on",
     protocol_images: (formData.getAll("protocolImages") as string[]).filter(
       Boolean
     ),
@@ -72,6 +74,11 @@ export async function createCase(
   const fields = readFields(formData);
   if (!fields.title) return { error: "Заголовок обязателен" };
 
+  // Те же правила, что проверяет форма. Дублируем на сервере: разметку
+  // можно обойти, а кейс без обложки ломает вид всех списков.
+  const imageError = validateCaseImages(fields);
+  if (imageError) return { error: imageError };
+
   const slug =
     slugify(String(formData.get("slug") || "")) ||
     slugify(fields.title) ||
@@ -108,6 +115,9 @@ export async function updateCase(
   const fields = readFields(formData);
   if (!fields.title) return { error: "Заголовок обязателен" };
 
+  const imageError = validateCaseImages(fields);
+  if (imageError) return { error: imageError };
+
   // published не трогаем — статус публикации меняется только модерацией.
   try {
     const data = await withDoctorName(fields);
@@ -122,9 +132,22 @@ export async function updateCase(
 }
 
 // Модерация: опубликовать кейс (например, присланный врачом).
+// Ещё один рубеж на обложку: кейс мог быть создан до появления проверки.
 export async function approveCase(formData: FormData) {
   await requireStaff();
   const slug = String(formData.get("slug") || "");
+  if (!slug) return;
+
+  const row = await queryOne<{ cover_image: string | null }>(
+    `select cover_image from cases where slug = $1`,
+    [slug]
+  );
+  if (!row) return;
+
+  if (!row.cover_image) {
+    console.warn(`approveCase: у кейса ${slug} нет обложки — ${CASE_ERRORS.cover}`);
+    return;
+  }
 
   await query(`update cases set published = true where slug = $1`, [slug]);
 

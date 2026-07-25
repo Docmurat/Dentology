@@ -1,3 +1,4 @@
+// app/admin/team/account-actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -29,6 +30,34 @@ export async function linkTeamAccount(
   if (!slug) return { error: "Нет карточки сотрудника" };
   if (!login.trim()) return { error: "Укажите логин" };
 
+  // Роль определяется карточкой, а не выбирается руками: иначе легко
+  // выдать врачу кабинет модератора или наоборот.
+  const card = await queryOne<{
+    category: string;
+    staff_kind: string | null;
+    is_moderator: boolean | null;
+  }>(
+    `select category, staff_kind, is_moderator from team_members where slug = $1`,
+    [slug]
+  );
+  if (!card) return { error: "Карточка сотрудника не найдена" };
+
+  // Врач с галочкой модератора остаётся врачом: кабинет врача ему нужнее,
+  // а доступ к заявкам даёт отдельный признак is_moderator в сессии.
+  const role =
+    card.category === "doctor"
+      ? "doctor"
+      : card.staff_kind === "moderator" || card.is_moderator
+        ? "moderator"
+        : null;
+
+  if (!role) {
+    return {
+      error:
+        "Этому сотруднику некуда входить. Включите «Модератор» в карточке или выберите тип «Модератор».",
+    };
+  }
+
   const existing = await queryOne<{ id: string }>(
     `select id from profiles where lower(email) = $1`,
     [email]
@@ -48,9 +77,9 @@ export async function linkTeamAccount(
       ]);
     }
     await query(
-      `update profiles set role = 'doctor', full_name = $1, doctor_slug = $2
-        where id = $3`,
-      [name || null, slug, userId]
+      `update profiles set role = $1, full_name = $2, doctor_slug = $3
+        where id = $4`,
+      [role, name || null, slug, userId]
     );
   } else {
     if (password.length < 8) {
@@ -60,9 +89,9 @@ export async function linkTeamAccount(
     try {
       const created = await queryOne<{ id: string }>(
         `insert into profiles (email, password_hash, full_name, role, doctor_slug)
-         values ($1, $2, $3, 'doctor', $4)
+         values ($1, $2, $3, $4, $5)
          returning id`,
-        [email, hash, name || null, slug]
+        [email, hash, name || null, role, slug]
       );
       if (!created) return { error: "Не удалось создать аккаунт" };
       userId = created.id;

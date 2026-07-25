@@ -19,6 +19,13 @@ export type CaseItem = {
   coverImage?: string;
   imageBefore?: string;
   imageAfter?: string;
+  /**
+   * Показывать ли блок «до / после».
+   * Управляется в форме кейса. По умолчанию включён, но сам блок
+   * отрисуется только если загружены обе картинки: с одной он
+   * выглядит как наполовину пустой контейнер сравнения.
+   */
+  showBeforeAfter?: boolean;
   protocolImages?: string[];
   doctorSlug?: string;
   /**

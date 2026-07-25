@@ -1,6 +1,16 @@
+// lib/team-data.ts
 // Доменная модель сотрудника. Используется и публичными страницами,
 // и сидом для переноса в Supabase.
 export type TeamCategory = "doctor" | "staff";
+
+/**
+ * Кем является сотрудник категории «персонал».
+ *   assistant — карточка на странице «Команда» после врачей, но без
+ *               своей страницы: кликать не по чему, информации нет.
+ *   moderator — карточки на сайте нет вовсе, только учётная запись.
+ * У врачей поле пустое.
+ */
+export type StaffKind = "assistant" | "moderator";
 
 export type TeamMember = {
   slug: string;
@@ -49,6 +59,14 @@ export type TeamMember = {
   featured?: boolean;
   showOnHomepage?: boolean;
   isSpeaker?: boolean;
+  /** Тип записи для категории «персонал». У врачей не задан. */
+  staffKind?: StaffKind;
+  /**
+   * Доступ к заявкам и отзывам на модерации.
+   * Флаг независим от типа карточки: включается врачу и ассистенту,
+   * у staffKind = "moderator" стоит всегда.
+   */
+  isModerator?: boolean;
 };
 
 export const teamData: TeamMember[] = [

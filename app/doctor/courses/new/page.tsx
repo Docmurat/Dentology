@@ -1,7 +1,8 @@
+// app/doctor/courses/new/page.tsx
 import { redirect } from "next/navigation";
 import { CourseForm } from "@/components/admin/course-form";
 import { createSpeakerCourse } from "../../course-actions";
-import { getTeamMembers } from "@/lib/team";
+import { getDoctors } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
 import { getCurrentUser } from "@/lib/auth-guards";
 
@@ -15,10 +16,11 @@ export default async function SpeakerNewCoursePage() {
   const lockedDoctorSlug =
     !isStaff && user.doctorSlug ? user.doctorSlug : undefined;
 
-  const team = await getTeamMembers();
-  const doctors = team
-    .filter((m) => m.category === "doctor")
-    .map((m) => ({ slug: m.slug, name: m.name }));
+  // Только врачи: ассистент курс не ведёт.
+  const doctors = (await getDoctors()).map((m) => ({
+    slug: m.slug,
+    name: m.name,
+  }));
   const directions = (await getDirections()).map((d) => ({
     slug: d.slug,
     label: d.title,
