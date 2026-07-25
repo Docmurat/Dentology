@@ -22,11 +22,12 @@ type AuthContextValue = AuthState & {
   clearSession: () => void;
 };
 
-const AuthContext = createContext<AuthContextValue>({
-  status: "loading",
-  home: null,
-  clearSession: () => {},
-});
+// Значение по умолчанию — null, а не готовый объект. Это позволяет
+// useAuthSession отличить «провайдера нет» от «провайдер есть, но сессия
+// ещё грузится». Раньше здесь стоял объект со status: "loading", и при
+// случайном удалении <AuthProvider> из layout шапка навсегда застревала
+// в состоянии загрузки: блок входа просто исчезал, без ошибки в консоли.
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 // Module-level cache. The session endpoint is hit once per page load no
 // matter how many consumers mount or unmount, so re-opening the menu or
@@ -78,6 +79,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuthSession() {
-  return useContext(AuthContext);
+/**
+ * Состояние авторизации для шапки.
+ *
+ * Обычно приходит из AuthProvider в корневом layout — тогда запрос идёт
+ * один раз на загрузку страницы и переживает открытие меню и навигацию.
+ * Если провайдера в дереве нет, хук читает сессию сам: медленнее, но шапка
+ * работает. Отсутствие провайдера не должно приводить к исчезновению входа.
+ */
+export function useAuthSession(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+
+  const [fallback, setFallback] = useState<AuthState>({
+    status: "loading",
+    home: null,
+  });
+
+  useEffect(() => {
+    if (ctx) return;
+
+    let active = true;
+    loadSession().then((home) => {
+      if (active) setFallback({ status: "ready", home });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [ctx]);
+
+  const clearFallback = useCallback(() => {
+    sessionPromise = Promise.resolve(null);
+    setFallback({ status: "ready", home: null });
+  }, []);
+
+  return ctx ?? { ...fallback, clearSession: clearFallback };
 }
