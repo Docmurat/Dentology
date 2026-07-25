@@ -1,7 +1,8 @@
+// app/doctor/cases/[slug]/edit/page.tsx
 import { notFound, redirect } from "next/navigation";
 import { CaseForm } from "@/components/admin/case-form";
 import { updateDoctorCase } from "../../../actions";
-import { getCaseBySlugAuthed } from "@/lib/cases";
+import { getCaseBySlugAuthed, canEditCase } from "@/lib/cases";
 import { getTeamMembers } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
 import { queryOne } from "@/lib/db";
@@ -19,16 +20,27 @@ export default async function DoctorEditCasePage({
   const user = await getCurrentUser();
   if (!user) redirect("/admin/login");
 
-  // Врач может править только свой кейс и только пока он на модерации.
-  const guard = await queryOne<{ created_by: string | null; published: boolean }>(
-    `select created_by, published from cases where slug = $1`,
+  const guard = await queryOne<{ published: boolean }>(
+    `select published from cases where slug = $1`,
     [slug]
   );
-
   if (!guard) notFound();
-  if (guard.created_by !== user.id || guard.published) {
-    redirect("/doctor");
-  }
+
+  // Владение: кейс мой, если я его создал ИЛИ он привязан к моей карточке
+  // врача. Раньше здесь стояло `guard.created_by !== user.id`, и врач,
+  // назначенный автором кейса, при нажатии «Изменить» получал редирект
+  // обратно на список — со стороны это выглядело как неработающая кнопка.
+  const isOwner = await canEditCase(slug, {
+    id: user.id,
+    role: user.role,
+    doctorSlug: user.doctorSlug,
+  });
+
+  // Опубликованный кейс врач не правит — это делает сотрудник через
+  // админку. Условие повторяет проверку в updateDoctorCase: раньше
+  // страница разворачивала даже администратора, хотя экшен его пропускал.
+  const canEdit = user.role === "admin" || (isOwner && !guard.published);
+  if (!canEdit) redirect("/doctor");
 
   const item = await getCaseBySlugAuthed(slug);
   if (!item) notFound();

@@ -1,7 +1,8 @@
+// app/doctor/courses/[slug]/edit/page.tsx
 import { notFound, redirect } from "next/navigation";
 import { CourseForm } from "@/components/admin/course-form";
 import { updateSpeakerCourse } from "../../../course-actions";
-import { getCourseBySlugAdmin } from "@/lib/courses";
+import { getCourseBySlugAdmin, canEditCourse } from "@/lib/courses";
 import { getTeamMembers } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
 import { getCurrentUser } from "@/lib/auth-guards";
@@ -25,8 +26,16 @@ export default async function SpeakerEditCoursePage({
   const course = await getCourseBySlugAdmin(slug);
   if (!course) notFound();
 
-  // Спикер может править только свой курс; сотрудник — любой.
-  if (!isStaff && course.createdBy !== user.id) redirect("/doctor/courses");
+  // Владение: курс мой, если я его создал ИЛИ он привязан к моей карточке
+  // врача. Раньше здесь стояло `course.createdBy !== user.id`, и врач,
+  // назначенный спикером курса, при нажатии «Изменить» получал редирект
+  // обратно на список — со стороны это выглядело как неработающая кнопка.
+  const allowed = await canEditCourse(slug, {
+    id: user.id,
+    role: user.role,
+    doctorSlug: user.doctorSlug,
+  });
+  if (!allowed) redirect("/doctor/courses");
 
   const team = await getTeamMembers();
   const doctors = team

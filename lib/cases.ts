@@ -78,7 +78,7 @@ export async function getCaseSlugs(): Promise<string[]> {
 }
 
 // --- Чтение без фильтра публикации (для предпросмотра и редактирования).
-//     Проверку прав (сотрудник/автор) теперь выполняет вызывающая страница. ---
+//     Проверку прав (сотрудник/автор) выполняет вызывающая страница. ---
 export async function getCaseBySlugAuthed(
   slug: string
 ): Promise<CaseItem | null> {
@@ -87,6 +87,85 @@ export async function getCaseBySlugAuthed(
     [slug]
   );
   return row ? mapRow(row) : null;
+}
+
+// --- Кабинет врача -----------------------------------------------------
+
+export type DoctorCase = {
+  slug: string;
+  title: string;
+  published: boolean;
+  archived: boolean;
+  coverImage: string | null;
+  directionSlug: string | null;
+  createdAt: string;
+};
+
+/**
+ * Кейсы кабинета врача.
+ *
+ * Владение определяется двумя признаками: кейс создан этим аккаунтом
+ * ИЛИ привязан к его карточке врача. Фильтр только по created_by означал
+ * бы, что кейс, заведённый администратором и назначенный врачу, в его
+ * кабинет не попадёт — человек увидит пустой список.
+ *
+ * Архивные показываем: врач должен понимать, что кейс не исчез.
+ */
+export async function getCasesByOwner(
+  userId: string,
+  doctorSlug?: string | null
+): Promise<DoctorCase[]> {
+  try {
+    const rows = await query<{
+      slug: string;
+      title: string;
+      published: boolean;
+      archived: boolean | null;
+      cover_image: string | null;
+      direction_slug: string | null;
+      created_at: string;
+    }>(
+      `select slug, title, published, archived, cover_image,
+              direction_slug, created_at
+         from cases
+        where created_by = $1
+           or ($2::text is not null and doctor_slug = $2)
+        order by created_at desc`,
+      [userId, doctorSlug ?? null]
+    );
+
+    return rows.map((row) => ({
+      slug: row.slug,
+      title: row.title,
+      published: row.published,
+      archived: Boolean(row.archived),
+      coverImage: row.cover_image,
+      directionSlug: row.direction_slug,
+      createdAt: row.created_at,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Может ли пользователь править этот кейс. Та же логика владения. */
+export async function canEditCase(
+  slug: string,
+  user: { id: string; role: string; doctorSlug: string | null }
+): Promise<boolean> {
+  if (["admin", "editor"].includes(user.role)) return true;
+
+  const row = await queryOne<{
+    created_by: string | null;
+    doctor_slug: string | null;
+  }>(`select created_by, doctor_slug from cases where slug = $1`, [slug]);
+
+  if (!row) return false;
+
+  return (
+    row.created_by === user.id ||
+    (Boolean(user.doctorSlug) && row.doctor_slug === user.doctorSlug)
+  );
 }
 
 // --- Выборка для карточек ---------------------------------------------

@@ -1,9 +1,11 @@
+// app/doctor/actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { query, queryOne } from "@/lib/db";
 import { buildInsert, buildUpdate, pgErrorCode } from "@/lib/sql-helpers";
 import { requireDoctor } from "@/lib/auth-guards";
+import { canEditCase } from "@/lib/cases";
 import { slugify } from "@/lib/slugify";
 
 function parseBlocks(value: FormDataEntryValue | null) {
@@ -29,6 +31,35 @@ function readFields(formData: FormData) {
   };
 }
 
+/**
+ * Дополняет поля кейса привязкой к врачу и снимком его имени.
+ *
+ * Привязка: если в форме врача поля выбора нет, doctor_slug приходит
+ * пустым, и кейс сохраняется ничейным — не показывается ни на странице
+ * врача на сайте, ни в его кабинете. Подставляем карточку автора.
+ *
+ * Снимок: клинический случай — самодостаточный документ, он должен
+ * пережить удаление карточки врача и сохранить, кто был автором.
+ * Если карточка не найдена, doctor_name в набор не попадает вовсе,
+ * чтобы при обновлении не затереть ранее записанное имя.
+ */
+async function withDoctor(
+  fields: ReturnType<typeof readFields>,
+  fallbackDoctorSlug: string | null
+): Promise<Record<string, unknown>> {
+  const doctorSlug = fields.doctor_slug || fallbackDoctorSlug || null;
+  if (!doctorSlug) return { ...fields, doctor_slug: null, doctor_name: null };
+
+  const row = await queryOne<{ name: string }>(
+    `select name from team_members where slug = $1`,
+    [doctorSlug]
+  );
+
+  if (!row) return { ...fields, doctor_slug: doctorSlug };
+
+  return { ...fields, doctor_slug: doctorSlug, doctor_name: row.name };
+}
+
 // Новый кейс от врача — на модерацию (published = false).
 export async function createDoctorCase(
   formData: FormData
@@ -44,9 +75,10 @@ export async function createDoctorCase(
     `case-${Date.now()}`;
 
   try {
+    const data = await withDoctor(fields, user.doctorSlug);
     const { text, values } = buildInsert("cases", {
       slug,
-      ...fields,
+      ...data,
       published: false,
       created_by: user.id,
     });
@@ -63,8 +95,8 @@ export async function createDoctorCase(
 }
 
 // Правка врачом своего кейса, пока он на модерации.
-// Раньше ограничение задавала RLS — теперь проверяем в коде:
-// врач может править только СВОЙ и только неопубликованный кейс.
+// Врач может править только СВОЙ и только неопубликованный кейс;
+// опубликованный меняет сотрудник через админку.
 export async function updateDoctorCase(
   formData: FormData
 ): Promise<{ error?: string; slug?: string }> {
@@ -76,20 +108,29 @@ export async function updateDoctorCase(
   const fields = readFields(formData);
   if (!fields.title) return { error: "Заголовок обязателен" };
 
-  const existing = await queryOne<{ created_by: string | null; published: boolean }>(
-    `select created_by, published from cases where slug = $1`,
+  const existing = await queryOne<{ published: boolean }>(
+    `select published from cases where slug = $1`,
     [originalSlug]
   );
   if (!existing) return { error: "Кейс не найден" };
 
-  const isOwner = existing.created_by === user.id;
+  // Владение: кейс мой, если я его создал ИЛИ он привязан к моей карточке
+  // врача. Раньше проверялся только created_by, и врач не мог править
+  // собственный кейс, заведённый администратором.
+  const isOwner = await canEditCase(originalSlug, {
+    id: user.id,
+    role: user.role,
+    doctorSlug: user.doctorSlug,
+  });
+
   const canEdit = user.role === "admin" || (isOwner && !existing.published);
   if (!canEdit) {
     return { error: "Кейс уже опубликован или недоступен для правки" };
   }
 
   try {
-    const { text, values } = buildUpdate("cases", fields, "slug", originalSlug);
+    const data = await withDoctor(fields, user.doctorSlug);
+    const { text, values } = buildUpdate("cases", data, "slug", originalSlug);
     await query(text, values);
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Ошибка сохранения" };
@@ -97,5 +138,6 @@ export async function updateDoctorCase(
 
   revalidatePath("/doctor");
   revalidatePath("/admin/cases");
+  revalidatePath(`/cases/${originalSlug}`);
   return { slug: originalSlug };
 }

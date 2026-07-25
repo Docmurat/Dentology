@@ -10,7 +10,10 @@ export default async function SpeakerCoursesPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/admin/login");
 
-  const courses = await getCoursesByOwner(user.id);
+  // Свои курсы = созданные этим аккаунтом ИЛИ привязанные к его
+  // карточке врача. Курс, заведённый администратором и назначенный
+  // врачу, теперь тоже виден.
+  const courses = await getCoursesByOwner(user.id, user.doctorSlug);
 
   return (
     <div>

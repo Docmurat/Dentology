@@ -1,9 +1,9 @@
+// app/cases/[slug]/preview/page.tsx
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { CaseView } from "@/components/cases/case-view";
-import { getCaseBySlugAuthed } from "@/lib/cases";
+import { getCaseBySlugAuthed, canEditCase } from "@/lib/cases";
 import { getTeamMemberBySlug } from "@/lib/team";
-import { queryOne } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
@@ -26,14 +26,16 @@ export default async function CasePreviewPage({
   const item = await getCaseBySlugAuthed(slug);
   if (!item) notFound();
 
-  // Не сотрудник видит только свой кейс.
-  if (!isStaff) {
-    const owner = await queryOne<{ created_by: string | null }>(
-      `select created_by from cases where slug = $1`,
-      [slug]
-    );
-    if (owner?.created_by !== user.id) notFound();
-  }
+  // Владение: кейс мой, если я его создал ИЛИ он привязан к моей карточке
+  // врача. Раньше сравнивался только created_by, и врач не мог открыть
+  // предпросмотр собственного кейса, заведённого администратором.
+  // canEditCase сама пропускает сотрудников, отдельная ветка не нужна.
+  const allowed = await canEditCase(slug, {
+    id: user.id,
+    role: user.role,
+    doctorSlug: user.doctorSlug,
+  });
+  if (!allowed) notFound();
 
   const doctor = item.doctorSlug
     ? await getTeamMemberBySlug(item.doctorSlug)

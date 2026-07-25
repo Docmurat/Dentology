@@ -1,3 +1,4 @@
+// lib/courses.ts
 import { query, queryOne } from "@/lib/db";
 
 export type CourseMetric = { value: string; label: string };
@@ -211,15 +212,49 @@ export async function getCourseBySlugAdmin(
   return getCourseBySlug(slug);
 }
 
-// Курсы конкретного владельца (кабинет спикера).
-export async function getCoursesByOwner(userId: string): Promise<Course[]> {
+/**
+ * Курсы кабинета спикера.
+ *
+ * Владение определяется двумя признаками: курс создан этим аккаунтом
+ * ИЛИ привязан к его карточке врача. Раньше фильтр шёл только по
+ * created_by, то есть по тому, кто нажал «Сохранить». Курс, заведённый
+ * администратором и назначенный врачу, в кабинет врача не попадал —
+ * человек видел пустой список и решал, что привязка не сработала.
+ */
+export async function getCoursesByOwner(
+  userId: string,
+  doctorSlug?: string | null
+): Promise<Course[]> {
   try {
     const rows = await query<Row>(
-      `select * from courses where created_by = $1 order by created_at desc`,
-      [userId]
+      `select * from courses
+        where created_by = $1
+           or ($2::text is not null and doctor_slug = $2)
+        order by created_at desc`,
+      [userId, doctorSlug ?? null]
     );
     return rows.map(mapRow);
   } catch {
     return [];
   }
+}
+
+/** Может ли пользователь править этот курс. Та же логика владения. */
+export async function canEditCourse(
+  slug: string,
+  user: { id: string; role: string; doctorSlug: string | null }
+): Promise<boolean> {
+  if (["admin", "editor"].includes(user.role)) return true;
+
+  const row = await queryOne<{
+    created_by: string | null;
+    doctor_slug: string | null;
+  }>(`select created_by, doctor_slug from courses where slug = $1`, [slug]);
+
+  if (!row) return false;
+
+  return (
+    row.created_by === user.id ||
+    (Boolean(user.doctorSlug) && row.doctor_slug === user.doctorSlug)
+  );
 }
