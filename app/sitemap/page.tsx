@@ -5,6 +5,7 @@ import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { getDirections } from "@/lib/directions-db";
+import { typography } from "@/lib/typography";
 
 export const metadata: Metadata = {
   title: "Карта сайта",
@@ -19,6 +20,8 @@ async function safeDirections(): Promise<{ slug: string; title: string }[]> {
   }
 }
 
+// Строчный интервал у ссылок увеличен намеренно: это список для быстрого
+// перехода, и разреженные строки удобнее попадать пальцем.
 const linkCls =
   "text-base leading-8 text-[var(--color-navy-secondary)] underline-offset-2 hover:text-[var(--color-navy)] hover:underline";
 
@@ -36,7 +39,7 @@ export default async function SitemapPage() {
       <Section className="pb-20 md:pb-28">
         <div className="grid gap-8 md:grid-cols-2">
           <Card>
-            <h2 className="text-xl font-semibold text-[var(--color-navy)]">
+            <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
               Основные разделы
             </h2>
             <ul className="mt-4 flex flex-col gap-1">
@@ -51,7 +54,7 @@ export default async function SitemapPage() {
           </Card>
 
           <Card>
-            <h2 className="text-xl font-semibold text-[var(--color-navy)]">
+            <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
               Направления
             </h2>
             {directions.length ? (
@@ -65,14 +68,14 @@ export default async function SitemapPage() {
                 ))}
               </ul>
             ) : (
-              <p className="mt-4 text-sm text-[var(--color-gray-500)]">
+              <p className={`mt-4 ${typography.bodySm} text-[var(--color-gray-500)]`}>
                 Список направлений временно недоступен.
               </p>
             )}
           </Card>
 
           <Card>
-            <h2 className="text-xl font-semibold text-[var(--color-navy)]">
+            <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
               Правовая информация
             </h2>
             <ul className="mt-4 flex flex-col gap-1">

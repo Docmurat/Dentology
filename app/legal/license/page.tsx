@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/layout/site-shell";
+import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { COMPANY } from "@/lib/company";
+import { typography } from "@/lib/typography";
 
 export const metadata: Metadata = {
   title: "Лицензия на медицинскую деятельность",
@@ -12,8 +14,12 @@ export const metadata: Metadata = {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1 border-b border-[var(--color-gray-100)] py-3 last:border-0 sm:grid-cols-[220px_1fr] sm:gap-4">
-      <span className="text-sm text-[var(--color-gray-500)]">{label}</span>
-      <span className="text-sm text-[var(--color-navy)]">{value}</span>
+      <span className={`${typography.bodySm} text-[var(--color-gray-500)]`}>
+        {label}
+      </span>
+      <span className={`${typography.bodySm} text-[var(--color-navy)]`}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -23,16 +29,18 @@ export default function LicensePage() {
 
   return (
     <SiteShell>
-      <Section className="py-12 md:py-16">
-        <div className="mx-auto max-w-3xl">
-          <h1 className="text-3xl font-semibold text-[var(--color-navy)] md:text-4xl">
-            Лицензия на медицинскую деятельность
-          </h1>
-          <p className="mt-3 text-sm text-[var(--color-gray-500)]">
-            {COMPANY.fullName} ({COMPANY.shortName})
-          </p>
+      {/* Раньше заголовок страницы был набран вручную и жил вне PageHero:
+          правовой раздел писался отдельно от остального сайта и отличался
+          и кеглем, и отступами. Теперь как на всех внутренних страницах. */}
+      <PageHero
+        eyebrow="Правовая информация"
+        title="Лицензия на медицинскую деятельность"
+        description={`${COMPANY.fullName} (${COMPANY.shortName})`}
+      />
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-start">
+      <Section className="pb-20 md:pb-28">
+        <div className="mx-auto max-w-3xl">
+          <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-start">
             <Card>
               <Row label="Статус лицензии" value={l.status} />
               <Row label="Регистрационный номер" value={l.number} />
@@ -53,27 +61,32 @@ export default function LicensePage() {
                   className="h-auto w-full"
                 />
               </div>
-              <p className="max-w-[220px] text-center text-xs leading-5 text-[var(--color-gray-500)]">
+
+              <p
+                className={`max-w-[220px] text-center ${typography.caption} text-[var(--color-gray-500)]`}
+              >
                 Отсканируйте QR-код и введите ОГРН{" "}
                 <span className="font-medium text-[var(--color-navy)]">
                   {COMPANY.ogrn}
                 </span>{" "}
                 для проверки лицензии в реестре Росздравнадзора
               </p>
+
               <a
                 href={l.registryUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm font-medium text-[var(--color-teal)] underline hover:opacity-80"
+                className={`${typography.bodySm} font-medium text-[var(--color-teal)] underline hover:opacity-80`}
               >
                 Проверить в реестре лицензий
               </a>
+
               {l.extractUrl ? (
                 <a
                   href={l.extractUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-medium text-[var(--color-navy)] underline hover:opacity-80"
+                  className={`${typography.bodySm} font-medium text-[var(--color-navy)] underline hover:opacity-80`}
                 >
                   Скачать выписку из реестра
                 </a>
@@ -81,7 +94,7 @@ export default function LicensePage() {
             </div>
           </div>
 
-          <p className="mt-8 text-sm leading-7 text-[var(--color-gray-600)]">
+          <p className={`mt-8 ${typography.bodySm} text-[var(--color-gray-600)]`}>
             Сведения о лицензии соответствуют выписке из реестра лицензий,
             сформированной на интернет-портале Росздравнадзора. Актуальный
             статус и полный перечень адресов осуществления деятельности можно

@@ -5,11 +5,11 @@ import { useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { ContactForm } from "@/components/forms/contact-form";
 import { useModalA11y } from "@/lib/use-modal-a11y";
+import { typography } from "@/lib/typography";
 
 type Variant = "teal" | "gold" | "gold-outline" | "ticket";
 
-const base =
-  "inline-flex items-center justify-center rounded-xl px-6 py-4 text-sm font-medium transition";
+const base = `inline-flex items-center justify-center rounded-xl px-6 py-4 ${typography.bodySm} font-medium transition`;
 
 function triggerClass(variant: Variant, className: string): string {
   // gold-strong вместо gold там, где цвет несёт текст: обычный золотой
@@ -60,10 +60,7 @@ function ContactModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
-          <h3
-            id={titleId}
-            className="text-lg font-semibold text-[var(--color-navy)]"
-          >
+          <h3 id={titleId} className={`${typography.h4} text-[var(--color-navy)]`}>
             {title}
           </h3>
           <button
@@ -76,7 +73,7 @@ function ContactModal({
           </button>
         </div>
 
-        <p className="mt-2 text-sm leading-6 text-[var(--color-gray-600)]">
+        <p className={`mt-2 ${typography.bodySm} text-[var(--color-gray-600)]`}>
           {intro}
         </p>
 

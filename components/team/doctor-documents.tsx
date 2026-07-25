@@ -7,9 +7,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
+import { Lightbox } from "@/components/cases/image-lightbox";
+import { typography } from "@/lib/typography";
 
 // useLayoutEffect на сервере шумит варнингом — на сервере берём useEffect.
 const useIsoLayoutEffect =
@@ -26,6 +27,11 @@ const useIsoLayoutEffect =
  * гарантированно была интерактивной. Состояние просмотра живёт в этом
  * компоненте — он сам не перемонтируется, поэтому окно не закрывается при
  * пересчёте раскладки.
+ *
+ * Просмотр крупно — общий Lightbox из components/cases/image-lightbox.tsx.
+ * Раньше здесь была своя копия портала, обработчика Escape и фиксации
+ * прокрутки: две независимые реализации расходились в поведении, и жест
+ * увеличения работал по-разному в кейсах и на странице врача.
  */
 export function DoctorDocuments({
   diplomaSrc,
@@ -74,39 +80,9 @@ export function DoctorDocuments({
     };
   }, [hasReviews, beside]);
 
-  useEffect(() => {
-    if (!zoom) return;
-
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setZoom(false);
-    }
-    document.addEventListener("keydown", onKey);
-
-    // Фиксируем страницу под окном просмотра: на телефоне иначе фон
-    // прокручивается вместе с жестом. Позицию запоминаем и возвращаем.
-    const scrollY = window.scrollY;
-    const body = document.body;
-    const prev = {
-      position: body.style.position,
-      top: body.style.top,
-      width: body.style.width,
-    };
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
-
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      body.style.position = prev.position;
-      body.style.top = prev.top;
-      body.style.width = prev.width;
-      window.scrollTo(0, scrollY);
-    };
-  }, [zoom]);
-
   const diplomaCard = (
     <Card>
-      <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+      <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
         Диплом специалиста
       </h2>
 
@@ -127,51 +103,25 @@ export function DoctorDocuments({
           />
         </button>
       ) : (
-        <p className="mt-4 text-base leading-7 text-[var(--color-gray-700)]">
+        <p className={`mt-4 ${typography.body} text-[var(--color-gray-700)]`}>
           Скан диплома появится после загрузки в админ-панели.
         </p>
       )}
     </Card>
   );
 
+  // Потолок увеличения выше, чем у фотографий: диплом открывают, чтобы
+  // прочитать текст, и там запас важнее чистоты картинки.
   const overlay =
-    zoom && diplomaSrc && typeof document !== "undefined"
-      ? createPortal(
-          <div
-            className="fixed inset-0 z-[100] overflow-auto overscroll-contain bg-black/90 sm:p-4"
-            onClick={() => setZoom(false)}
-            role="dialog"
-            aria-modal="true"
-          >
-            <button
-              type="button"
-              onClick={() => setZoom(false)}
-              aria-label="Закрыть"
-              className="fixed right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-lg text-white backdrop-blur transition hover:bg-white/25 sm:right-4 sm:top-4 sm:h-10 sm:w-10"
-            >
-              ✕
-            </button>
-
-            {/* На телефоне диплом открывается во всю ширину и прокручивается,
-                чтобы текст можно было прочитать. От 640px — вписывается в экран. */}
-            <div
-              className="flex min-h-full items-center justify-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Image
-                src={diplomaSrc}
-                alt={diplomaAlt}
-                width={1600}
-                height={1200}
-                sizes="(max-width: 1024px) 100vw, 1200px"
-                priority
-                className="h-auto w-full sm:max-h-[90vh] sm:rounded-lg sm:object-contain lg:max-w-[1200px]"
-              />
-            </div>
-          </div>,
-          document.body
-        )
-      : null;
+    zoom && diplomaSrc ? (
+      <Lightbox
+        images={[diplomaSrc]}
+        index={0}
+        onClose={() => setZoom(false)}
+        onIndexChange={() => {}}
+        maxScale={4}
+      />
+    ) : null;
 
   if (beside && hasReviews) {
     return (

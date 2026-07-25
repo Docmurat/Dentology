@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/layout/site-shell";
+import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { COMPANY } from "@/lib/company";
+import { typography } from "@/lib/typography";
 
 export const metadata: Metadata = {
   title: "Политика обработки персональных данных",
@@ -11,18 +13,22 @@ export const metadata: Metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <SiteShell>
-      <Section className="py-12 md:py-16">
-        <div className="mx-auto max-w-3xl">
-          <h1 className="text-3xl font-semibold text-[var(--color-navy)] md:text-4xl">
-            Политика в отношении обработки персональных данных
-          </h1>
-          <p className="mt-3 text-sm text-[var(--color-gray-500)]">
-            {COMPANY.fullName} ({COMPANY.shortName})
-          </p>
+      {/* Раньше заголовок страницы был набран вручную и жил вне PageHero:
+          правовой раздел писался отдельно от остального сайта и отличался
+          и кеглем, и отступами. Теперь как на всех внутренних страницах. */}
+      <PageHero
+        eyebrow="Правовая информация"
+        title="Политика в отношении обработки персональных данных"
+        description={`${COMPANY.fullName} (${COMPANY.shortName})`}
+      />
 
-          <div className="mt-8 space-y-6 text-base leading-8 text-[var(--color-gray-700)]">
+      <Section className="pb-20 md:pb-28">
+        <div className="mx-auto max-w-3xl">
+          <div
+            className={`space-y-6 ${typography.body} text-[var(--color-gray-700)]`}
+          >
             <div>
-              <h2 className="mb-2 text-xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`mb-2 ${typography.h3} text-[var(--color-navy)]`}>
                 1. Общие положения
               </h2>
               <p>
@@ -37,7 +43,7 @@ export default function PrivacyPolicyPage() {
             </div>
 
             <div>
-              <h2 className="mb-2 text-xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`mb-2 ${typography.h3} text-[var(--color-navy)]`}>
                 2. Правовые основания и цели обработки
               </h2>
               <p>
@@ -51,7 +57,7 @@ export default function PrivacyPolicyPage() {
             </div>
 
             <div>
-              <h2 className="mb-2 text-xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`mb-2 ${typography.h3} text-[var(--color-navy)]`}>
                 3. Категории персональных данных
               </h2>
               <p>
@@ -65,60 +71,62 @@ export default function PrivacyPolicyPage() {
             </div>
 
             <div>
-              <h2 className="mb-2 text-xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`mb-2 ${typography.h3} text-[var(--color-navy)]`}>
                 4. Порядок и условия обработки
               </h2>
               <p>
                 Обработка включает сбор, запись, систематизацию, накопление,
                 хранение, уточнение, использование, передачу (в предусмотренных
-                законом случаях), блокирование, удаление и уничтожение.
-                Оператор принимает необходимые правовые, организационные и
-                технические меры для защиты данных от неправомерного доступа.
-                Данные хранятся не дольше, чем этого требуют цели обработки,
-                если иной срок не предусмотрен законодательством.
+                законом случаях), блокирование, удаление и уничтожение. Оператор
+                принимает необходимые правовые, организационные и технические
+                меры для защиты данных от неправомерного доступа. Данные
+                хранятся не дольше, чем этого требуют цели обработки, если иной
+                срок не предусмотрен законодательством.
               </p>
             </div>
 
             <div>
-              <h2 className="mb-2 text-xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`mb-2 ${typography.h3} text-[var(--color-navy)]`}>
                 5. Права субъекта персональных данных
               </h2>
               <p>
                 Субъект вправе получать информацию об обработке своих данных,
                 требовать их уточнения, блокирования или уничтожения, а также
-                отозвать согласие на обработку, направив обращение Оператору. При
-                отзыве согласия Оператор прекращает обработку и уничтожает данные
-                в сроки, установленные законодательством, если отсутствуют иные
-                правовые основания для обработки.
+                отозвать согласие на обработку, направив обращение Оператору.
+                При отзыве согласия Оператор прекращает обработку и уничтожает
+                данные в сроки, установленные законодательством, если
+                отсутствуют иные правовые основания для обработки.
               </p>
             </div>
 
             <div>
-              <h2 className="mb-2 text-xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`mb-2 ${typography.h3} text-[var(--color-navy)]`}>
                 6. Файлы cookie
               </h2>
               <p>
-                Сайт может использовать файлы cookie и аналогичные технологии для
-                корректной работы и анализа посещаемости. Пользователь может
+                Сайт может использовать файлы cookie и аналогичные технологии
+                для корректной работы и анализа посещаемости. Пользователь может
                 отключить cookie в настройках браузера; это может повлиять на
                 работу отдельных функций сайта.
               </p>
             </div>
 
             <div>
-              <h2 className="mb-2 text-xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`mb-2 ${typography.h3} text-[var(--color-navy)]`}>
                 7. Контакты Оператора
               </h2>
               <p>
                 {COMPANY.fullName}. Адрес: {COMPANY.address}.
                 {COMPANY.email ? ` E-mail: ${COMPANY.email}.` : ""}
                 {COMPANY.phone ? ` Телефон: ${COMPANY.phone}.` : ""} По вопросам
-                обработки персональных данных и для отзыва согласия обращайтесь к
-                Оператору по указанным реквизитам.
+                обработки персональных данных и для отзыва согласия обращайтесь
+                к Оператору по указанным реквизитам.
               </p>
             </div>
 
-            <p className="border-t border-[var(--color-gray-200)] pt-6 text-sm text-[var(--color-gray-500)]">
+            <p
+              className={`border-t border-[var(--color-gray-200)] pt-6 ${typography.caption} text-[var(--color-gray-500)]`}
+            >
               Документ является шаблоном и подлежит проверке и утверждению
               юристом организации перед публикацией.
             </p>

@@ -9,6 +9,7 @@ import {
 } from "@/lib/leads";
 import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { setLeadStatusAction, deleteLead } from "@/app/admin/leads/actions";
+import { PushToggle } from "@/components/admin/push-toggle";
 
 // Общий список заявок. Используется админкой и кабинетом модератора,
 // поэтому базовый адрес для вкладок приходит снаружи.
@@ -83,6 +84,10 @@ export async function LeadsBoard({
 
   return (
     <>
+      {/* Уведомления включаются на каждом устройстве отдельно. */}
+      <div className="mt-6">
+        <PushToggle />
+      </div>
       {/* Фильтр по статусу */}
       <div className="mt-6 flex flex-wrap gap-2">
         {tabs.map((tab) => {
@@ -202,6 +207,9 @@ export async function LeadsBoard({
                 </span>
                 <span>
                   Telegram: {lead.notifiedTelegram ? "отправлен" : "не дошёл"}
+                </span>
+                <span>
+                  Пуш: {lead.notifiedPush ? "доставлен" : "не дошёл"}
                 </span>
                 {lead.sourceIp ? <span>IP: {lead.sourceIp}</span> : null}
               </div>

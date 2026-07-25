@@ -20,6 +20,7 @@ import { CourseReviews } from "@/components/reviews/course-reviews";
 import { getCasesForCards } from "@/lib/cases";
 import { getDirectionLabelMap } from "@/lib/directions-db";
 import { getTeamMemberBySlug } from "@/lib/team";
+import { typography } from "@/lib/typography";
 import type { Course } from "@/lib/courses";
 
 /**
@@ -85,9 +86,9 @@ export async function CourseView({
   // На планшете мини кегль возвращается к мобильному: две колонки по ~330px,
   // 16px в них выглядят крупно и раздувают высоту блока.
   const listTitleCls =
-    "text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-lg md:leading-snug lg:text-2xl lg:leading-tight";
+    `${typography.h3} text-[var(--color-navy)] md:text-lg md:leading-snug lg:text-2xl lg:leading-tight`;
   const listItemCls =
-    "flex gap-3 text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7 md:gap-2.5 md:text-sm md:leading-6 lg:gap-3 lg:text-base lg:leading-7";
+    `flex gap-3 ${typography.body} text-[var(--color-gray-700)] md:gap-2.5 md:text-sm md:leading-6 lg:gap-3 lg:text-base lg:leading-7`;
   const listDotCls =
     "mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-gold)] md:mt-[9px] md:h-1 md:w-1 lg:mt-2 lg:h-1.5 lg:w-1.5";
 
@@ -135,7 +136,7 @@ export async function CourseView({
       ) : null}
 
       {isDraftPreview ? (
-        <div className="flex items-center justify-between gap-4 bg-amber-100 px-4 py-2 text-sm text-amber-800">
+        <div className={`flex items-center justify-between gap-4 bg-amber-100 px-4 py-2 ${typography.bodySm} text-amber-800`}>
           <span>Предпросмотр · черновик — так курс будет выглядеть на сайте</span>
           <Link href={draftBackHref} className="font-medium underline">
             ← к списку
@@ -147,7 +148,7 @@ export async function CourseView({
       <Section className="pt-10 pb-12 md:pt-14 md:pb-16">
         <div className="grid items-center gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-10">
           <div className="order-1 lg:order-2">
-            <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-gold)]">
+            <p className={`${typography.eyebrow} text-[var(--color-gold-strong)]`}>
               Lucenta Обучение
             </p>
 
@@ -156,7 +157,7 @@ export async function CourseView({
               на 1024px правая колонка ≈ 566px — там 36px читается лучше.
               Полный размер возвращаем только с 1280px.
             */}
-            <h1 className="mt-4 text-2xl font-semibold leading-[1.15] text-[var(--color-navy)] sm:text-3xl sm:leading-[1.1] md:text-4xl lg:text-4xl xl:text-5xl">
+            <h1 className={`mt-4 ${typography.h1} text-[var(--color-navy)]`}>
               {course.title}
             </h1>
 
@@ -165,7 +166,7 @@ export async function CourseView({
                 {course.learningTypes.map((t) => (
                   <span
                     key={t}
-                    className="rounded-full border border-[var(--color-gray-200)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-navy)]"
+                    className={`rounded-full border border-[var(--color-gray-200)] bg-white px-3 py-1 ${typography.caption} font-medium text-[var(--color-navy)]`}
                   >
                     {t}
                   </span>
@@ -174,7 +175,7 @@ export async function CourseView({
             ) : null}
 
             {course.description ? (
-              <p className="mt-4 max-w-xl text-sm leading-6 text-[var(--color-gray-700)] sm:mt-5 sm:text-base sm:leading-7 lg:text-lg lg:leading-8 xl:max-w-2xl">
+              <p className={`mt-4 max-w-xl sm:mt-5 xl:max-w-2xl ${typography.bodyLg} text-[var(--color-gray-700)]`}>
                 {course.description}
               </p>
             ) : null}
@@ -218,12 +219,12 @@ export async function CourseView({
 
             <div className="md:min-w-0 md:flex-1">
               {doctor ? (
-                <p className="mt-4 text-center text-sm font-semibold text-[var(--color-navy)] sm:mt-5 sm:text-base md:mt-0 md:text-left lg:mt-5 lg:text-center">
+                <p className={`mt-4 text-center sm:mt-5 md:mt-0 md:text-left lg:mt-5 lg:text-center ${typography.body} font-semibold text-[var(--color-navy)]`}>
                   Спикер — {doctor.name}
                 </p>
               ) : null}
               {course.showBio && course.instructorBio ? (
-                <p className="mt-2 text-center text-sm leading-6 text-[var(--color-gray-700)] sm:leading-7 md:text-left lg:text-center">
+                <p className={`mt-2 text-center md:text-left lg:text-center ${typography.body} text-[var(--color-gray-700)]`}>
                   {course.instructorBio}
                 </p>
               ) : null}
@@ -328,7 +329,7 @@ export async function CourseView({
       {/* Программа */}
       {course.showProgram && programItems.length ? (
         <Section className="py-12 md:py-16">
-          <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
+          <h2 className={`${typography.h2} text-[var(--color-navy)]`}>
             Программа курса
           </h2>
           <div className="mt-6 sm:mt-8">
@@ -340,7 +341,7 @@ export async function CourseView({
       {/* Форматы обучения */}
       {formatCards.length ? (
         <Section className="py-12 md:py-16">
-          <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-center md:text-3xl">
+          <h2 className={`md:text-center ${typography.h2} text-[var(--color-navy)]`}>
             Форматы обучения
           </h2>
           <div
@@ -359,10 +360,10 @@ export async function CourseView({
                       : ""
                   }`}
                 >
-                  <h3 className="text-base font-semibold leading-snug text-[var(--color-navy)] sm:text-lg">
+                  <h3 className={`${typography.h4} text-[var(--color-navy)]`}>
                     {f.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-[var(--color-gray-700)]">
+                  <p className={`mt-2 ${typography.bodySm} text-[var(--color-gray-700)]`}>
                     {f.summary}
                   </p>
 
@@ -372,7 +373,7 @@ export async function CourseView({
                     {f.points.map((p) => (
                       <li
                         key={p}
-                        className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
+                        className={`flex gap-2 ${typography.bodySm} text-[var(--color-gray-700)]`}
                       >
                         <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--color-gold)]" />
                         {p}
@@ -381,14 +382,17 @@ export async function CourseView({
                   </ul>
 
                   <div className="mt-6 border-t border-[var(--color-gray-200)] pt-4">
-                    <p className="text-xs text-[var(--color-gray-500)]">
+                    <p className={`${typography.caption} text-[var(--color-gray-500)]`}>
                       {f.duration}
                     </p>
+                    {/* Цена — не текст, а конверсионный якорь: кегль
+                        подобран под ширину карточки формата, поэтому
+                        она сознательно вне шкалы. */}
                     <p className="mt-1 text-lg font-semibold text-[var(--color-navy)] sm:text-xl">
                       {f.price}
                     </p>
                     {f.priceNote ? (
-                      <p className="mt-2 text-xs leading-5 text-[var(--color-gray-600)]">
+                      <p className={`mt-2 ${typography.caption} text-[var(--color-gray-600)]`}>
                         {f.priceNote}
                       </p>
                     ) : null}
@@ -428,10 +432,10 @@ export async function CourseView({
               в строку не помещаются */}
           <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-gold)]">
+              <p className={`${typography.eyebrow} text-[var(--color-gold-strong)]`}>
                 Клинические случаи
               </p>
-              <h2 className="mt-3 text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
+              <h2 className={`mt-3 ${typography.h2} text-[var(--color-navy)]`}>
                 Клинические случаи спикера
               </h2>
             </div>
@@ -478,11 +482,11 @@ export async function CourseView({
           id="course-final-cta"
           className="rounded-[24px] bg-[var(--color-gold)]/10 px-5 py-10 text-center sm:rounded-[32px] sm:px-8 sm:py-12 md:px-12 xl:py-16"
         >
-          <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
+          <h2 className={`${typography.h2} text-[var(--color-navy)]`}>
             Готовы начать?
           </h2>
           {course.showCta && course.ctaNote ? (
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7 xl:max-w-2xl">
+            <p className={`mx-auto mt-3 max-w-xl xl:max-w-2xl ${typography.body} text-[var(--color-gray-700)]`}>
               {course.ctaNote}
             </p>
           ) : null}

@@ -46,9 +46,11 @@ function CaseDoctorCard({
           >
             {doctor.position}
           </p>
+          {/* eyebrowSm, а не eyebrow: колонка 300px, и 14px с разрядкой
+              здесь переполняют строку. */}
           <Link
             href={`/team/${doctor.slug}`}
-            className={`mt-2 inline-flex lg:mt-3 ${typography.eyebrow} text-[var(--color-teal)] hover:text-[var(--color-navy)]`}
+            className={`mt-2 inline-flex lg:mt-3 ${typography.eyebrowSm} text-[var(--color-teal)] hover:text-[var(--color-navy)]`}
           >
             Подробнее о враче
           </Link>

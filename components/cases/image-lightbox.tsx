@@ -4,12 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 
-// Пределы масштабирования. Верхняя граница — 3x осознанно: фотографии
-// сжимаются при загрузке до 1600px по большей стороне (lib/image-compress.ts),
-// на экране снимок занимает около 1200px. Дальше 3x растёт не детализация,
-// а мыло — ограничение честнее, чем иллюзия глубокого зума.
+// Потолок масштабирования по умолчанию — 3x: фотографии кейсов сжимаются
+// при загрузке до 1600px по большей стороне (lib/image-compress.ts), на
+// экране снимок занимает около 1200px. Дальше растёт не детализация, а мыло.
+// Документы (диплом) переопределяют предел через maxScale: их увеличивают,
+// чтобы прочитать текст, и там запас важнее чистоты картинки.
 const MIN_SCALE = 1;
-const MAX_SCALE = 3;
+const DEFAULT_MAX_SCALE = 3;
 const TAP_SCALE = 2.5;
 const WHEEL_STEP = 1.15;
 const DOUBLE_TAP_MS = 300;
@@ -28,17 +29,22 @@ const RESET: View = { s: 1, x: 0, y: 0 };
  *
  * Рендерится порталом в document.body, чтобы оверлей не зажимался
  * родителями с transform или overflow.
+ *
+ * Используется галереей блоков кейса, блоком «до / после» и дипломом врача.
  */
 export function Lightbox({
   images,
   index,
   onClose,
   onIndexChange,
+  maxScale = DEFAULT_MAX_SCALE,
 }: {
   images: string[];
   index: number;
   onClose: () => void;
   onIndexChange: (i: number) => void;
+  /** Потолок увеличения. Больше 3x осмысленно только для документов. */
+  maxScale?: number;
 }) {
   const count = images.length;
   const single = count <= 1;
@@ -83,27 +89,30 @@ export function Lightbox({
   // Ограничение сдвига: увеличенный снимок не должен отрываться от краёв.
   // offsetWidth берётся у неотмасштабированного контейнера, поэтому на него
   // не влияет собственный transform.
-  const clamp = useCallback((v: View): View => {
-    const frame = frameRef.current;
-    const vp = viewportRef.current;
-    if (!frame || !vp) return v;
+  const clamp = useCallback(
+    (v: View): View => {
+      const frame = frameRef.current;
+      const vp = viewportRef.current;
+      if (!frame || !vp) return v;
 
-    const s = Math.min(MAX_SCALE, Math.max(MIN_SCALE, v.s));
-    const maxX = Math.max(0, (frame.offsetWidth * s - vp.clientWidth) / 2);
-    const maxY = Math.max(0, (frame.offsetHeight * s - vp.clientHeight) / 2);
+      const s = Math.min(maxScale, Math.max(MIN_SCALE, v.s));
+      const maxX = Math.max(0, (frame.offsetWidth * s - vp.clientWidth) / 2);
+      const maxY = Math.max(0, (frame.offsetHeight * s - vp.clientHeight) / 2);
 
-    return {
-      s,
-      x: Math.min(maxX, Math.max(-maxX, v.x)),
-      y: Math.min(maxY, Math.max(-maxY, v.y)),
-    };
-  }, []);
+      return {
+        s,
+        x: Math.min(maxX, Math.max(-maxX, v.x)),
+        y: Math.min(maxY, Math.max(-maxY, v.y)),
+      };
+    },
+    [maxScale]
+  );
 
   // Масштабирование «вокруг точки»: содержимое под пальцем или курсором
   // остаётся на месте. Точка задаётся относительно центра области просмотра.
   const zoomAt = useCallback(
     (nextScale: number, fx: number, fy: number, from: View) => {
-      const s = Math.min(MAX_SCALE, Math.max(MIN_SCALE, nextScale));
+      const s = Math.min(maxScale, Math.max(MIN_SCALE, nextScale));
       const k = s / from.s;
       setView(
         clamp({
@@ -113,11 +122,11 @@ export function Lightbox({
         })
       );
     },
-    [clamp]
+    [clamp, maxScale]
   );
 
   // Клавиатура. Отдельным эффектом: onClose приходит из родителя как новая
-  // функция на каждом рендере, и раньше вместе с ним переподписывалась
+  // функция на каждом рендере, и вместе с ним переподписывалась бы
   // блокировка прокрутки — в блоке «до / после» она успевала сняться и
   // вернуться несколько раз подряд из-за onLoad у картинок.
   useEffect(() => {

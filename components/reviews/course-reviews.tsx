@@ -21,7 +21,9 @@ export async function CourseReviews({ courseSlug }: { courseSlug: string }) {
           заголовок и две кнопки в строку не помещаются. */}
       <div className="flex flex-col gap-6 sm:gap-8 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className={`${typography.eyebrow} text-[var(--color-gold)]`}>
+          {/* gold-strong вместо gold: обычный золотой на белом даёт 2.9:1
+              при норме AA 4.5:1 — как текст он непригоден. */}
+          <p className={`${typography.eyebrow} text-[var(--color-gold-strong)]`}>
             Отзывы
           </p>
           <h2 className={`mt-3 ${typography.h2} text-[var(--color-navy)]`}>
@@ -68,7 +70,7 @@ export async function CourseReviews({ courseSlug }: { courseSlug: string }) {
           </div>
         </>
       ) : (
-        <p className="mt-8 text-sm text-[var(--color-gray-500)] sm:mt-10">
+        <p className={`mt-8 sm:mt-10 ${typography.bodySm} text-[var(--color-gray-500)]`}>
           Пока нет отзывов об этом курсе. Станьте первым!
         </p>
       )}

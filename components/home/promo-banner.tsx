@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Section } from "@/components/layout/section";
 import { getPromoContent } from "@/lib/homepage";
+import { typography } from "@/lib/typography";
 
 export async function PromoBanner() {
   const promo = await getPromoContent();
@@ -14,12 +15,12 @@ export async function PromoBanner() {
     <Section className="pt-6 pb-0 md:pt-8 md:pb-0">
       <div className="rounded-[24px] border border-red-200 bg-red-50 px-6 py-3 text-center md:px-8">
         {promo.eyebrow ? (
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-600">
+          <p className={`${typography.eyebrow} font-semibold text-red-600`}>
             {promo.eyebrow}
           </p>
         ) : null}
 
-        <p className="mt-1 text-base leading-6 text-[var(--color-navy)] md:text-lg">
+        <p className={`mt-1 ${typography.bodyLg} text-[var(--color-navy)]`}>
           {promo.text}
           {showLink ? (
             isExternal ? (

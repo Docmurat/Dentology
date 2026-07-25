@@ -25,7 +25,9 @@ export async function EducationPreview() {
           </div>
 
           <div className="rounded-[20px] border border-[var(--color-gray-200)] bg-white p-4 sm:p-6">
-            <p className={`${typography.eyebrow} text-[var(--color-gold)]`}>
+            {/* gold-strong вместо gold: обычный золотой на белом даёт 2.9:1
+                при норме AA 4.5:1 — как текст он непригоден. */}
+            <p className={`${typography.eyebrow} text-[var(--color-gold-strong)]`}>
               {edu.badge}
             </p>
             <div

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { typography } from "@/lib/typography";
 import type { ReviewItem } from "@/lib/reviews-data";
 
 type ReviewCardProps = {
@@ -61,14 +62,18 @@ function ReviewSection({
 
   return (
     <div className="mt-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-gray-500)]">
+      {/* Вес medium, а не semibold: это подпись к списку, капитель с
+          разрядкой и так выделяет её из текста. */}
+      <p
+        className={`${typography.eyebrow} font-medium text-[var(--color-gray-500)]`}
+      >
         {title}
       </p>
       <ul className="mt-2 space-y-1.5">
         {items.map((item, i) => (
           <li
             key={i}
-            className="flex gap-2 text-sm leading-6 text-[var(--color-gray-700)]"
+            className={`flex gap-2 ${typography.bodySm} text-[var(--color-gray-700)]`}
           >
             <span className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
             {item}
@@ -113,27 +118,36 @@ export function ReviewCard({ review, compact = false, date }: ReviewCardProps) {
             />
           </div>
         ) : (
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-gray-100)] text-sm font-semibold text-[var(--color-navy-secondary)]">
+          <div
+            className={`flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-gray-100)] ${typography.bodySm} font-semibold text-[var(--color-navy-secondary)]`}
+          >
             {getInitials(review.author)}
           </div>
         )}
 
         <div className="min-w-0">
-          <p className="font-medium text-[var(--color-navy)]">
+          {/* Имя отделено от текста отзыва кеглем и цветом, а не весом.
+              Сайт набран Arial: у него только Regular и Bold, промежуточных
+              начертаний нет — font-medium там отображается как обычный, а
+              font-semibold сразу как жирный. Когда вернётся переменный
+              шрифт с настоящей осью веса, здесь уместнее bodySm + medium. */}
+          <p className={`${typography.body} text-[var(--color-navy)]`}>
             {review.author}
           </p>
 
           {date ? (
-            <p className="text-sm text-[var(--color-gray-500)]">{date}</p>
+            <p className={`${typography.caption} text-[var(--color-gray-500)]`}>
+              {date}
+            </p>
           ) : review.city ? (
-            <p className="text-sm text-[var(--color-gray-500)]">
+            <p className={`${typography.caption} text-[var(--color-gray-500)]`}>
               {review.city}
             </p>
           ) : null}
         </div>
       </div>
 
-      <p className="mt-5 text-sm leading-7 text-[var(--color-gray-700)]">
+      <p className={`mt-5 ${typography.bodySm} text-[var(--color-gray-700)]`}>
         {visibleText}
       </p>
 
@@ -152,7 +166,7 @@ export function ReviewCard({ review, compact = false, date }: ReviewCardProps) {
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
-            className="inline-flex text-sm font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]"
+            className={`inline-flex ${typography.bodySm} font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]`}
           >
             {expanded ? "Свернуть" : "Читать полностью"}
           </button>

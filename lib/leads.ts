@@ -23,6 +23,7 @@ export type Lead = {
   userAgent: string | null;
   notifiedEmail: boolean;
   notifiedTelegram: boolean;
+  notifiedPush: boolean;
   createdAt: string;
   handledAt: string | null;
   /** Кто последним менял статус — имя из профиля, иначе почта. */
@@ -41,6 +42,7 @@ type Row = {
   user_agent: string | null;
   notified_email: boolean;
   notified_telegram: boolean;
+  notified_push: boolean;
   created_at: string;
   handled_at: string | null;
   handled_by_name: string | null;
@@ -62,6 +64,7 @@ function mapRow(row: Row): Lead {
     userAgent: row.user_agent,
     notifiedEmail: row.notified_email,
     notifiedTelegram: row.notified_telegram,
+    notifiedPush: row.notified_push,
     createdAt: row.created_at,
     handledAt: row.handled_at,
     handledByName: row.handled_by_name || row.handled_by_email || null,
@@ -72,7 +75,7 @@ function mapRow(row: Row): Lead {
 const SELECT = `
   select l.id, l.name, l.phone, l.contact_method, l.message, l.context,
          l.status, l.source_ip, l.user_agent, l.notified_email,
-         l.notified_telegram, l.created_at, l.handled_at,
+         l.notified_telegram, l.notified_push, l.created_at, l.handled_at,
          p.full_name as handled_by_name,
          p.email     as handled_by_email
     from leads l
@@ -114,10 +117,15 @@ export async function createLead(lead: NewLead): Promise<void> {
 /** Отметка о доставке уведомления. Ошибку глушим: заявка уже сохранена. */
 export async function markLeadNotified(
   id: string,
-  channel: "email" | "telegram",
+  channel: "email" | "telegram" | "push",
   ok: boolean
 ): Promise<void> {
-  const column = channel === "email" ? "notified_email" : "notified_telegram";
+  const column =
+    channel === "email"
+      ? "notified_email"
+      : channel === "telegram"
+        ? "notified_telegram"
+        : "notified_push";
   try {
     await query(`update leads set ${column} = $1 where id = $2`, [ok, id]);
   } catch (err) {

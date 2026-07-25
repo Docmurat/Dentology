@@ -1,5 +1,6 @@
 // components/ui/faq-section.tsx
 import { JsonLd, faqJsonLd } from "@/components/seo/json-ld";
+import { typography } from "@/lib/typography";
 
 export type FaqEntry = { question: string; answer: string };
 
@@ -10,14 +11,13 @@ export type FaqEntry = { question: string; answer: string };
  * направления — любая правка требовала двух одинаковых изменений, и они
  * начали расходиться. Теперь одно место, оно же отдаёт разметку FAQPage.
  *
- * Оформление: без внешней карточки, кегль 14px на телефоне и 16px от 640px.
- * От 834px (iPad Pro портрет) ограничиваем ширину строки — ответ во всю
- * секцию это ~150 символов, читать тяжело.
+ * Оформление: без внешней карточки. От 834px (iPad Pro портрет) ограничиваем
+ * ширину строки — ответ во всю секцию это ~150 символов, читать тяжело.
  */
 export function FaqSection({
   items,
   title = "Частые вопросы",
-  headingClassName = "text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight",
+  headingClassName = `${typography.h3} text-[var(--color-navy)]`,
   withJsonLd = true,
 }: {
   items: FaqEntry[];
@@ -44,7 +44,9 @@ export function FaqSection({
             className="group rounded-2xl border border-[var(--color-gray-200)] bg-white px-5 py-4"
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left">
-              <span className="text-sm font-medium leading-6 text-[var(--color-navy)] sm:text-base sm:leading-7">
+              <span
+                className={`${typography.body} font-medium text-[var(--color-navy)]`}
+              >
                 {item.question}
               </span>
 
@@ -54,7 +56,7 @@ export function FaqSection({
             </summary>
 
             <div className="pt-4">
-              <p className="text-sm leading-6 text-[var(--color-gray-700)] sm:text-base sm:leading-7">
+              <p className={`${typography.body} text-[var(--color-gray-700)]`}>
                 {item.answer}
               </p>
             </div>
