@@ -2,6 +2,7 @@ import { Section } from "@/components/layout/section";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Card } from "@/components/ui/card";
 import { getWhenContent } from "@/lib/homepage";
+import { typography } from "@/lib/typography";
 
 export async function WhenToApply() {
   const when = await getWhenContent();
@@ -21,11 +22,13 @@ export async function WhenToApply() {
             key={index}
             className="grow basis-full p-4 sm:basis-[calc(50%-0.75rem)] sm:p-6 lg:basis-[calc(25%-1.125rem)]"
           >
-            <h3 className="text-base font-semibold text-[var(--color-navy)] sm:text-lg">
+            <h3 className={`${typography.h4} text-[var(--color-navy)]`}>
               {item.title}
             </h3>
 
-            <p className="mt-2 text-xs leading-5 text-[var(--color-gray-700)] sm:mt-3 sm:text-sm sm:leading-6">
+            <p
+              className={`mt-2 sm:mt-3 ${typography.bodySm} text-[var(--color-gray-700)]`}
+            >
               {item.text}
             </p>
           </Card>

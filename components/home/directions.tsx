@@ -4,6 +4,7 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { Card } from "@/components/ui/card";
 import { getDirections, type DirectionItem } from "@/lib/directions-db";
 import { getSectionHeadingContent } from "@/lib/homepage";
+import { typography } from "@/lib/typography";
 
 const linkCls =
   "inline-flex text-sm font-medium text-[var(--color-navy-secondary)] hover:text-[var(--color-navy)]";
@@ -12,19 +13,23 @@ const linkCls =
 function FeaturedCard({ item }: { item: DirectionItem }) {
   return (
     <Card className="p-5 sm:p-8 md:p-10">
-      <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-teal)] sm:text-sm sm:tracking-[0.16em]">
+      <p className={`${typography.eyebrow} text-[var(--color-teal)]`}>
         Основное направление
       </p>
 
-      <h3 className="mt-3 text-xl font-semibold text-[var(--color-navy)] sm:mt-4 sm:text-3xl">
+      <h3 className={`mt-3 sm:mt-4 ${typography.h3} text-[var(--color-navy)]`}>
         {item.title}
       </h3>
 
-      <p className="mt-2 text-xs font-medium text-[var(--color-navy-secondary)] sm:mt-3 sm:text-sm">
+      <p
+        className={`mt-2 sm:mt-3 ${typography.caption} font-medium text-[var(--color-navy-secondary)]`}
+      >
         {item.short}
       </p>
 
-      <p className="mt-4 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-6 sm:text-base sm:leading-7">
+      <p
+        className={`mt-4 sm:mt-6 ${typography.body} text-[var(--color-gray-700)]`}
+      >
         {item.description}
       </p>
 
@@ -39,15 +44,19 @@ function FeaturedCard({ item }: { item: DirectionItem }) {
 function CompactCard({ item }: { item: DirectionItem }) {
   return (
     <Card className="p-4 sm:p-6">
-      <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
+      <p className={`${typography.eyebrow} text-[var(--color-gray-500)]`}>
         {item.short}
       </p>
 
-      <h3 className="mt-1.5 text-base font-semibold text-[var(--color-navy)] sm:mt-2 sm:text-lg">
+      <h3
+        className={`mt-1.5 sm:mt-2 ${typography.h4} text-[var(--color-navy)]`}
+      >
         {item.title}
       </h3>
 
-      <p className="mt-2 text-xs leading-5 text-[var(--color-gray-700)] sm:mt-3 sm:text-sm sm:leading-6">
+      <p
+        className={`mt-2 sm:mt-3 ${typography.bodySm} text-[var(--color-gray-700)]`}
+      >
         {item.description}
       </p>
 

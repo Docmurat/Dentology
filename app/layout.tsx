@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { CookieBanner } from "@/components/legal/cookie-banner";
 import { JsonLd, dentistJsonLd } from "@/components/seo/json-ld";
-import { AuthProvider } from "@/components/layout/auth-provider";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://lucenta.ru"),
@@ -84,10 +83,7 @@ export default function RootLayout({
               "if(c)e.setAttribute('data-a11y-contrast',c);}catch(x){}})();",
           }}
         />
-        {/* Провайдер сессии живёт в корневом layout и не размонтируется
-            при клиентской навигации — шапка перестаёт мигать. children
-            остаются серверными компонентами. */}
-        <AuthProvider>{children}</AuthProvider>
+        {children}
         <CookieBanner />
       </body>
     </html>

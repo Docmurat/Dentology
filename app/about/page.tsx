@@ -4,7 +4,9 @@ import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { ContactButton } from "@/components/contact/contact-modal";
+import { typography } from "@/lib/typography";
 import type { Metadata } from "next";
+
 export const metadata: Metadata = {
   title: "О враче",
   description:
@@ -36,7 +38,7 @@ export default function AboutPage() {
 
           <div className="space-y-6">
             <Card>
-              <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                 Подход
               </h2>
               <p className="mt-4 text-base leading-7 text-[var(--color-gray-700)]">
@@ -47,7 +49,7 @@ export default function AboutPage() {
             </Card>
 
             <Card>
-              <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                 Направления работы
               </h2>
               <p className="mt-4 text-base leading-7 text-[var(--color-gray-700)]">
@@ -58,7 +60,7 @@ export default function AboutPage() {
             </Card>
 
             <Card>
-              <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                 Обучение
               </h2>
               <p className="mt-4 text-base leading-7 text-[var(--color-gray-700)]">

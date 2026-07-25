@@ -5,6 +5,7 @@ import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { getDirections } from "@/lib/directions-db";
+import { typography } from "@/lib/typography";
 
 export const metadata: Metadata = {
   title: "Направления лечения",
@@ -31,11 +32,11 @@ export default async function DirectionsPage() {
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           {featured ? (
             <Card className="p-8 md:p-10">
-              <p className="text-sm uppercase tracking-[0.16em] text-[var(--color-teal)]">
+              <p className={`${typography.eyebrow} text-[var(--color-teal)]`}>
                 Основное направление
               </p>
 
-              <h2 className="mt-4 text-3xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`mt-4 ${typography.h3} text-[var(--color-navy)]`}>
                 {featured.title}
               </h2>
 
@@ -59,11 +60,13 @@ export default async function DirectionsPage() {
           <div className="grid gap-6">
             {others.map((item) => (
               <Card key={item.slug} className="p-6">
-                <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
+                <p
+                  className={`${typography.eyebrow} text-[var(--color-gray-500)]`}
+                >
                   {item.short}
                 </p>
 
-                <h2 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
+                <h2 className={`mt-2 ${typography.h4} text-[var(--color-navy)]`}>
                   {item.title}
                 </h2>
 

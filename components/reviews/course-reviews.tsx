@@ -5,6 +5,7 @@ import { getReviewsByCourse } from "@/lib/reviews";
 import { ReviewsCarousel } from "@/components/reviews/reviews-carousel";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { ReviewForm } from "@/components/reviews/review-form";
+import { typography } from "@/lib/typography";
 
 /** Блок отзывов о курсе — как на главной, но только для этого курса. */
 export async function CourseReviews({ courseSlug }: { courseSlug: string }) {
@@ -17,13 +18,13 @@ export async function CourseReviews({ courseSlug }: { courseSlug: string }) {
   return (
     <Section className="py-12 md:py-16">
       {/* Заголовок и кнопки в один ряд только с 1024px: на планшете мини
-          заголовок 30px и две кнопки в строку не помещаются. */}
+          заголовок и две кнопки в строку не помещаются. */}
       <div className="flex flex-col gap-6 sm:gap-8 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-gold)]">
+          <p className={`${typography.eyebrow} text-[var(--color-gold)]`}>
             Отзывы
           </p>
-          <h2 className="mt-3 text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight md:text-3xl">
+          <h2 className={`mt-3 ${typography.h2} text-[var(--color-navy)]`}>
             Отзывы участников курса
           </h2>
         </div>

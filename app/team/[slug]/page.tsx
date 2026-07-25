@@ -17,6 +17,7 @@ import { ReviewForm } from "@/components/reviews/review-form";
 import { ReviewsCarousel } from "@/components/reviews/reviews-carousel";
 import { DoctorDocuments } from "@/components/team/doctor-documents";
 import { JsonLd, physicianJsonLd } from "@/components/seo/json-ld";
+import { typography } from "@/lib/typography";
 
 export const revalidate = 60;
 
@@ -121,11 +122,11 @@ export default async function DoctorPage({ params }: Props) {
       <Section className="pt-14 pb-16 md:pt-20 md:pb-24">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
           <div className="order-2 lg:order-1">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-teal)] sm:text-sm sm:tracking-[0.22em]">
+            <p className={`${typography.eyebrow} text-[var(--color-teal)]`}>
               {doctor.featured ? "Ведущий специалист" : "Врач команды"}
             </p>
 
-            <h1 className="mt-4 text-2xl font-semibold leading-[1.15] text-[var(--color-navy)] sm:text-3xl sm:leading-[1.1] md:mt-5 md:text-4xl lg:text-5xl">
+            <h1 className={`mt-4 md:mt-5 ${typography.h1} text-[var(--color-navy)]`}>
               {doctor.name}
             </h1>
 
@@ -159,10 +160,12 @@ export default async function DoctorPage({ params }: Props) {
                     key={index}
                     className="rounded-2xl bg-[var(--color-teal)]/5 px-4 py-3 sm:px-5 sm:py-5 sm:text-center lg:px-3 lg:py-4 xl:px-5 xl:py-5"
                   >
-                    <p className="text-lg font-light leading-none text-[var(--color-teal)] sm:text-2xl lg:text-base xl:text-xl">
+                    {/* Цифра показателя — не текст, а декоративная величина: её кегль
+                        задаётся шириной бокса, поэтому она вне шкалы. */}
+                    <p className="text-lg font-light leading-none text-[var(--color-teal)] sm:text-2xl lg:text-xl">
                       {stat.value}
                     </p>
-                    <p className="mt-1 text-xs leading-5 text-[var(--color-gray-600)] sm:mt-2 sm:text-sm sm:leading-6 lg:text-xs lg:leading-5 xl:text-sm xl:leading-6">
+                    <p className={`mt-1 sm:mt-2 ${typography.caption} text-[var(--color-gray-600)]`}>
                       {stat.label}
                     </p>
                   </div>
@@ -199,7 +202,7 @@ export default async function DoctorPage({ params }: Props) {
       {doctor.doctorQuote?.trim() ? (
         <Section className="pb-12 md:pb-16">
           <figure className="border-l-2 border-[var(--color-teal)] pl-6">
-            <blockquote className="whitespace-pre-line font-serif text-base italic leading-7 text-[var(--color-navy)] sm:text-lg sm:leading-8 lg:text-xl">
+            <blockquote className={`whitespace-pre-line ${typography.quote} text-[var(--color-navy)]`}>
               {doctor.doctorQuote}
             </blockquote>
           </figure>
@@ -210,7 +213,7 @@ export default async function DoctorPage({ params }: Props) {
         <div className="grid gap-6 sm:gap-8 [&>*]:min-w-0">
           <div className="grid min-w-0 gap-4 sm:gap-8 lg:grid-cols-2 [&>*]:min-w-0">
             <Card>
-              <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+              <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                 Клинический фокус
               </h2>
               <ul className="mt-4 space-y-2 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-5 sm:space-y-3 sm:text-base sm:leading-7">
@@ -221,7 +224,7 @@ export default async function DoctorPage({ params }: Props) {
             </Card>
 
             <Card className="bg-[var(--color-gray-50)]">
-              <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+              <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                 Когда стоит обратиться
               </h2>
               <ul className="mt-4 space-y-2 text-sm leading-6 text-[var(--color-gray-700)] sm:mt-5 sm:space-y-3 sm:text-base sm:leading-7">
@@ -237,7 +240,7 @@ export default async function DoctorPage({ params }: Props) {
                общая карточка кейса, разное количество под каждый экран. */
             <div>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-                <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+                <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                   Клинические случаи врача
                 </h2>
 
@@ -280,7 +283,7 @@ export default async function DoctorPage({ params }: Props) {
             diplomaAlt={`Диплом — ${doctor.name}`}
             education={
               <Card>
-                <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+                <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                   Дополнительное образование
                 </h2>
 
@@ -307,7 +310,7 @@ export default async function DoctorPage({ params }: Props) {
               doctorReviews.length ? (
                 <div>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between lg:flex-col lg:items-end xl:flex-row xl:items-end">
-                    <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight lg:w-full xl:w-auto">
+                    <h2 className={`${typography.h3} text-[var(--color-navy)] lg:w-full xl:w-auto`}>
                       Отзывы о враче
                     </h2>
 
@@ -366,7 +369,7 @@ export default async function DoctorPage({ params }: Props) {
               doctorReviews.length ? (
                 <div>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between lg:flex-col lg:items-end xl:flex-row xl:items-end">
-                    <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight lg:w-full xl:w-auto">
+                    <h2 className={`${typography.h3} text-[var(--color-navy)] lg:w-full xl:w-auto`}>
                       Отзывы о враче
                     </h2>
 
@@ -419,7 +422,7 @@ export default async function DoctorPage({ params }: Props) {
 
           <div className="rounded-[28px] bg-[var(--color-navy)] px-6 py-10 text-white md:px-10 md:py-12">
             <div className="max-w-3xl">
-              <h2 className="text-2xl font-semibold leading-snug sm:text-3xl sm:leading-tight md:text-4xl">
+              <h2 className={typography.h2}>
                 Запись на консультацию
               </h2>
 

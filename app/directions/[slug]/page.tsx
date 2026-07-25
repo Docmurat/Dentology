@@ -21,6 +21,7 @@ import { CaseCard } from "@/components/cases/case-card";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { ContraindicationsNote } from "@/components/legal/contraindications-note";
 import { FaqSection } from "@/components/ui/faq-section";
+import { typography } from "@/lib/typography";
 
 export const revalidate = 60;
 
@@ -120,7 +121,7 @@ export default async function DirectionPage({ params }: Props) {
             {/* Левая колонка */}
             <div className="grid min-w-0 gap-6 sm:gap-8 [&>*]:min-w-0">
               <Card>
-                <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+                <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                   О направлении
                 </h2>
 
@@ -131,7 +132,7 @@ export default async function DirectionPage({ params }: Props) {
 
               {direction.problems.length ? (
                 <Card>
-                  <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+                  <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                     С какими проблемами приходят
                   </h2>
 
@@ -159,11 +160,11 @@ export default async function DirectionPage({ params }: Props) {
                   </div>
 
                   <div className="p-6 md:p-8">
-                    <p className="text-sm uppercase tracking-[0.14em] text-[var(--color-teal)]">
+                    <p className={`${typography.eyebrow} text-[var(--color-teal)]`}>
                       Специалист направления
                     </p>
 
-                    <h2 className="mt-3 text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+                    <h2 className={`mt-3 ${typography.h3} text-[var(--color-navy)]`}>
                       {relatedDoctor.name}
                     </h2>
 
@@ -183,7 +184,7 @@ export default async function DirectionPage({ params }: Props) {
 
                       <Link
                         href={`/team/${relatedDoctor.slug}`}
-                        className="mt-3 inline-flex text-xs uppercase tracking-[0.14em] text-[var(--color-teal)] hover:text-[var(--color-navy)]"
+                        className={`mt-3 inline-flex ${typography.eyebrow} text-[var(--color-teal)] hover:text-[var(--color-navy)]`}
                       >
                         Подробнее о враче
                       </Link>
@@ -207,7 +208,7 @@ export default async function DirectionPage({ params }: Props) {
             /* Без внешнего контейнера: карточки страхов занимают всю ширину
                колонки на любом экране. */
             <div>
-              <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+              <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                 Что беспокоит пациентов
               </h2>
 
@@ -233,7 +234,7 @@ export default async function DirectionPage({ params }: Props) {
               {/* ЛЕВАЯ КОЛОНКА — подход */}
               {direction.approach.length ? (
                 <Card>
-                  <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+                  <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                     Как мы подходим к лечению
                   </h2>
 
@@ -260,7 +261,7 @@ export default async function DirectionPage({ params }: Props) {
               {/* ПРАВАЯ КОЛОНКА — смысловой блок */}
               {direction.insightTitle && direction.insightText.length ? (
                 <Card className="bg-[var(--color-gray-50)]">
-                  <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+                  <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                     {direction.insightTitle}
                   </h2>
 
@@ -279,7 +280,7 @@ export default async function DirectionPage({ params }: Props) {
             <div>
               <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+                  <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                     Клинические случаи по направлению
                   </h2>
 
@@ -344,7 +345,7 @@ export default async function DirectionPage({ params }: Props) {
             <div>
               <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold leading-snug text-[var(--color-navy)] sm:text-2xl sm:leading-tight">
+                  <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                     Отзывы по направлению
                   </h2>
 
@@ -390,7 +391,7 @@ export default async function DirectionPage({ params }: Props) {
 
           <div className="rounded-[28px] bg-[var(--color-navy)] px-5 py-8 text-white sm:px-6 sm:py-10 md:px-10 md:py-12">
             <div className="max-w-3xl">
-              <h2 className="text-2xl font-semibold leading-snug sm:text-3xl sm:leading-tight md:text-4xl">
+              <h2 className={typography.h2}>
                 {slug === "endodontics"
                   ? "Запись на консультацию по эндодонтическому лечению"
                   : "Запись на консультацию"}

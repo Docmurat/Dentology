@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { TicketButton } from "@/components/ui/ticket-button";
 import { getEducationContent } from "@/lib/homepage";
+import { typography } from "@/lib/typography";
 
 export async function EducationPreview() {
   const edu = await getEducationContent();
@@ -24,10 +25,12 @@ export async function EducationPreview() {
           </div>
 
           <div className="rounded-[20px] border border-[var(--color-gray-200)] bg-white p-4 sm:p-6">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-gold)] sm:text-sm sm:tracking-[0.18em]">
+            <p className={`${typography.eyebrow} text-[var(--color-gold)]`}>
               {edu.badge}
             </p>
-            <div className="mt-4 space-y-3 text-xs leading-6 text-[var(--color-gray-700)] sm:mt-5 sm:space-y-4 sm:text-sm sm:leading-7">
+            <div
+              className={`mt-4 space-y-3 sm:mt-5 sm:space-y-4 ${typography.bodySm} text-[var(--color-gray-700)]`}
+            >
               {edu.bullets.map((b, i) => (
                 <p key={i}>— {b}</p>
               ))}

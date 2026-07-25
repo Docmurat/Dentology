@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { getIcon } from "@/components/ui/icon-map";
 import { getWhyContent } from "@/lib/homepage";
+import { typography } from "@/lib/typography";
 
 export async function WhyDentology() {
   const why = await getWhyContent();
@@ -25,11 +26,13 @@ export async function WhyDentology() {
                 <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
 
-              <h3 className="text-base font-semibold text-[var(--color-navy)] sm:text-lg">
+              <h3 className={`${typography.h4} text-[var(--color-navy)]`}>
                 {item.title}
               </h3>
 
-              <p className="mt-2 text-xs leading-5 text-[var(--color-gray-700)] sm:mt-4 sm:text-sm sm:leading-7">
+              <p
+                className={`mt-2 sm:mt-4 ${typography.bodySm} text-[var(--color-gray-700)]`}
+              >
                 {item.text}
               </p>
             </Card>

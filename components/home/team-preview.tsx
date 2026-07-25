@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { getFeaturedTeam } from "@/lib/team";
 import { Button } from "@/components/ui/button";
 import { getSectionHeadingContent } from "@/lib/homepage";
+import { typography } from "@/lib/typography";
 import type { TeamMember } from "@/lib/team-data";
 
 // Карточка врача. На телефоне круглый аватар и имя в ряд, описание под ними.
@@ -31,25 +32,29 @@ function SmallMemberCard({ member }: { member: TeamMember }) {
 
           {/* Должность и имя */}
           <div className="col-start-2 row-start-1 min-w-0 px-4 pt-4 sm:px-5 sm:pt-5 lg:px-4 lg:pt-4 xl:px-5 xl:pt-5">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-gray-500)] lg:text-xs">
+            <p className={`${typography.eyebrow} text-[var(--color-gray-500)]`}>
               {member.shortRole}
             </p>
 
-            <h3 className="mt-1.5 text-base font-semibold leading-snug text-[var(--color-navy)] lg:mt-2 lg:text-base xl:text-lg">
+            <h3
+              className={`mt-1.5 lg:mt-2 ${typography.h4} text-[var(--color-navy)]`}
+            >
               {member.name}
             </h3>
           </div>
 
           {/* Описание — целиком, без обрезки */}
           <div className="col-span-2 row-start-2 min-w-0 px-4 pt-3 sm:col-span-1 sm:col-start-2 sm:px-5 lg:px-4 lg:pt-2 xl:px-5 xl:pt-3">
-            <p className="text-sm leading-6 text-[var(--color-gray-700)] lg:text-xs lg:leading-5 xl:text-sm xl:leading-6">
+            <p className={`${typography.bodySm} text-[var(--color-gray-700)]`}>
               {member.description}
             </p>
           </div>
 
           {/* Ссылка */}
           <div className="col-span-2 row-start-3 px-4 pb-4 pt-3 sm:col-span-1 sm:col-start-2 sm:px-5 sm:pb-5 sm:pt-4 lg:px-4 lg:pb-4 lg:pt-3 xl:px-5 xl:pb-5 xl:pt-4">
-            <span className="inline-flex text-sm font-medium text-[var(--color-navy-secondary)] group-hover:text-[var(--color-navy)]">
+            <span
+              className={`inline-flex ${typography.bodySm} font-medium text-[var(--color-navy-secondary)] group-hover:text-[var(--color-navy)]`}
+            >
               Подробнее ...
             </span>
           </div>
@@ -107,23 +112,31 @@ export async function TeamPreview() {
                 </div>
 
                 <div className="min-w-0 p-5 md:p-8 lg:p-6 xl:p-8">
-                  <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-teal)] md:text-sm">
+                  <p className={`${typography.eyebrow} text-[var(--color-teal)]`}>
                     Главный врач
                   </p>
 
-                  <h3 className="mt-2 text-xl font-semibold text-[var(--color-navy)] md:mt-3 md:text-2xl lg:text-xl xl:text-2xl">
+                  <h3
+                    className={`mt-2 md:mt-3 ${typography.h3} text-[var(--color-navy)]`}
+                  >
                     {leadMember.name}
                   </h3>
 
-                  <p className="mt-2 text-xs font-medium text-[var(--color-navy-secondary)] md:mt-3 md:text-sm">
+                  <p
+                    className={`mt-2 md:mt-3 ${typography.caption} font-medium text-[var(--color-navy-secondary)]`}
+                  >
                     {leadMember.role}
                   </p>
 
-                  <p className="mt-3 text-sm leading-6 text-[var(--color-gray-700)] md:mt-5 md:text-base md:leading-7 lg:mt-4 lg:text-sm lg:leading-6 xl:mt-5 xl:text-base xl:leading-7">
+                  <p
+                    className={`mt-3 md:mt-5 ${typography.bodySm} text-[var(--color-gray-700)]`}
+                  >
                     {leadMember.description}
                   </p>
 
-                  <span className="mt-5 inline-flex text-xs font-medium text-[var(--color-navy-secondary)] group-hover:text-[var(--color-navy)] md:mt-8 md:text-sm">
+                  <span
+                    className={`mt-5 inline-flex md:mt-8 ${typography.caption} font-medium text-[var(--color-navy-secondary)] group-hover:text-[var(--color-navy)]`}
+                  >
                     Подробнее ...
                   </span>
                 </div>

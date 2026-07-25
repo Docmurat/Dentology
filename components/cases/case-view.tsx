@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { CaseContentBlocks } from "@/components/cases/case-content-blocks";
 import { BeforeAfter } from "@/components/cases/before-after";
 import { ContactButton } from "@/components/contact/contact-modal";
+import { typography } from "@/lib/typography";
 import type { CaseItem } from "@/lib/cases-data";
 import type { TeamMember } from "@/lib/team-data";
 
@@ -37,15 +38,17 @@ function CaseDoctorCard({
         </div>
 
         <div className="min-w-0 lg:p-5">
-          <h2 className="text-base font-semibold leading-snug text-[var(--color-navy)] lg:text-xl lg:leading-tight">
+          <h2 className={`${typography.h4} text-[var(--color-navy)]`}>
             {doctor.name}
           </h2>
-          <p className="mt-1 text-xs font-medium text-[var(--color-navy-secondary)] lg:mt-2 lg:text-sm">
+          <p
+            className={`mt-1 lg:mt-2 ${typography.caption} font-medium text-[var(--color-navy-secondary)]`}
+          >
             {doctor.position}
           </p>
           <Link
             href={`/team/${doctor.slug}`}
-            className="mt-2 inline-flex text-[10px] uppercase tracking-[0.12em] text-[var(--color-teal)] hover:text-[var(--color-navy)] lg:mt-3 lg:text-xs lg:tracking-[0.14em]"
+            className={`mt-2 inline-flex lg:mt-3 ${typography.eyebrow} text-[var(--color-teal)] hover:text-[var(--color-navy)]`}
           >
             Подробнее о враче
           </Link>
@@ -59,11 +62,13 @@ function CaseDoctorCard({
           <figure className="min-w-0 border-l-2 border-[var(--color-teal)] pl-4">
             <span
               aria-hidden="true"
-              className="block font-serif text-5xl leading-none text-[var(--color-gray-200)]"
+              className={`${typography.quoteMark} text-[var(--color-gray-200)]`}
             >
               “
             </span>
-            <blockquote className="mt-1 whitespace-pre-line break-words font-serif text-base italic leading-7 text-[var(--color-navy)]">
+            <blockquote
+              className={`mt-1 whitespace-pre-line break-words ${typography.quote} text-[var(--color-navy)]`}
+            >
               {quote}
             </blockquote>
           </figure>
@@ -97,10 +102,12 @@ export function CaseView({
               наполовину пустой контейнер сравнения. */}
           {item.showBeforeAfter !== false && item.imageBefore && item.imageAfter ? (
             <Card>
-              <h2 className="text-2xl font-semibold text-[var(--color-navy)]">
+              <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
                 Визуальная динамика
               </h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--color-gray-600)]">
+              <p
+                className={`mt-2 ${typography.bodySm} text-[var(--color-gray-600)]`}
+              >
                 Сравнение клинической ситуации до лечения и после проведения
                 лечения.
               </p>
@@ -126,7 +133,9 @@ export function CaseView({
               {/* Карточки врача нет, но кейс помнит автора: показываем имя
                   из снимка без ссылки — вести на 404 хуже, чем дать текст. */}
               {!doctor && item.doctorName ? (
-                <p className="text-sm font-medium text-[var(--color-navy-secondary)]">
+                <p
+                  className={`${typography.bodySm} font-medium text-[var(--color-navy-secondary)]`}
+                >
                   Автор случая — {item.doctorName}
                 </p>
               ) : null}
@@ -135,11 +144,13 @@ export function CaseView({
                 <figure className="hidden min-w-0 border-l-2 border-[var(--color-teal)] pl-4 sm:pl-6 lg:block">
                   <span
                     aria-hidden="true"
-                    className="block font-serif text-5xl leading-none text-[var(--color-gray-200)]"
+                    className={`${typography.quoteMark} text-[var(--color-gray-200)]`}
                   >
                     “
                   </span>
-                  <blockquote className="mt-1 whitespace-pre-line break-words font-serif text-base italic leading-7 text-[var(--color-navy)] sm:text-lg sm:leading-8 lg:text-xl">
+                  <blockquote
+                    className={`mt-1 whitespace-pre-line break-words ${typography.quote} text-[var(--color-navy)]`}
+                  >
                     {item.doctorWords}
                   </blockquote>
                 </figure>
@@ -148,10 +159,8 @@ export function CaseView({
               <CaseContentBlocks blocks={item.contentBlocks ?? []} />
 
               <div className="rounded-[28px] bg-[var(--color-navy)] px-6 py-10 text-white md:px-10 md:py-12">
-                <h2 className="text-2xl font-semibold leading-tight md:text-3xl">
-                  Запись на консультацию
-                </h2>
-                <p className="mt-4 leading-7 text-white/80">
+                <h2 className={typography.h2}>Запись на консультацию</h2>
+                <p className={`mt-4 ${typography.body} text-white/80`}>
                   Консультация позволяет оценить клиническую ситуацию и
                   определить возможные варианты лечения.
                 </p>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { directionLabel } from "@/lib/directions";
 import { CaseExcerpt } from "@/components/cases/case-excerpt";
+import { typography } from "@/lib/typography";
 import type { CaseItem } from "@/lib/cases-data";
 
 // Единая карточка клинического случая. Используется на /cases,
@@ -39,11 +40,11 @@ export function CaseCard({
           </div>
         </div>
 
-        <p className="text-xs uppercase tracking-[0.14em] text-[var(--color-gray-500)]">
+        <p className={`${typography.eyebrow} text-[var(--color-gray-500)]`}>
           {directionLabel(item.directionSlug, dirLabel)}
         </p>
 
-        <h2 className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
+        <h2 className={`mt-2 ${typography.h4} text-[var(--color-navy)]`}>
           {item.title}
         </h2>
 

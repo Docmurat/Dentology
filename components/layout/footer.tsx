@@ -4,6 +4,7 @@ import { Section } from "@/components/layout/section";
 import { COMPANY } from "@/lib/company";
 import { AccessibilityWidget } from "@/components/a11y/accessibility-widget";
 import { getDirections } from "@/lib/directions-db";
+import { typography } from "@/lib/typography";
 
 // Направления берём из базы, чтобы новые из админки появлялись здесь сами.
 // Если база недоступна — просто не показываем список, подвал не падает.
@@ -44,9 +45,7 @@ export async function Footer() {
           </div>
 
           <div>
-            <h4 className="text-sm uppercase tracking-[0.16em] text-white/50">
-              Навигация
-            </h4>
+            <h4 className={`${typography.eyebrow} text-white/50`}>Навигация</h4>
             <div className="mt-5 flex flex-col gap-3 text-sm text-white/80">
               <Link href="/">Главная</Link>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
@@ -61,7 +60,7 @@ export async function Footer() {
           </div>
 
           <div>
-            <h4 className="text-sm uppercase tracking-[0.16em] text-white/50">
+            <h4 className={`${typography.eyebrow} text-white/50`}>
               Направления
             </h4>
             <div className="mt-5 flex flex-col gap-3 text-sm text-white/80">
@@ -74,9 +73,7 @@ export async function Footer() {
           </div>
 
           <div className="sm:col-span-2 lg:col-span-1">
-            <h4 className="text-sm uppercase tracking-[0.16em] text-white/50">
-              Контакты
-            </h4>
+            <h4 className={`${typography.eyebrow} text-white/50`}>Контакты</h4>
             <div className="mt-5 space-y-3 text-sm leading-7 text-white/80">
               <p>
                 {COMPANY.displayAddress}

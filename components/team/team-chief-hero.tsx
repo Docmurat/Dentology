@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { MemberPhoto } from "@/components/team/member-photo";
+import { typography } from "@/lib/typography";
 import type { TeamMember } from "@/lib/team-data";
 
 const FALLBACK_QUOTE =
@@ -20,20 +21,24 @@ export function TeamChiefHero({ chief }: { chief: TeamMember }) {
         </Card>
 
         <div className="mt-8 min-w-0 md:mt-0 lg:mt-0">
-          <p className="text-sm uppercase tracking-[0.14em] text-[var(--color-teal)]">
+          <p className={`${typography.eyebrow} text-[var(--color-teal)]`}>
             Главный врач
           </p>
 
-          <h2 className="mt-2 text-2xl font-semibold text-[var(--color-navy)] md:text-3xl">
+          <h2 className={`mt-2 ${typography.h3} text-[var(--color-navy)]`}>
             {chief.name}
           </h2>
 
-          <p className="mt-2 text-sm font-medium text-[var(--color-navy-secondary)]">
+          <p
+            className={`mt-2 ${typography.caption} font-medium text-[var(--color-navy-secondary)]`}
+          >
             {chief.role || chief.position}
           </p>
 
           {chief.description ? (
-            <p className="mt-5 whitespace-pre-line text-base leading-7 text-[var(--color-gray-700)]">
+            <p
+              className={`mt-5 whitespace-pre-line ${typography.body} text-[var(--color-gray-700)]`}
+            >
               {chief.description}
             </p>
           ) : null}
@@ -41,7 +46,7 @@ export function TeamChiefHero({ chief }: { chief: TeamMember }) {
           {/* Ссылка на планшете mini — сразу под описанием в правой колонке */}
           <Link
             href={`/team/${chief.slug}`}
-            className="mt-8 hidden text-xs uppercase tracking-[0.14em] text-[var(--color-teal)] hover:text-[var(--color-navy)] md:inline-flex lg:hidden"
+            className={`mt-8 hidden md:inline-flex lg:hidden ${typography.eyebrow} text-[var(--color-teal)] hover:text-[var(--color-navy)]`}
           >
             Подробнее о враче
           </Link>
@@ -52,18 +57,20 @@ export function TeamChiefHero({ chief }: { chief: TeamMember }) {
             <figure className="mt-8 border-l-2 border-[var(--color-teal)] pl-6">
               <span
                 aria-hidden="true"
-                className="block font-serif text-5xl leading-none text-[var(--color-gray-200)]"
+                className={`${typography.quoteMark} text-[var(--color-gray-200)]`}
               >
                 “
               </span>
-              <blockquote className="mt-1 whitespace-pre-line font-serif text-xl italic leading-8 text-[var(--color-navy)]">
+              <blockquote
+                className={`mt-1 whitespace-pre-line ${typography.quoteLg} text-[var(--color-navy)]`}
+              >
                 {quote}
               </blockquote>
             </figure>
 
             <Link
               href={`/team/${chief.slug}`}
-              className="mt-8 inline-flex text-xs uppercase tracking-[0.14em] text-[var(--color-teal)] hover:text-[var(--color-navy)]"
+              className={`mt-8 inline-flex ${typography.eyebrow} text-[var(--color-teal)] hover:text-[var(--color-navy)]`}
             >
               Подробнее о враче
             </Link>
@@ -76,11 +83,13 @@ export function TeamChiefHero({ chief }: { chief: TeamMember }) {
         <figure className="mt-8 border-l-2 border-[var(--color-teal)] pl-6">
           <span
             aria-hidden="true"
-            className="block font-serif text-5xl leading-none text-[var(--color-gray-200)]"
+            className={`${typography.quoteMark} text-[var(--color-gray-200)]`}
           >
             “
           </span>
-          <blockquote className="mt-1 whitespace-pre-line font-serif text-lg italic leading-8 text-[var(--color-navy)]">
+          <blockquote
+            className={`mt-1 whitespace-pre-line ${typography.quoteLg} text-[var(--color-navy)]`}
+          >
             {quote}
           </blockquote>
         </figure>
