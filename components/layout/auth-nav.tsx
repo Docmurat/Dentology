@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { roleHome } from "@/lib/role-home";
 import { signOut } from "@/app/admin/actions";
+import { useAuthSession } from "@/components/layout/auth-provider";
 
 // Клиентский островок авторизации в шапке: гость видит «Войти»,
 // залогиненный — «Кабинет» (по роли) и «Выйти». Не делает страницы
 // динамическими: статус читается на клиенте через эндпоинт сессии Auth.js.
+//
+// Состояние приходит из AuthProvider в корневом layout, поэтому открытие
+// меню и переходы между страницами не вызывают повторных запросов и не
+// сдвигают вёрстку.
 export function AuthNav({
   variant,
   onNavigate,
@@ -15,83 +18,51 @@ export function AuthNav({
   variant: "desktop" | "mobile";
   onNavigate?: () => void;
 }) {
-  const [loading, setLoading] = useState(true);
-  const [home, setHome] = useState<string | null>(null);
+  const { status, home, clearSession } = useAuthSession();
+  const isDesktop = variant === "desktop";
 
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      try {
-        const res = await fetch("/api/auth/session");
-        const session = (await res.json()) as {
-          user?: { role?: string } | null;
-        } | null;
-
-        if (!active) return;
-        const role = session?.user?.role;
-        setHome(role ? roleHome(role) : null);
-      } catch {
-        if (active) setHome(null);
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (loading) return null;
-
-  if (variant === "mobile") {
-    const cls =
-      "text-base text-[var(--color-gray-700)] transition-colors hover:text-[var(--color-navy)]";
-    if (!home) {
-      return (
-        <Link href="/admin/login" onClick={onNavigate} className={cls}>
-          Войти
-        </Link>
-      );
-    }
+  // Пока сессия неизвестна — держим место, чтобы не было layout shift.
+  if (status === "loading") {
     return (
-      <>
-        <Link href={home} onClick={onNavigate} className={cls}>
-          Кабинет
-        </Link>
-        <form action={signOut}>
-          <button type="submit" className={cls}>
-            Выйти
-          </button>
-        </form>
-      </>
+      <div
+        aria-hidden="true"
+        className={isDesktop ? "h-5 w-[112px]" : "h-6 w-full"}
+      />
     );
   }
 
-  // desktop
-  const linkCls =
-    "text-sm font-medium text-[var(--color-navy)] transition-colors hover:text-[var(--color-navy-secondary)]";
+  const linkCls = isDesktop
+    ? "text-sm font-medium text-[var(--color-navy)] transition-colors hover:text-[var(--color-navy-secondary)]"
+    : "text-base text-[var(--color-gray-700)] transition-colors hover:text-[var(--color-navy)]";
+
   if (!home) {
     return (
-      <Link href="/admin/login" className={linkCls}>
+      <Link href="/admin/login" onClick={onNavigate} className={linkCls}>
         Войти
       </Link>
     );
   }
-  return (
-    <div className="flex items-center gap-4">
-      <Link href={home} className={linkCls}>
+
+  const signOutCls = isDesktop
+    ? "text-sm text-[var(--color-gray-500)] transition-colors hover:text-[var(--color-navy)]"
+    : linkCls;
+
+  const content = (
+    <>
+      <Link href={home} onClick={onNavigate} className={linkCls}>
         Кабинет
       </Link>
-      <form action={signOut}>
-        <button
-          type="submit"
-          className="text-sm text-[var(--color-gray-500)] transition-colors hover:text-[var(--color-navy)]"
-        >
+      <form action={signOut} onSubmit={clearSession}>
+        <button type="submit" className={signOutCls}>
           Выйти
         </button>
       </form>
-    </div>
+    </>
+  );
+
+  return isDesktop ? (
+    <div className="flex items-center justify-end gap-4">{content}</div>
+  ) : (
+    content
   );
 }

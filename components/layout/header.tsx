@@ -40,7 +40,9 @@ export function Header() {
             )}
           </nav>
 
-          <div className="hidden items-center gap-5 xl:flex">
+          {/* shrink-0 + justify-end: правая группа прижата к краю и не тянет
+              за собой навигацию, пока AuthNav определяет статус сессии. */}
+          <div className="hidden shrink-0 items-center justify-end gap-5 xl:flex">
             <AuthNav variant="desktop" />
             <ContactButton
               label="Записаться"

@@ -1,10 +1,11 @@
+// app/cases/page.tsx
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/layout/site-shell";
 import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { CasesPageContent } from "@/components/cases/cases-page-content";
-import { getAllCases } from "@/lib/cases";
-import { getTeamMemberBySlug } from "@/lib/team";
+import { getCasesForCards } from "@/lib/cases";
+import { getTeamMemberBySlug, getTeamMembersAll } from "@/lib/team";
 import { getDirections, getDirectionLabelMap } from "@/lib/directions-db";
 import { getPageHeading } from "@/lib/page-content";
 
@@ -24,12 +25,19 @@ export default async function CasesPage({
 }) {
   const { doctor: doctorSlug, direction: directionParam } = await searchParams;
 
-  const [allCases, doctor, allDirections, labelMap] = await Promise.all([
-    getAllCases(),
+  const [allCases, doctor, allDirections, labelMap, team] = await Promise.all([
+    // Странице нужны только поля карточки: getAllCases() тянул бы
+    // content_blocks с полным разбором по каждому кейсу.
+    getCasesForCards(),
     doctorSlug ? getTeamMemberBySlug(doctorSlug) : Promise.resolve(null),
     getDirections(),
     getDirectionLabelMap(),
+    // Со всеми, включая архивных: у кейса архивного врача подпись
+    // должна остаться.
+    getTeamMembersAll(),
   ]);
+
+  const doctorNames = Object.fromEntries(team.map((m) => [m.slug, m.name]));
 
   const heading = await getPageHeading("cases");
 
@@ -102,6 +110,7 @@ export default async function CasesPage({
         <CasesPageContent
           cases={cases}
           directions={directions}
+          doctorNames={doctorNames}
           doctorFilter={doctor ? { slug: doctor.slug, name: doctor.name } : null}
           hideFilters={Boolean(doctor && directionSet)}
           initialFilter={preselected}

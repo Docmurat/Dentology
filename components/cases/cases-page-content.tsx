@@ -1,3 +1,4 @@
+// components/cases/cases-page-content.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -5,19 +6,26 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import type { CaseItem } from "@/lib/cases-data";
 import { CaseCard } from "@/components/cases/case-card";
-import { teamData } from "@/lib/team-data";
 
 const ITEMS_PER_PAGE = 6;
 
 export function CasesPageContent({
   cases,
   directions = [],
+  doctorNames = {},
   doctorFilter = null,
   hideFilters = false,
   initialFilter = "all",
 }: {
   cases: CaseItem[];
   directions?: { slug: string; label: string }[];
+  /**
+   * Карта «слаг врача -> имя», приходит с сервера.
+   * Раньше имя искалось в teamData — статическом демо-массиве: после
+   * переименования врача в кабинете подпись под кейсом не менялась,
+   * а врача, которого в массиве нет, не находило вовсе.
+   */
+  doctorNames?: Record<string, string>;
   doctorFilter?: { slug: string; name: string } | null;
   // Полностью скрыть строку фильтров (напр. переход с курса: врач + направление).
   hideFilters?: boolean;
@@ -101,20 +109,18 @@ export function CasesPageContent({
       {paginatedCases.length ? (
         <>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {paginatedCases.map((item) => {
-              const doctor = teamData.find(
-                (doc) => doc.slug === item.doctorSlug
-              );
-
-              return (
-                <CaseCard
-                  key={item.slug}
-                  item={item}
-                  dirLabel={dirLabel}
-                  doctorName={doctor?.name}
-                />
-              );
-            })}
+            {paginatedCases.map((item) => (
+              // Имя из карты — живое. Если карточки врача уже нет,
+              // CaseCard подставит снимок, сохранённый в самом кейсе.
+              <CaseCard
+                key={item.slug}
+                item={item}
+                dirLabel={dirLabel}
+                doctorName={
+                  item.doctorSlug ? doctorNames[item.doctorSlug] : undefined
+                }
+              />
+            ))}
           </div>
 
           {totalPages > 1 && (
