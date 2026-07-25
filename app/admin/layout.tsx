@@ -1,6 +1,8 @@
+// app/admin/layout.tsx
 import Link from "next/link";
 import { queryOne } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-guards";
+import { getNewLeadCount } from "@/lib/leads";
 import { signOut } from "./actions";
 
 export default async function AdminLayout({
@@ -35,16 +37,25 @@ export default async function AdminLayout({
     );
   }
 
-  const profile = await queryOne<{ full_name: string | null }>(
-    `select full_name from profiles where id = $1`,
-    [user.id]
-  );
+  const [profile, newLeads] = await Promise.all([
+    queryOne<{ full_name: string | null }>(
+      `select full_name from profiles where id = $1`,
+      [user.id]
+    ),
+    // Возвращает 0 при любой ошибке, поэтому шапка не сломается,
+    // если таблица заявок ещё не создана.
+    getNewLeadCount(),
+  ]);
+
+  const navLink =
+    "font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]";
 
   return (
     <div className="min-h-screen bg-[var(--color-gray-50)]">
       <header className="border-b border-[var(--color-gray-200)] bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-6">
+        {/* flex-wrap — иначе на телефоне навигация уезжает за край экрана */}
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-4">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <p className="font-semibold text-[var(--color-navy)]">
               {/* «Lucenta» ведёт на публичный сайт, «Кабинет» — в корень админки */}
               <Link href="/" className="hover:text-[var(--color-navy-secondary)]">
@@ -58,41 +69,33 @@ export default async function AdminLayout({
                 Кабинет
               </Link>
             </p>
-            <nav className="flex items-center gap-3 text-sm">
-              <Link
-                href="/admin/cases"
-                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
-              >
+            <nav className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+              {/* Заявки первыми: это единственный раздел, который требует
+                  реакции в тот же день. */}
+              <Link href="/admin/leads" className={navLink}>
+                Заявки
+                {newLeads > 0 ? (
+                  <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
+                    {newLeads}
+                  </span>
+                ) : null}
+              </Link>
+              <Link href="/admin/cases" className={navLink}>
                 Кейсы
               </Link>
-              <Link
-                href="/admin/team"
-                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
-              >
+              <Link href="/admin/team" className={navLink}>
                 Команда
               </Link>
-              <Link
-                href="/admin/directions"
-                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
-              >
+              <Link href="/admin/directions" className={navLink}>
                 Направления
               </Link>
-              <Link
-                href="/admin/homepage"
-                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
-              >
+              <Link href="/admin/homepage" className={navLink}>
                 Главная
               </Link>
-              <Link
-                href="/admin/education"
-                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
-              >
+              <Link href="/admin/education" className={navLink}>
                 Обучение
               </Link>
-              <Link
-                href="/admin/cases/new"
-                className="font-medium text-[var(--color-navy)] hover:text-[var(--color-navy-secondary)]"
-              >
+              <Link href="/admin/cases/new" className={navLink}>
                 Добавить
               </Link>
             </nav>

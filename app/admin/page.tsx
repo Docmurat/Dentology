@@ -1,6 +1,14 @@
+// app/admin/page.tsx
 import Link from "next/link";
+import { getNewLeadCount } from "@/lib/leads";
 
-export default function AdminHomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function AdminHomePage() {
+  // Возвращает 0 при любой ошибке — страница не сломается,
+  // если таблица заявок ещё не создана.
+  const newLeads = await getNewLeadCount();
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-[var(--color-navy)]">
@@ -10,7 +18,38 @@ export default function AdminHomePage() {
         Управление клиническими случаями, командой и аккаунтами пациентов.
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      {/* Заявки — во всю ширину и первыми: единственный раздел,
+          который требует реакции в тот же день. */}
+      <div className="mt-8">
+        <Link
+          href="/admin/leads"
+          className={
+            "flex items-center justify-between gap-4 rounded-2xl border bg-white p-6 transition hover:shadow-[0_8px_28px_rgba(0,0,0,0.06)] " +
+            (newLeads > 0
+              ? "border-amber-300 bg-amber-50/40"
+              : "border-[var(--color-gray-200)]")
+          }
+        >
+          <div>
+            <p className="text-lg font-semibold text-[var(--color-navy)]">
+              Заявки
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-gray-600)]">
+              {newLeads > 0
+                ? "Есть необработанные обращения с форм сайта."
+                : "Обращения с форм сайта. Новых нет."}
+            </p>
+          </div>
+
+          {newLeads > 0 ? (
+            <span className="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-700">
+              {newLeads}
+            </span>
+          ) : null}
+        </Link>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <Link
           href="/admin/cases/new"
           className="rounded-2xl border border-[var(--color-gray-200)] bg-white p-6 transition hover:shadow-[0_8px_28px_rgba(0,0,0,0.06)]"

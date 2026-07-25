@@ -1,12 +1,15 @@
 // app/api/contact/route.ts
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import nodemailer from "nodemailer";
 import { sendTelegramMessage, tgEscape } from "@/lib/telegram";
+import { createLead, markLeadNotified } from "@/lib/leads";
 import {
   isHoneypotFilled,
   isTooFast,
   rateLimit,
   formatRetryAfter,
+  getClientIp,
 } from "@/lib/anti-spam";
 
 type ContactPayload = {
@@ -43,6 +46,110 @@ function isTooLong(data: ContactPayload): boolean {
     (data.message?.length ?? 0) > MAX_LENGTH.message ||
     (data.context?.length ?? 0) > MAX_LENGTH.context
   );
+}
+
+/**
+ * Уведомления отправляются в фоне и результат пишется в заявку.
+ *
+ * Ответ пользователю не ждёт ни Telegram, ни почту: заявка уже в базе,
+ * а Telegram с российских хостингов сейчас недоступен и висит до
+ * таймаута — заставлять человека смотреть на «Отправка…» полминуты
+ * ради канала уведомления неправильно.
+ */
+function notifyInBackground(
+  leadId: string,
+  body: ContactPayload,
+  transporterConfigured: boolean
+) {
+  // Значок в шапке уведомления помогает различать тип с первого взгляда:
+  // 📅 — заявка с курса, 🦷 — обычная заявка на консультацию.
+  const isCourseRequest = (body.context || "")
+    .trim()
+    .toLowerCase()
+    .startsWith("курс");
+  const headerEmoji = isCourseRequest ? "📅" : "🦷";
+
+  const tgText = [
+    `${headerEmoji} <b>Новая заявка с сайта Lucenta</b>`,
+    "",
+    `<b>Имя:</b> ${tgEscape(body.name)}`,
+    `<b>Телефон:</b> ${tgEscape(body.phone)}`,
+    `<b>Способ связи:</b> ${tgEscape(body.contactMethod || "Не указан")}`,
+    `<b>Заявка по:</b> ${tgEscape(body.context || "Общая заявка")}`,
+    body.message ? `<b>Сообщение:</b> ${tgEscape(body.message)}` : "",
+    "",
+    "Все заявки: /admin/leads",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  void sendTelegramMessage(tgText)
+    .then(() => markLeadNotified(leadId, "telegram", true))
+    .catch((error) => {
+      console.error("TELEGRAM_SEND_ERROR", error?.cause ?? error);
+      return markLeadNotified(leadId, "telegram", false);
+    });
+
+  if (!transporterConfigured) return;
+
+  const {
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_USER,
+    SMTP_PASS,
+    CONTACT_TO_EMAIL,
+    CONTACT_FROM_EMAIL,
+  } = process.env;
+
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT),
+    secure: Number(SMTP_PORT) === 465,
+    auth: { user: SMTP_USER as string, pass: SMTP_PASS as string },
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
+  });
+
+  const subject = body.context
+    ? `Новая заявка (${body.context}) — Lucenta`
+    : "Новая заявка с сайта Lucenta";
+
+  const text = [
+    `Имя: ${body.name}`,
+    `Телефон: ${body.phone}`,
+    `Способ связи: ${body.contactMethod || "Не указан"}`,
+    `Сообщение: ${body.message || "Не указано"}`,
+    `Заявка по: ${body.context || "Общая заявка"}`,
+    `Согласие на обработку ПДн: да`,
+  ].join("\n");
+
+  const html = `
+      <h2>Новая заявка с сайта Lucenta</h2>
+      <p><strong>Имя:</strong> ${body.name}</p>
+      <p><strong>Телефон:</strong> ${body.phone}</p>
+      <p><strong>Способ связи:</strong> ${body.contactMethod || "Не указан"}</p>
+      <p><strong>Сообщение:</strong><br />${(body.message || "Не указано").replace(/\n/g, "<br />")}</p>
+      <p><strong>Заявка по:</strong> ${body.context || "Общая заявка"}</p>
+      <p><strong>Согласие на обработку ПДн:</strong> да</p>
+    `;
+
+  transporter
+    .sendMail({
+      from: CONTACT_FROM_EMAIL,
+      to: CONTACT_TO_EMAIL,
+      subject,
+      text,
+      html,
+    })
+    .then(() => {
+      transporter.close();
+      return markLeadNotified(leadId, "email", true);
+    })
+    .catch((error) => {
+      console.error("EMAIL_SEND_ERROR", error);
+      return markLeadNotified(leadId, "email", false);
+    });
 }
 
 export async function POST(request: Request) {
@@ -103,104 +210,49 @@ export async function POST(request: Request) {
       );
     }
 
-    // Значок в шапке уведомления помогает различать тип с первого взгляда:
-    // 📅 — заявка с курса, 🦷 — обычная заявка на консультацию.
-    const isCourseRequest = (body.context || "")
-      .trim()
-      .toLowerCase()
-      .startsWith("курс");
-    const headerEmoji = isCourseRequest ? "📅" : "🦷";
+    // ── Сохранение. Это единственный шаг, без которого заявка потеряна,
+    //    поэтому он выполняется первым и его провал — ошибка для клиента.
+    const leadId = crypto.randomUUID();
+    const h = await headers();
 
-    // Дублируем заявку в Telegram (если бот настроен) — до отправки письма,
-    // чтобы заявка дошла даже при проблемах с почтой.
-    const tgText = [
-      `${headerEmoji} <b>Новая заявка с сайта Lucenta</b>`,
-      "",
-      `<b>Имя:</b> ${tgEscape(body.name)}`,
-      `<b>Телефон:</b> ${tgEscape(body.phone)}`,
-      `<b>Способ связи:</b> ${tgEscape(body.contactMethod || "Не указан")}`,
-      `<b>Заявка по:</b> ${tgEscape(body.context || "Общая заявка")}`,
-      body.message ? `<b>Сообщение:</b> ${tgEscape(body.message)}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-    await sendTelegramMessage(tgText);
-
-    const {
-      SMTP_HOST,
-      SMTP_PORT,
-      SMTP_USER,
-      SMTP_PASS,
-      CONTACT_TO_EMAIL,
-      CONTACT_FROM_EMAIL,
-    } = process.env;
-
-    if (
-      !SMTP_HOST ||
-      !SMTP_PORT ||
-      !SMTP_USER ||
-      !SMTP_PASS ||
-      !CONTACT_TO_EMAIL ||
-      !CONTACT_FROM_EMAIL
-    ) {
+    try {
+      await createLead({
+        id: leadId,
+        name: body.name.trim(),
+        phone: body.phone.trim(),
+        contactMethod: body.contactMethod?.trim() || null,
+        message: body.message?.trim() || null,
+        context: body.context?.trim() || null,
+        sourceIp: await getClientIp(),
+        userAgent: h.get("user-agent")?.slice(0, 300) ?? null,
+      });
+    } catch (error) {
+      console.error("LEAD_SAVE_ERROR", error);
       return NextResponse.json(
         {
           ok: false,
-          message: "Почтовые настройки не заданы.",
+          message:
+            "Не удалось принять заявку. Пожалуйста, позвоните нам — мы на связи.",
         },
         { status: 500 }
       );
     }
 
-    const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: Number(SMTP_PORT),
-      secure: Number(SMTP_PORT) === 465,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 5000,
-    });
+    const smtpConfigured = Boolean(
+      process.env.SMTP_HOST &&
+        process.env.SMTP_PORT &&
+        process.env.SMTP_USER &&
+        process.env.SMTP_PASS &&
+        process.env.CONTACT_TO_EMAIL &&
+        process.env.CONTACT_FROM_EMAIL
+    );
 
-    const subject = body.context
-      ? `Новая заявка (${body.context}) — Lucenta`
-      : "Новая заявка с сайта Lucenta";
-    const text = [
-      `Имя: ${body.name}`,
-      `Телефон: ${body.phone}`,
-      `Способ связи: ${body.contactMethod || "Не указан"}`,
-      `Сообщение: ${body.message || "Не указано"}`,
-      `Заявка по: ${body.context || "Общая заявка"}`,
-      `Согласие на обработку ПДн: да`,
-    ].join("\n");
+    if (!smtpConfigured) {
+      console.error("EMAIL_NOT_CONFIGURED: заявка сохранена, письмо не уйдёт");
+    }
 
-    const html = `
-      <h2>Новая заявка с сайта Lucenta</h2>
-      <p><strong>Имя:</strong> ${body.name}</p>
-      <p><strong>Телефон:</strong> ${body.phone}</p>
-      <p><strong>Способ связи:</strong> ${body.contactMethod || "Не указан"}</p>
-      <p><strong>Сообщение:</strong><br />${(body.message || "Не указано").replace(/\n/g, "<br />")}</p>
-      <p><strong>Заявка по:</strong> ${body.context || "Общая заявка"}</p>
-      <p><strong>Согласие на обработку ПДн:</strong> да</p>
-    `;
-
-    transporter
-      .sendMail({
-        from: CONTACT_FROM_EMAIL,
-        to: CONTACT_TO_EMAIL,
-        subject,
-        text,
-        html,
-      })
-      .then(() => {
-        transporter.close();
-      })
-      .catch((error) => {
-        console.error("EMAIL_SEND_ERROR", error);
-      });
+    // Уведомления — в фоне, ответ их не ждёт.
+    notifyInBackground(leadId, body, smtpConfigured);
 
     return NextResponse.json({
       ok: true,
