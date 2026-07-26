@@ -1,8 +1,9 @@
 // app/api/contact/route.ts
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { headers } from "next/headers";
 import nodemailer from "nodemailer";
 import { sendTelegramMessage, tgEscape } from "@/lib/telegram";
+import { sendPushToStaff } from "@/lib/push";
 import { createLead, markLeadNotified } from "@/lib/leads";
 import {
   isHoneypotFilled,
@@ -49,18 +50,24 @@ function isTooLong(data: ContactPayload): boolean {
 }
 
 /**
- * Уведомления отправляются в фоне и результат пишется в заявку.
+ * Уведомления отправляются после ответа пользователю, а результат
+ * пишется в заявку.
  *
- * Ответ пользователю не ждёт ни Telegram, ни почту: заявка уже в базе,
+ * Ответ не ждёт ни Telegram, ни почту, ни пуш: заявка уже в базе,
  * а Telegram с российских хостингов сейчас недоступен и висит до
  * таймаута — заставлять человека смотреть на «Отправка…» полминуты
  * ради канала уведомления неправильно.
+ *
+ * Функция асинхронная и дожидается всех каналов сознательно: вызывающий
+ * код передаёт её в after(), а тот обрывает работу, как только колбэк
+ * вернул управление. При «выстрелил и забыл» рантайм успевал свернуть
+ * запрос раньше, чем уходило уведомление.
  */
-function notifyInBackground(
+async function notifyInBackground(
   leadId: string,
   body: ContactPayload,
   transporterConfigured: boolean
-) {
+): Promise<void> {
   // Значок в шапке уведомления помогает различать тип с первого взгляда:
   // 📅 — заявка с курса, 🦷 — обычная заявка на консультацию.
   const isCourseRequest = (body.context || "")
@@ -83,48 +90,67 @@ function notifyInBackground(
     .filter(Boolean)
     .join("\n");
 
-  void sendTelegramMessage(tgText)
-    .then(() => markLeadNotified(leadId, "telegram", true))
-    .catch((error) => {
-      console.error("TELEGRAM_SEND_ERROR", error?.cause ?? error);
-      return markLeadNotified(leadId, "telegram", false);
+  // Каналы независимы: падение одного не должно отменять остальные,
+  // поэтому собираем их и ждём через allSettled.
+  const tasks: Promise<unknown>[] = [];
+
+  tasks.push(
+    sendTelegramMessage(tgText)
+      .then(() => markLeadNotified(leadId, "telegram", true))
+      .catch((error) => {
+        console.error("TELEGRAM_SEND_ERROR", error?.cause ?? error);
+        return markLeadNotified(leadId, "telegram", false);
+      })
+  );
+
+  // Пуш приходит на телефон тому, кто обрабатывает заявки.
+  tasks.push(
+    sendPushToStaff({
+      title: isCourseRequest ? "📅 Заявка с курса" : "🦷 Новая заявка",
+      body: `${body.name} · ${body.phone}${body.context ? ` · ${body.context}` : ""}`,
+      url: "/moderator",
+    })
+      .then((result) => markLeadNotified(leadId, "push", result.ok))
+      .catch((error) => {
+        console.error("PUSH_SEND_FAILED", error);
+        return markLeadNotified(leadId, "push", false);
+      })
+  );
+
+  if (transporterConfigured) {
+    const {
+      SMTP_HOST,
+      SMTP_PORT,
+      SMTP_USER,
+      SMTP_PASS,
+      CONTACT_TO_EMAIL,
+      CONTACT_FROM_EMAIL,
+    } = process.env;
+
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT),
+      secure: Number(SMTP_PORT) === 465,
+      auth: { user: SMTP_USER as string, pass: SMTP_PASS as string },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
     });
 
-  if (!transporterConfigured) return;
+    const subject = body.context
+      ? `Новая заявка (${body.context}) — Lucenta`
+      : "Новая заявка с сайта Lucenta";
 
-  const {
-    SMTP_HOST,
-    SMTP_PORT,
-    SMTP_USER,
-    SMTP_PASS,
-    CONTACT_TO_EMAIL,
-    CONTACT_FROM_EMAIL,
-  } = process.env;
+    const text = [
+      `Имя: ${body.name}`,
+      `Телефон: ${body.phone}`,
+      `Способ связи: ${body.contactMethod || "Не указан"}`,
+      `Сообщение: ${body.message || "Не указано"}`,
+      `Заявка по: ${body.context || "Общая заявка"}`,
+      `Согласие на обработку ПДн: да`,
+    ].join("\n");
 
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT),
-    secure: Number(SMTP_PORT) === 465,
-    auth: { user: SMTP_USER as string, pass: SMTP_PASS as string },
-    connectionTimeout: 5000,
-    greetingTimeout: 5000,
-    socketTimeout: 5000,
-  });
-
-  const subject = body.context
-    ? `Новая заявка (${body.context}) — Lucenta`
-    : "Новая заявка с сайта Lucenta";
-
-  const text = [
-    `Имя: ${body.name}`,
-    `Телефон: ${body.phone}`,
-    `Способ связи: ${body.contactMethod || "Не указан"}`,
-    `Сообщение: ${body.message || "Не указано"}`,
-    `Заявка по: ${body.context || "Общая заявка"}`,
-    `Согласие на обработку ПДн: да`,
-  ].join("\n");
-
-  const html = `
+    const html = `
       <h2>Новая заявка с сайта Lucenta</h2>
       <p><strong>Имя:</strong> ${body.name}</p>
       <p><strong>Телефон:</strong> ${body.phone}</p>
@@ -134,22 +160,28 @@ function notifyInBackground(
       <p><strong>Согласие на обработку ПДн:</strong> да</p>
     `;
 
-  transporter
-    .sendMail({
-      from: CONTACT_FROM_EMAIL,
-      to: CONTACT_TO_EMAIL,
-      subject,
-      text,
-      html,
-    })
-    .then(() => {
-      transporter.close();
-      return markLeadNotified(leadId, "email", true);
-    })
-    .catch((error) => {
-      console.error("EMAIL_SEND_ERROR", error);
-      return markLeadNotified(leadId, "email", false);
-    });
+    tasks.push(
+      transporter
+        .sendMail({
+          from: CONTACT_FROM_EMAIL,
+          to: CONTACT_TO_EMAIL,
+          subject,
+          text,
+          html,
+        })
+        .then(() => {
+          transporter.close();
+          return markLeadNotified(leadId, "email", true);
+        })
+        .catch((error) => {
+          console.error("EMAIL_SEND_ERROR", error);
+          transporter.close();
+          return markLeadNotified(leadId, "email", false);
+        })
+    );
+  }
+
+  await Promise.allSettled(tasks);
 }
 
 export async function POST(request: Request) {
@@ -180,8 +212,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Пять заявок с одного адреса в час.
-    const limit = await rateLimit("contact", { limit: 5, windowSec: 3600 });
+    // Пять заявок с одного адреса в час. В разработке потолок выше,
+    // иначе тестовые отправки исчерпывают лимит за пару минут.
+    const limit = await rateLimit("contact", {
+      limit: process.env.NODE_ENV === "production" ? 5 : 100,
+      windowSec: 3600,
+    });
     if (!limit.allowed) {
       return NextResponse.json(
         {
@@ -251,8 +287,10 @@ export async function POST(request: Request) {
       console.error("EMAIL_NOT_CONFIGURED: заявка сохранена, письмо не уйдёт");
     }
 
-    // Уведомления — в фоне, ответ их не ждёт.
-    notifyInBackground(leadId, body, smtpConfigured);
+    // Уведомления — после ответа. after() продлевает жизнь запроса ровно
+    // настолько, чтобы каналы успели отработать; ответ пользователю
+    // уходит немедленно.
+    after(() => notifyInBackground(leadId, body, smtpConfigured));
 
     return NextResponse.json({
       ok: true,

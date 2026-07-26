@@ -88,7 +88,7 @@ export async function sendPushToStaff(
       }
     })
   );
-
+console.log("PUSH_RESULT", { subscribers: subscriptions.length, delivered });
   return { ok: delivered > 0, delivered };
 }
 
