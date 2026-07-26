@@ -6,6 +6,12 @@ import { getNewLeadCount } from "@/lib/leads";
 import { CabinetNav, type CabinetLink } from "@/components/admin/cabinet-nav";
 import { signOut } from "@/app/admin/actions";
 import { roleHome } from "@/lib/role-home";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  manifest: "/staff.webmanifest",
+  robots: { index: false, follow: false },
+};
 
 export default async function DoctorLayout({
   children,

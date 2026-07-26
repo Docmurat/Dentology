@@ -60,7 +60,7 @@ export function PushToggle() {
       const existing = await registration?.pushManager.getSubscription();
       setStatus(existing ? "on" : "off");
     }
-
+console.log("VAPID:", VAPID_PUBLIC_KEY?.length ?? "MISSING");
     detect().catch(() => setStatus("unsupported"));
   }, []);
 

@@ -5,6 +5,12 @@ import { getCurrentUser } from "@/lib/auth-guards";
 import { getNewLeadCount } from "@/lib/leads";
 import { CabinetNav } from "@/components/admin/cabinet-nav";
 import { signOut } from "./actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  manifest: "/staff.webmanifest",
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminLayout({
   children,
