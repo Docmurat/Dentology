@@ -95,14 +95,21 @@ export function sniffFileType(bytes: Uint8Array): SniffedType | null {
   return null;
 }
 
-/** Имя файла для показа сотруднику: без путей и управляющих символов. */
-export function cleanFileName(raw: string): string {
+/**
+ * Имя файла для показа сотруднику: без путей и управляющих символов.
+ *
+ * Расширение берётся из РЕАЛЬНОГО типа содержимого, а не из присланного
+ * имени: иначе картинку можно назвать «снимок.html», и при «Сохранить как»
+ * у сотрудника на диске окажется файл, который откроется как страница.
+ */
+export function cleanFileName(raw: string, ext: string): string {
   const base = raw.split(/[\\/]/).pop() ?? "";
-  const cleaned = base
-    .replace(/[\u0000-\u001f\u007f"<>|:*?]/g, "")
+  const stem = base
+    .replace(/\.[^.]*$/, "")
+    .replace(/[\u0000-\u001f\u007f"<>|:*?.]/g, "")
     .trim()
-    .slice(0, 120);
-  return cleaned || "file";
+    .slice(0, 100);
+  return `${stem || "file"}.${ext}`;
 }
 
 // ── Одноразовый пропуск на загрузку ──
@@ -172,23 +179,45 @@ export async function insertLeadFile(file: {
   contentType: string;
   sizeBytes: number;
 }): Promise<boolean> {
-  const rows = await query<{ id: string }>(
-    `insert into lead_files
-       (id, lead_id, storage_key, file_name, content_type, size_bytes)
-     select $1, $2, $3, $4, $5, $6
-      where (select count(*) from lead_files where lead_id = $2) < $7
-     returning id`,
-    [
-      file.id,
-      file.leadId,
-      file.storageKey,
-      file.fileName,
-      file.contentType,
-      file.sizeBytes,
-      MAX_FILES_PER_LEAD,
-    ]
-  );
-  return rows.length > 0;
+  // У каждого файла свой номер места (slot), пара «заявка + место»
+  // уникальна. Простая проверка «файлов меньше трёх» не выдерживает
+  // одновременных запросов: все они видят одно и то же число. С местами
+  // лишний запрос упирается в уникальный индекс и повторяет попытку —
+  // уже видя занятые места.
+  for (let attempt = 0; attempt <= MAX_FILES_PER_LEAD; attempt++) {
+    try {
+      const rows = await query<{ id: string }>(
+        `insert into lead_files
+           (id, lead_id, slot, storage_key, file_name, content_type, size_bytes)
+         select $1, $2, free.slot, $3, $4, $5, $6
+           from (
+             select s as slot
+               from generate_series(1, $7::int) as s
+              where not exists (
+                      select 1 from lead_files
+                       where lead_id = $2 and slot = s
+                    )
+              order by s
+              limit 1
+           ) as free
+         returning id`,
+        [
+          file.id,
+          file.leadId,
+          file.storageKey,
+          file.fileName,
+          file.contentType,
+          file.sizeBytes,
+          MAX_FILES_PER_LEAD,
+        ]
+      );
+      return rows.length > 0;
+    } catch (err) {
+      // 23505 — место только что занял параллельный запрос: пробуем ещё.
+      if ((err as { code?: string })?.code !== "23505") throw err;
+    }
+  }
+  return false;
 }
 
 export async function deleteLeadFileRow(id: string): Promise<void> {

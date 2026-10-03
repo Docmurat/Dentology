@@ -55,8 +55,16 @@ export async function GET(
   }
   if (!bytes) return notFound();
 
+  // Картинке не нужны ни скрипты, ни загрузка чего-либо ещё: запрещаем
+  // всё на случай, если в файл что-то подмешано. Для PDF не ставим —
+  // встроенный просмотрщик браузера в «песочнице» не открывается.
+  const isImage = file.contentType.startsWith("image/");
+
   return new Response(Buffer.from(bytes), {
     headers: {
+      ...(isImage
+        ? { "Content-Security-Policy": "default-src 'none'; sandbox" }
+        : {}),
       "Content-Type": file.contentType,
       "Content-Length": String(bytes.byteLength),
       "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,

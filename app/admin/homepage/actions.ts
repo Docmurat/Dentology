@@ -35,12 +35,17 @@ export async function toggleHomepageBlock(formData: FormData) {
   const enabled = formData.get("enabled") === "true";
   if (!key) return;
 
+  // Порядок передаём явно. У блока, добавленного в код позже, строки
+  // в базе ещё нет: вставка без sort_order дала бы 0, и блок прыгнул бы
+  // выше первого экрана. Существующей строке порядок не меняем.
+  const current = (await getHomepageBlocks()).find((b) => b.key === key);
+
   await query(
-    `insert into homepage_blocks (block_key, enabled)
-     values ($1, $2)
+    `insert into homepage_blocks (block_key, enabled, sort_order)
+     values ($1, $2, $3)
      on conflict (block_key) do update
        set enabled = excluded.enabled, updated_at = now()`,
-    [key, enabled]
+    [key, enabled, current?.sortOrder ?? 0]
   );
 
   revalidateHomepage();

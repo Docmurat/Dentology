@@ -1,6 +1,7 @@
 import { PrimaryCtaButton } from "@/components/contact/contact-modal";
 import { COMPANY } from "@/lib/company";
 import { typography } from "@/lib/typography";
+import { XRAY_UPLOAD_ENABLED } from "@/lib/constants";
 
 /**
  * Закреплённая панель связи внизу экрана: телефон и кнопка заявки.
@@ -45,9 +46,10 @@ export function StickyContactBar() {
         {/* Короткая подпись: полная «Отправить снимок на оценку» на узком
             телефоне рядом с кнопкой звонка уходит в две строки. */}
         <PrimaryCtaButton
-          label="Отправить снимок"
-          context="Закреплённая панель"
-          className="min-w-0 flex-1 px-3 py-3"
+          label={XRAY_UPLOAD_ENABLED ? "Отправить снимок" : "Записаться"}
+          // «!» обязателен: без него базовые отступы кнопки (px-6 py-4)
+          // перекрывают эти — порядок классов в строке ничего не решает.
+          className="min-w-0 flex-1 px-3! py-3!"
         />
       </div>
     </div>

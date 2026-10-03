@@ -66,7 +66,16 @@ export async function deleteLead(formData: FormData) {
   // Снимки пациента удаляются вместе с заявкой: в хранилище не должно
   // оставаться файлов, к которым уже нет записи.
   const fileKeys = await takeLeadFileKeys(id);
-  await Promise.allSettled(fileKeys.map((key) => deleteFromStorage(key)));
+  const results = await Promise.allSettled(
+    fileKeys.map((key) => deleteFromStorage(key))
+  );
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      // Запись уже удалена, объект остался: ключ в журнале — единственный
+      // след, по которому его можно убрать вручную.
+      console.error("LEAD_FILE_DELETE_FAILED", fileKeys[index], result.reason);
+    }
+  });
 
   await query(`delete from leads where id = $1`, [id]);
 

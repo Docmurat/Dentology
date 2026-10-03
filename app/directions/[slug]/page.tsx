@@ -16,6 +16,7 @@ import { CtaCaption } from "@/components/consultation/cta-caption";
 import { ConsultationInfo } from "@/components/consultation/consultation-info";
 import { getConsultationContent } from "@/lib/homepage";
 import { SITUATIONS } from "@/lib/situations";
+import { pageOpenGraph } from "@/lib/seo";
 import {
   getDirectionBySlug,
   getDirectionLabelMap,
@@ -88,12 +89,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: url },
-    openGraph: {
-      title,
-      description,
-      url,
-      type: "article",
-    },
+    openGraph: pageOpenGraph({ title, description, url, type: "article" }),
     twitter: {
       card: "summary_large_image",
       title,

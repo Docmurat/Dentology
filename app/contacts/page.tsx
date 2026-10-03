@@ -10,18 +10,19 @@ import { typography } from "@/lib/typography";
 import { ConsultationInfo } from "@/components/consultation/consultation-info";
 import { getConsultationContent } from "@/lib/homepage";
 import { XRAY_UPLOAD_ENABLED } from "@/lib/constants";
+import { pageOpenGraph } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Контакты",
   description:
     "Контакты Lucenta в Москве: телефон, адрес у метро Автозаводская, запись на консультацию. Можно прислать снимок для предварительной оценки.",
   alternates: { canonical: "/contacts" },
-  openGraph: {
+  openGraph: pageOpenGraph({
     title: "Контакты Lucenta",
     description:
       "Телефон, адрес и запись на консультацию. Можно прислать снимок для предварительной оценки.",
     url: "/contacts",
-  },
+  }),
 };
 
 // Срок ответа, цена и шаги консультации редактируются в админке.

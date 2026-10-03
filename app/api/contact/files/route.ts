@@ -46,8 +46,25 @@ export async function POST(request: Request) {
     return fail("Срок загрузки истёк. Заявка принята без файла.", 403);
   }
 
-  const declared = Number(request.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+  // Потолок с запасом: три файла на заявку, пять заявок в час. Считаем
+  // до чтения тела — иначе лимит не защищает от самой дорогой части.
+  const limit = await rateLimit("contact-file", {
+    limit: process.env.NODE_ENV === "production" ? 20 : 200,
+    windowSec: 3600,
+  });
+  if (!limit.allowed) {
+    return fail("Слишком много файлов. Заявка принята без файла.", 429);
+  }
+
+  // Размер должен быть объявлен заранее. Без Content-Length (поточная
+  // отправка) тело пришлось бы читать в память целиком, не зная, где оно
+  // кончится; браузер при отправке формы размер указывает всегда.
+  const declaredRaw = request.headers.get("content-length");
+  const declared = Number(declaredRaw);
+  if (!declaredRaw || !Number.isFinite(declared) || declared <= 0) {
+    return fail("Некорректный запрос.", 411);
+  }
+  if (declared > MAX_BODY_BYTES) {
     return fail("Файл слишком большой: допускается до 10 МБ.", 413);
   }
 
@@ -56,15 +73,6 @@ export async function POST(request: Request) {
     form = await request.formData();
   } catch {
     return fail("Некорректный запрос.", 400);
-  }
-
-  // Потолок с запасом: три файла на заявку, пять заявок в час.
-  const limit = await rateLimit("contact-file", {
-    limit: process.env.NODE_ENV === "production" ? 20 : 200,
-    windowSec: 3600,
-  });
-  if (!limit.allowed) {
-    return fail("Слишком много файлов. Заявка принята без файла.", 429);
   }
 
   const file = form.get("file");
@@ -95,7 +103,7 @@ export async function POST(request: Request) {
       id: fileId,
       leadId,
       storageKey,
-      fileName: cleanFileName(file.name),
+      fileName: cleanFileName(file.name, type.ext),
       contentType: type.contentType,
       sizeBytes: file.size,
     });

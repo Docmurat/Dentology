@@ -41,6 +41,9 @@ async function uploadLeadFile(token: string, file: File): Promise<string | null>
       // Пропуск — заголовком: сервер проверяет его до чтения файла.
       headers: { "x-upload-token": token },
       body: data,
+      // Минута на файл: если сервер или хранилище не отвечают, человек
+      // должен получить понятное сообщение, а не вечную «загрузку».
+      signal: AbortSignal.timeout(60_000),
     });
 
     if (response.ok) return null;
@@ -104,6 +107,11 @@ export function ContactForm({
   // общей галочки для них недостаточно.
   const [healthConsent, setHealthConsent] = useState(false);
   const fileInputId = useId();
+  // Снимок нужен пациенту. В заявке на курс (её отправляет врач) поле
+  // файла только мешает. Признак тот же, что у сервера: контекст
+  // начинается со слова «Курс».
+  const filesEnabled =
+    XRAY_UPLOAD_ENABLED && !(context ?? "").trim().toLowerCase().startsWith("курс");
 
   function addFiles(list: FileList | null) {
     if (!list?.length) return;
@@ -307,7 +315,7 @@ export function ContactForm({
         className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-base outline-none transition focus:border-[var(--color-teal)] sm:text-sm"
       />
 
-      {XRAY_UPLOAD_ENABLED ? (
+      {filesEnabled ? (
         <div>
           <label
             htmlFor={fileInputId}
@@ -372,6 +380,12 @@ export function ContactForm({
             </ul>
           ) : null}
 
+          {fileError ? (
+            <p className="mt-2 text-sm leading-6 text-[#9B4C4C]">{fileError}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       <textarea
         placeholder="Кратко опишите ситуацию"
         rows={5}
@@ -381,12 +395,6 @@ export function ContactForm({
         }
         className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-base outline-none transition focus:border-[var(--color-teal)] sm:text-sm"
       />
-
-          {fileError ? (
-            <p className="mt-2 text-sm leading-6 text-[#9B4C4C]">{fileError}</p>
-          ) : null}
-        </div>
-      ) : null}
 
       {files.length ? (
         <label className="flex items-start gap-2 text-xs leading-5 text-[var(--color-gray-600)]">

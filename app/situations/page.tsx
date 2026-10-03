@@ -6,12 +6,19 @@ import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { SITUATIONS } from "@/lib/situations";
 import { typography } from "@/lib/typography";
+import { pageOpenGraph } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Ситуации, с которыми к нам приходят",
   description:
     "Рекомендовали удалить зуб, поставили диагноз «киста», болит зуб после лечения каналов — что это значит и что можно сделать.",
   alternates: { canonical: "/situations" },
+  openGraph: pageOpenGraph({
+    title: "Ситуации, с которыми к нам приходят",
+    description:
+      "Рекомендовали удалить зуб, поставили диагноз «киста», болит зуб после лечения каналов — что это значит и что можно сделать.",
+    url: "/situations",
+  }),
 };
 
 export default function SituationsPage() {

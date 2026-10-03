@@ -17,6 +17,9 @@
 create table if not exists lead_files (
   id           uuid primary key,
   lead_id      text not null,
+  -- Номер места файла в заявке: 1, 2, 3. Вместе с lead_id уникален —
+  -- так лимит файлов держит сама база, даже при одновременных запросах.
+  slot         smallint not null,
   storage_key  text not null,
   file_name    text not null default '',
   content_type text not null,
@@ -24,4 +27,5 @@ create table if not exists lead_files (
   created_at   timestamptz not null default now()
 );
 
-create index if not exists lead_files_lead_idx on lead_files (lead_id);
+create unique index if not exists lead_files_lead_slot_idx
+  on lead_files (lead_id, slot);

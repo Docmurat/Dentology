@@ -45,6 +45,14 @@ const MAX_LENGTH: Record<string, number> = {
   context: 200,
 };
 
+function htmlEscape(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 /** Число обещанных файлов, приведённое к допустимому диапазону. */
 function expectedFiles(data: ContactPayload): number {
   if (!XRAY_UPLOAD_ENABLED) return 0;
@@ -93,8 +101,10 @@ async function notifyInBackground(
   // Сами снимки в уведомление не кладём: это сведения о здоровье, а почта
   // и Telegram — открытые каналы. Сообщаем только, что они есть в заявке.
   const files = expectedFiles(body);
+  // Уведомление уходит раньше, чем файлы загрузятся, поэтому пишем
+  // «прикладывает», а не «приложено»: дошли ли они, видно в заявке.
   const filesNote = files
-    ? `приложено: ${files} — смотреть в разделе «Заявки»`
+    ? `посетитель прикладывает ${files} шт. — проверьте в разделе «Заявки»`
     : "";
 
   const tgText = [
@@ -129,7 +139,7 @@ async function notifyInBackground(
   tasks.push(
     sendPushToStaff({
       title: isCourseRequest ? "📅 Заявка с курса" : "🦷 Новая заявка",
-      body: `${body.name} · ${body.phone}${body.context ? ` · ${body.context}` : ""}${files ? " · есть снимок" : ""}`,
+      body: `${body.name} · ${body.phone}${body.context ? ` · ${body.context}` : ""}${files ? " · со снимком" : ""}`,
       url: "/moderator",
     })
       .then((result) => markLeadNotified(leadId, "push", result.ok))
@@ -175,13 +185,15 @@ async function notifyInBackground(
       .filter(Boolean)
       .join("\n");
 
+    // Поля заявки пишет посетитель: в HTML письма они попадают только
+    // экранированными, иначе в письмо можно подмешать свою разметку.
     const html = `
       <h2>Новая заявка с сайта Lucenta</h2>
-      <p><strong>Имя:</strong> ${body.name}</p>
-      <p><strong>Телефон:</strong> ${body.phone}</p>
-      <p><strong>Способ связи:</strong> ${body.contactMethod || "Не указан"}</p>
-      <p><strong>Сообщение:</strong><br />${(body.message || "Не указано").replace(/\n/g, "<br />")}</p>
-      <p><strong>Заявка по:</strong> ${body.context || "Общая заявка"}</p>
+      <p><strong>Имя:</strong> ${htmlEscape(body.name)}</p>
+      <p><strong>Телефон:</strong> ${htmlEscape(body.phone)}</p>
+      <p><strong>Способ связи:</strong> ${htmlEscape(body.contactMethod || "Не указан")}</p>
+      <p><strong>Сообщение:</strong><br />${htmlEscape(body.message || "Не указано").replace(/\n/g, "<br />")}</p>
+      <p><strong>Заявка по:</strong> ${htmlEscape(body.context || "Общая заявка")}</p>
       ${filesNote ? `<p><strong>Снимки:</strong> ${filesNote}</p>` : ""}
       <p><strong>Согласие на обработку ПДн:</strong> да</p>
     `;

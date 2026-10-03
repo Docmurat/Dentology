@@ -61,6 +61,8 @@ export async function deleteFromStorage(path: string): Promise<void> {
   await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
 }
 
+const PRIVATE_TIMEOUT_MS = 25_000;
+
 /**
  * Загружает файл как ЗАКРЫТЫЙ объект: по прямой ссылке он недоступен,
  * прочитать его можно только через getPrivateObject (то есть через наш
@@ -82,7 +84,10 @@ export async function uploadPrivate(
       Body: body,
       ContentType: contentType,
       ACL: "private",
-    })
+    }),
+    // Если хранилище не отвечает, посетитель не должен бесконечно
+    // смотреть на «Загружаем снимки…».
+    { abortSignal: AbortSignal.timeout(PRIVATE_TIMEOUT_MS) }
   );
 }
 
@@ -93,7 +98,8 @@ export async function getPrivateObject(
   const key = path.replace(/^\/+/, "");
   try {
     const res = await s3.send(
-      new GetObjectCommand({ Bucket: BUCKET, Key: key })
+      new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+      { abortSignal: AbortSignal.timeout(PRIVATE_TIMEOUT_MS) }
     );
     if (!res.Body) return null;
     return await res.Body.transformToByteArray();

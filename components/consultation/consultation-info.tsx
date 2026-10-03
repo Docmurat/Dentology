@@ -67,8 +67,8 @@ export async function ConsultationInfo({
             <ul
               className={`mt-3 space-y-2 ${typography.bodySm} text-[var(--color-gray-700)]`}
             >
-              {bring.map((item) => (
-                <li key={item} className="flex gap-3">
+              {bring.map((item, index) => (
+                <li key={index} className="flex gap-3">
                   <span
                     aria-hidden
                     className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-teal)]"

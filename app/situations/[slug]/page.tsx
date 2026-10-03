@@ -18,6 +18,7 @@ import { getDirectionLabelMap } from "@/lib/directions-db";
 import { getConsultationContent } from "@/lib/homepage";
 import { SITUATIONS, getSituationBySlug } from "@/lib/situations";
 import { typography } from "@/lib/typography";
+import { pageOpenGraph } from "@/lib/seo";
 import type { CaseItem } from "@/lib/cases-data";
 
 // Кейсы подтягиваются из базы — обновляем раз в минуту, как на направлениях.
@@ -45,12 +46,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: item.seoTitle,
     description: item.description,
     alternates: { canonical: url },
-    openGraph: {
+    openGraph: pageOpenGraph({
       title: item.title,
       description: item.description,
       url,
       type: "article",
-    },
+    }),
     twitter: {
       card: "summary_large_image",
       title: item.title,
@@ -265,8 +266,8 @@ export default async function SituationPage({ params }: Props) {
               </h2>
 
               <p className="mt-4 text-sm leading-6 text-white/80 sm:mt-6 sm:text-base sm:leading-7">
-                Это предварительная оценка, она ни к чему не обязывает.
-                Окончательное решение принимается на очном приёме.
+                Это предварительная оценка по снимку. Окончательное решение
+                принимается на очном приёме.
               </p>
 
               <div className="mt-8">
