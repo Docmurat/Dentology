@@ -9,6 +9,7 @@ import { typography } from "@/lib/typography";
 
 export const metadata: Metadata = {
   title: "Направления лечения",
+  alternates: { canonical: "/directions" },
   description:
     "Клинические направления Lucenta: эндодонтия, имплантация, гнатология, ортопедия и реставрации в рамках единого диагностического подхода.",
 };

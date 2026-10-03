@@ -1,4 +1,4 @@
-import { getHomepageBlocks, getHeroContent, getAboutContent, getWhenContent, getWhyContent, getSectionHeadingContent, getEducationContent, getCtaContent, getPromoContent } from "@/lib/homepage";
+import { getHomepageBlocks, getHeroContent, getAboutContent, getWhenContent, getWhyContent, getSectionHeadingContent, getEducationContent, getCtaContent, getPromoContent, getConsultationContent } from "@/lib/homepage";
 import { toggleHomepageBlock, moveHomepageBlock } from "./actions";
 import { HeroEditor } from "@/components/admin/hero-editor";
 import { AboutEditor } from "@/components/admin/about-editor";
@@ -8,6 +8,7 @@ import { SectionHeadingEditor } from "@/components/admin/section-heading-editor"
 import { EducationEditor } from "@/components/admin/education-editor";
 import { CtaEditor } from "@/components/admin/cta-editor";
 import { PromoEditor } from "@/components/admin/promo-editor";
+import { ConsultationEditor } from "@/components/admin/consultation-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function AdminHomepagePage() {
   const educationContent = await getEducationContent();
   const ctaContent = await getCtaContent();
   const promoContent = await getPromoContent();
+  const consultationContent = await getConsultationContent();
 
   // Заголовки блоков с собственной механикой (карточки — из своих разделов).
   const headings: Record<string, Awaited<ReturnType<typeof getSectionHeadingContent>>> = {
@@ -187,6 +189,17 @@ export default async function AdminHomepagePage() {
                   </summary>
                   <div className="mt-4">
                     <CtaEditor initial={ctaContent} />
+                  </div>
+                </details>
+              ) : null}
+
+              {block.key === "consultation" ? (
+                <details className="mt-4 rounded-xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] p-4">
+                  <summary className="cursor-pointer text-sm font-medium text-[var(--color-navy-secondary)]">
+                    Редактировать содержимое, цену и длительность
+                  </summary>
+                  <div className="mt-4">
+                    <ConsultationEditor initial={consultationContent} />
                   </div>
                 </details>
               ) : null}

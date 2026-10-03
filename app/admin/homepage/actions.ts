@@ -10,6 +10,13 @@ function revalidateHomepage() {
   revalidatePath("/admin/homepage");
 }
 
+// Цена, длительность и шаги консультации показываются не только на
+// главной: под кнопками записи, в контактах, на страницах направлений
+// и ситуаций. Обновляем всё сразу, иначе старая цена провисит минуту.
+function revalidateEverywhere() {
+  revalidatePath("/", "layout");
+}
+
 // Сохранить контент блока (upsert по block_key).
 async function saveBlockContent(blockKey: string, content: unknown) {
   await query(
@@ -28,12 +35,17 @@ export async function toggleHomepageBlock(formData: FormData) {
   const enabled = formData.get("enabled") === "true";
   if (!key) return;
 
+  // Порядок передаём явно. У блока, добавленного в код позже, строки
+  // в базе ещё нет: вставка без sort_order дала бы 0, и блок прыгнул бы
+  // выше первого экрана. Существующей строке порядок не меняем.
+  const current = (await getHomepageBlocks()).find((b) => b.key === key);
+
   await query(
-    `insert into homepage_blocks (block_key, enabled)
-     values ($1, $2)
+    `insert into homepage_blocks (block_key, enabled, sort_order)
+     values ($1, $2, $3)
      on conflict (block_key) do update
        set enabled = excluded.enabled, updated_at = now()`,
-    [key, enabled]
+    [key, enabled, current?.sortOrder ?? 0]
   );
 
   revalidateHomepage();
@@ -51,18 +63,25 @@ export async function moveHomepageBlock(formData: FormData) {
   const j = dir === "up" ? i - 1 : i + 1;
   if (i < 0 || j < 0 || j >= blocks.length) return;
 
-  const a = blocks[i];
-  const b = blocks[j];
+  // Меняем блоки местами и нумеруем весь список заново.
+  //
+  // Раньше местами менялись только два числа sort_order. Это ломалось,
+  // когда числа совпадали: у блока, добавленного в код позже, строки
+  // в базе ещё нет, и его порядок считается по умолчанию — он может
+  // совпасть с соседом, и «обмен» ничего не менял. Сплошная нумерация
+  // убирает совпадения раз и навсегда.
+  const ordered = [...blocks];
+  [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
 
-  // Гарантируем, что обе строки существуют, и меняем порядок местами.
   const upsert = `insert into homepage_blocks (block_key, enabled, sort_order)
                   values ($1, $2, $3)
                   on conflict (block_key) do update
                     set enabled = excluded.enabled,
                         sort_order = excluded.sort_order,
                         updated_at = now()`;
-  await query(upsert, [a.key, a.enabled, b.sortOrder]);
-  await query(upsert, [b.key, b.enabled, a.sortOrder]);
+  for (const [index, block] of ordered.entries()) {
+    await query(upsert, [block.key, block.enabled, index + 1]);
+  }
 
   revalidateHomepage();
 }
@@ -229,4 +248,45 @@ export async function savePromoContent(formData: FormData) {
   });
 
   revalidateHomepage();
+}
+
+// Сохранить блок «Как проходит консультация».
+export async function saveConsultationContent(formData: FormData) {
+  await requireStaff();
+
+  let steps: { title: string; text: string }[] = [];
+  try {
+    const parsed = JSON.parse(String(formData.get("steps") || "[]"));
+    if (Array.isArray(parsed)) {
+      steps = parsed
+        .map((it) => ({
+          title: String(it?.title || "").trim(),
+          text: String(it?.text || "").trim(),
+        }))
+        .filter((it) => it.title || it.text);
+    }
+  } catch {
+    steps = [];
+  }
+
+  // Список «что взять с собой» — по пункту на строку.
+  const bring = String(formData.get("bring") || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  await saveBlockContent("consultation", {
+    eyebrow: String(formData.get("eyebrow") || "").trim(),
+    title: String(formData.get("title") || "").trim(),
+    description: String(formData.get("description") || "").trim(),
+    price: String(formData.get("price") || "").trim(),
+    duration: String(formData.get("duration") || "").trim(),
+    responseNote: String(formData.get("responseNote") || "").trim(),
+    steps,
+    bringTitle: String(formData.get("bringTitle") || "").trim(),
+    bring,
+  });
+
+  revalidateHomepage();
+  revalidateEverywhere();
 }

@@ -6,6 +6,7 @@ import { AuthNav } from "@/components/layout/auth-nav";
 import { LogoLink } from "@/components/layout/logo-link";
 import { ContactButton } from "@/components/contact/contact-modal";
 import { siteConfig } from "@/lib/constants";
+import { COMPANY } from "@/lib/company";
 
 export function Header() {
   return (
@@ -44,6 +45,14 @@ export function Header() {
               за собой навигацию, пока AuthNav определяет статус сессии. */}
           <div className="hidden shrink-0 items-center justify-end gap-5 xl:flex">
             <AuthNav variant="desktop" />
+            {/* Телефон виден с 1536px: при 1280–1535 он не помещается рядом
+                с меню. На экранах уже xl его показывает нижняя панель. */}
+            <a
+              href={`tel:${COMPANY.phone.replace(/[^\d+]/g, "")}`}
+              className="hidden whitespace-nowrap text-sm font-medium text-[var(--color-navy)] hover:text-[var(--color-teal)] 2xl:block"
+            >
+              {COMPANY.phone}
+            </a>
             <ContactButton
               label="Записаться"
               variant="teal"
