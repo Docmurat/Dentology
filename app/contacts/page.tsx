@@ -7,20 +7,36 @@ import { ContactForm } from "@/components/forms/contact-form";
 import { COMPANY } from "@/lib/company";
 import { MessengerButtons } from "@/components/contact/messenger-buttons";
 import { typography } from "@/lib/typography";
+import { ConsultationInfo } from "@/components/consultation/consultation-info";
+import { getConsultationContent } from "@/lib/homepage";
+import { XRAY_UPLOAD_ENABLED } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Контакты",
   description:
-    "Контакты Lucenta и запись на консультацию по сложным клиническим случаям, эндодонтии и комплексному лечению.",
+    "Контакты Lucenta в Москве: телефон, адрес у метро Автозаводская, запись на консультацию. Можно прислать снимок для предварительной оценки.",
+  alternates: { canonical: "/contacts" },
+  openGraph: {
+    title: "Контакты Lucenta",
+    description:
+      "Телефон, адрес и запись на консультацию. Можно прислать снимок для предварительной оценки.",
+    url: "/contacts",
+  },
 };
 
-export default function ContactsPage() {
+// Срок ответа, цена и шаги консультации редактируются в админке.
+export const revalidate = 60;
+
+export default async function ContactsPage() {
+  const consultation = await getConsultationContent();
+  const responseNote = consultation.responseNote.trim().replace(/\.+$/, "");
+
   return (
     <SiteShell>
       <PageHero
         eyebrow="Контакты"
         title="Запись на консультацию"
-        description="Консультация проводится после анализа клинической ситуации и диагностики. Возможность лечения определяется индивидуально."
+        description="Пришлите снимок или опишите ситуацию — подскажем, есть ли смысл в очной консультации и с чего начать."
       />
 
       <Section className="pb-20 md:pb-28">
@@ -76,13 +92,25 @@ export default function ContactsPage() {
             </h2>
 
             <p className={`mt-4 ${typography.bodySm} text-[var(--color-gray-700)]`}>
-              Вы можете оставить запрос, кратко описав ситуацию. После этого с
-              вами свяжутся для уточнения деталей и оптимального формата
-              консультации.
+              Опишите ситуацию
+              {XRAY_UPLOAD_ENABLED ? " и прикрепите снимок, если он есть" : ""}.
+              {responseNote ? ` ${responseNote}: ` : " Мы свяжемся с вами: "}
+              скажем, нужна ли очная консультация, и предложим время.
             </p>
 
             <ContactForm />
           </Card>
+        </div>
+
+        <div className="mt-16 sm:mt-20">
+          <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
+            {consultation.title}
+          </h2>
+
+          <div className="mt-6 sm:mt-8">
+            {/* Кнопки нет: форма заявки на этой же странице, выше. */}
+            <ConsultationInfo showButton={false} />
+          </div>
         </div>
       </Section>
     </SiteShell>

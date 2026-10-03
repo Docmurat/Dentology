@@ -115,7 +115,7 @@ export async function CourseView({
   const tabletCases = courseCases.slice(0, 4);
 
   return (
-    <SiteShell>
+    <SiteShell contactBar={false}>
       {/* Структурированные данные — только для опубликованного курса,
           черновик в индекс попадать не должен. */}
       {!isDraftPreview ? (

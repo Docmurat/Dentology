@@ -6,9 +6,11 @@ import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { getDirections } from "@/lib/directions-db";
 import { typography } from "@/lib/typography";
+import { SITUATIONS } from "@/lib/situations";
 
 export const metadata: Metadata = {
   title: "Карта сайта",
+  alternates: { canonical: "/sitemap" },
   description: "Все разделы сайта Lucenta.",
 };
 
@@ -72,6 +74,21 @@ export default async function SitemapPage() {
                 Список направлений временно недоступен.
               </p>
             )}
+          </Card>
+
+          <Card>
+            <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
+              Ситуации пациентов
+            </h2>
+            <ul className="mt-4 flex flex-col gap-1">
+              {SITUATIONS.map((item) => (
+                <li key={item.slug}>
+                  <Link href={`/situations/${item.slug}`} className={linkCls}>
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </Card>
 
           <Card>

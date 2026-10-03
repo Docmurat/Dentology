@@ -11,6 +11,7 @@ import { getPageHeading } from "@/lib/page-content";
 
 export const metadata: Metadata = {
   title: "Клинические случаи",
+  alternates: { canonical: "/cases" },
   description:
     "Реальные клинические случаи Lucenta: сложная эндодонтия, повторное лечение и ситуации, где ранее рекомендовали удаление зуба.",
 };

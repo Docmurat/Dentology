@@ -13,14 +13,22 @@ import { EducationPreview } from "@/components/home/education-preview";
 import { CtaSection } from "@/components/home/cta-section";
 import { ReviewsPreview } from "@/components/home/reviews-preview";
 import { PromoBanner } from "@/components/home/promo-banner";
+import { ConsultationSection } from "@/components/home/consultation-section";
+import { StickyContactBar } from "@/components/contact/sticky-contact-bar";
 import { getEnabledHomepageBlocks } from "@/lib/homepage";
 
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "Стоматологическая практика",
+  // absolute: шаблон «%s | Lucenta» из layout к главной не применяется,
+  // поэтому название и город пишем здесь целиком.
+  title: {
+    absolute:
+      "Lucenta — лечение и перелечивание каналов в Москве, сохранение зубов",
+  },
   description:
-    "Lucenta — стоматологическая практика в Москве с ведущей экспертизой в сложной эндодонтии, имплантации, ортодонтии и гнатологии.",
+    "Стоматологическая практика Lucenta в Москве: сложная эндодонтия, перелечивание каналов, лечение кисты зуба. Пришлите снимок — врач ответит, есть ли шанс сохранить зуб.",
+  alternates: { canonical: "/" },
 };
 
 // Реестр: какой ключ блока какому компоненту соответствует.
@@ -35,6 +43,7 @@ const BLOCKS = {
   team: TeamPreview,
   reviews: ReviewsPreview,
   education: EducationPreview,
+  consultation: ConsultationSection,
   cta: CtaSection,
   promo: PromoBanner,
 } as unknown as Record<string, ComponentType>;
@@ -53,7 +62,8 @@ export default async function HomePage() {
         })}
       </main>
 
-      <Footer />
+      <Footer withContactBar />
+      <StickyContactBar />
     </>
   );
 }

@@ -1,4 +1,5 @@
 import { query, queryOne } from "@/lib/db";
+import { PRIMARY_CTA_LABEL } from "@/lib/constants";
 
 // Внутренний хелпер: контент блока из homepage_content по ключу (или null).
 async function getBlockContent<T>(blockKey: string): Promise<Partial<T> | null> {
@@ -34,6 +35,7 @@ export const HOMEPAGE_BLOCK_DEFS: {
   { key: "team", title: "Команда" },
   { key: "reviews", title: "Отзывы" },
   { key: "education", title: "Обучение" },
+  { key: "consultation", title: "Как проходит консультация" },
   { key: "cta", title: "Призыв к действию" },
   {
     key: "promo",
@@ -97,7 +99,7 @@ export type HeroContent = {
 
 export const HERO_DEFAULTS: HeroContent = {
   eyebrow: "Экспертная стоматологическая практика",
-  title: "Сохранение зубов в ситуациях, где часто рекомендуют удаление",
+  title: "Вам сказали удалять зуб? Сначала проверим, можно ли его сохранить",
   subtitle:
     "Ведущая экспертиза в сложной эндодонтии, дополненная имплантацией, ортодонтией и гнатологией как частью комплексного подхода к лечению.",
   card1Label: "Основной фокус",
@@ -254,20 +256,19 @@ export type SectionHeadingContent = {
 export const SECTION_HEADING_DEFAULTS: Record<string, SectionHeadingContent> = {
   directions: {
     eyebrow: "Клинические направления",
-    title: "Система лечения, а не отдельные услуги",
+    title: "Что мы лечим",
     description:
       "Эндодонтия является ключевым направлением, но лечение всегда рассматривается в контексте общей клинической картины.",
   },
   cases: {
     eyebrow: "Клинические случаи",
-    title:
-      "Реальные ситуации, в которых решение требует больше, чем стандартного подхода",
+    title: "Зубы, которые удалось сохранить",
     description:
       "Кейсы, где ранее рекомендовали удаление, отказывали в лечении или не удавалось добиться стабильного результата.",
   },
   team: {
     eyebrow: "Клиническая команда",
-    title: "Сложные случаи требуют междисциплинарного подхода",
+    title: "Кто будет вас лечить",
     description:
       "Lucenta объединяет ведущих специалистов разных направлений, работающих в рамках единой системы клинического мышления и принятия решений.",
   },
@@ -348,7 +349,7 @@ export const CTA_DEFAULTS: CtaContent = {
     "Консультация позволяет оценить клиническую ситуацию, подтвердить диагноз и определить возможные варианты лечения.",
   text2:
     "В ряде случаев возможно сохранить зуб даже при ранее рекомендованном удалении.",
-  primaryLabel: "Записаться на консультацию",
+  primaryLabel: PRIMARY_CTA_LABEL,
   secondaryLabel: "Перейти к контактам",
 };
 
@@ -388,4 +389,93 @@ export async function getPromoContent(): Promise<PromoContent> {
     linkLabel: c.linkLabel ?? PROMO_DEFAULTS.linkLabel,
     linkHref: c.linkHref ?? PROMO_DEFAULTS.linkHref,
   };
+}
+
+// ── Как проходит консультация ──
+// Цена и длительность намеренно пустые по умолчанию: пока их не заполнили
+// в админке, сайт их просто не показывает. Выдуманная цена хуже её
+// отсутствия.
+export type ConsultationStep = { title: string; text: string };
+export type ConsultationContent = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  /** Например «3 000 ₽». Пусто — цена не показывается. */
+  price: string;
+  /** Например «40 минут». Пусто — длительность не показывается. */
+  duration: string;
+  /** Срок ответа на заявку: «Ответим в течение дня». */
+  responseNote: string;
+  steps: ConsultationStep[];
+  bringTitle: string;
+  bring: string[];
+};
+
+export const CONSULTATION_DEFAULTS: ConsultationContent = {
+  eyebrow: "Консультация",
+  title: "Как проходит консультация",
+  description:
+    "Начать можно без визита: пришлите снимок, и врач скажет, есть ли смысл рассматривать сохранение зуба.",
+  price: "",
+  duration: "",
+  responseNote: "Ответим в течение дня",
+  steps: [
+    {
+      title: "Вы отправляете снимок",
+      text: "Прикрепите к заявке прицельный снимок, панорамный снимок или страницы заключения КТ. Снимка нет — просто опишите ситуацию.",
+    },
+    {
+      title: "Предварительная оценка",
+      text: "Врач смотрит снимок и отвечает, есть ли шанс сохранить зуб. Это ориентир, а не диагноз: решение принимается на очном приёме.",
+    },
+    {
+      title: "Очная консультация",
+      text: "Осмотр, разбор снимков и, если нужно, дополнительная диагностика.",
+    },
+    {
+      title: "План лечения",
+      text: "Вы получаете варианты лечения с этапами, сроками и стоимостью и решаете, как действовать дальше.",
+    },
+  ],
+  bringTitle: "Что взять с собой",
+  bring: [
+    "Снимки и КТ, если они есть: на диске, флешке или ссылкой",
+    "Выписки и заключения по прошлому лечению",
+    "Паспорт для оформления договора",
+  ],
+};
+
+export async function getConsultationContent(): Promise<ConsultationContent> {
+  const d = CONSULTATION_DEFAULTS;
+  const c = await getBlockContent<ConsultationContent>("consultation");
+  if (!c) return d;
+  return {
+    eyebrow: c.eyebrow ?? d.eyebrow,
+    title: c.title ?? d.title,
+    description: c.description ?? d.description,
+    price: c.price ?? d.price,
+    duration: c.duration ?? d.duration,
+    responseNote: c.responseNote ?? d.responseNote,
+    steps: Array.isArray(c.steps) ? c.steps : d.steps,
+    bringTitle: c.bringTitle ?? d.bringTitle,
+    bring: Array.isArray(c.bring) ? c.bring : d.bring,
+  };
+}
+
+/**
+ * Строка под кнопкой записи: «Ответим в течение дня. Консультация: 3 000 ₽,
+ * 40 минут». Собирается только из заполненных частей; если пусто всё —
+ * возвращает пустую строку, и подпись не рисуется.
+ */
+export function consultationCaption(
+  c: Pick<ConsultationContent, "price" | "duration" | "responseNote">
+): string {
+  const parts: string[] = [];
+  const note = c.responseNote.trim().replace(/\.+$/, "");
+  if (note) parts.push(`${note}.`);
+
+  const facts = [c.price.trim(), c.duration.trim()].filter(Boolean);
+  if (facts.length) parts.push(`Консультация: ${facts.join(", ")}`);
+
+  return parts.join(" ");
 }

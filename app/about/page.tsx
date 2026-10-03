@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "О враче",
+  alternates: { canonical: "/about" },
   description:
     "Практика Lucenta с ведущим фокусом на сложной эндодонтии, точной диагностике и междисциплинарном подходе к лечению.",
 };

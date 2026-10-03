@@ -8,6 +8,7 @@ import { typography } from "@/lib/typography";
 
 export const metadata: Metadata = {
   title: "Лицензия на медицинскую деятельность",
+  alternates: { canonical: "/legal/license" },
   robots: { index: true, follow: true },
 };
 

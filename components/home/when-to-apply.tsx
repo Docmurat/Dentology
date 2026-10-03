@@ -3,6 +3,8 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { Card } from "@/components/ui/card";
 import { getWhenContent } from "@/lib/homepage";
 import { typography } from "@/lib/typography";
+import Link from "next/link";
+import { SITUATIONS } from "@/lib/situations";
 
 export async function WhenToApply() {
   const when = await getWhenContent();
@@ -32,6 +34,23 @@ export async function WhenToApply() {
               {item.text}
             </p>
           </Card>
+        ))}
+      </div>
+
+      {/* Карточки выше редактируются в админке и ссылок не несут, поэтому
+          переходы на подробные страницы стоят отдельной строкой. */}
+      <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-3 sm:mt-8">
+        <span className={`${typography.bodySm} text-[var(--color-gray-600)]`}>
+          Подробнее о ситуациях:
+        </span>
+        {SITUATIONS.map((item) => (
+          <Link
+            key={item.slug}
+            href={`/situations/${item.slug}`}
+            className={`rounded-full border border-[var(--color-teal)] px-4 py-2 ${typography.bodySm} font-medium text-[var(--color-teal)] transition hover:bg-[var(--color-teal)]/10`}
+          >
+            {item.name}
+          </Link>
         ))}
       </div>
     </Section>

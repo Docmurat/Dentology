@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { query, queryOne } from "@/lib/db";
 import { requireModerator, requireAdmin } from "@/lib/auth-guards";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads";
+import { takeLeadFileKeys } from "@/lib/lead-files";
+import { deleteFromStorage } from "@/lib/storage";
 
 function isStatus(value: string): value is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(value);
@@ -60,6 +62,11 @@ export async function deleteLead(formData: FormData) {
     console.warn(`deleteLead: заявка ${id} не помечена спамом, удаление отклонено`);
     return;
   }
+
+  // Снимки пациента удаляются вместе с заявкой: в хранилище не должно
+  // оставаться файлов, к которым уже нет записи.
+  const fileKeys = await takeLeadFileKeys(id);
+  await Promise.allSettled(fileKeys.map((key) => deleteFromStorage(key)));
 
   await query(`delete from leads where id = $1`, [id]);
 

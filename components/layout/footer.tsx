@@ -18,11 +18,23 @@ async function safeDirections(): Promise<{ slug: string; title: string }[]> {
   }
 }
 
-export async function Footer() {
+export async function Footer({
+  withContactBar = false,
+}: {
+  /** Под закреплённую панель связи нужен отступ, иначе она закроет
+   *  последние строки подвала на телефоне и планшете. */
+  withContactBar?: boolean;
+} = {}) {
   const directions = await safeDirections();
 
   return (
-    <footer className="mt-24 border-t border-[var(--color-gray-200)] bg-[var(--color-navy)] text-white">
+    <footer
+      className={`mt-24 border-t border-[var(--color-gray-200)] bg-[var(--color-navy)] text-white ${
+        withContactBar
+          ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))] xl:pb-0"
+          : ""
+      }`}
+    >
       <Section className="py-16">
         <div className="grid gap-8 sm:grid-cols-2 sm:gap-10 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr] lg:gap-8 xl:gap-12">
           <div className="sm:col-span-2 lg:col-span-1">
@@ -54,6 +66,7 @@ export async function Footer() {
               <Link href="/reviews">Отзывы</Link>
               <Link href="/team">Команда</Link>
               <Link href="/about">О враче</Link>
+              <Link href="/situations">Ситуации пациентов</Link>
               <Link href="/education">Обучение</Link>
               <Link href="/contacts">Контакты</Link>
             </div>

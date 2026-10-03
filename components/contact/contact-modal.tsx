@@ -6,6 +6,11 @@ import { createPortal } from "react-dom";
 import { ContactForm } from "@/components/forms/contact-form";
 import { useModalA11y } from "@/lib/use-modal-a11y";
 import { typography } from "@/lib/typography";
+import {
+  PRIMARY_CTA_LABEL,
+  PRIMARY_CTA_MODAL_INTRO,
+  PRIMARY_CTA_MODAL_TITLE,
+} from "@/lib/constants";
 
 type Variant = "teal" | "gold" | "gold-outline" | "ticket";
 
@@ -144,5 +149,35 @@ export function ContactButton({
           )
         : null}
     </>
+  );
+}
+
+/**
+ * Главная кнопка сайта: «Отправить снимок на оценку».
+ *
+ * Та же форма, что и у ContactButton, но окно сразу объясняет, что делать
+ * со снимком. Подпись можно переопределить (её редактируют в админке
+ * в блоке «Призыв к действию»).
+ */
+export function PrimaryCtaButton({
+  label = PRIMARY_CTA_LABEL,
+  context,
+  variant = "teal",
+  className = "",
+}: {
+  label?: string;
+  context?: string;
+  variant?: Variant;
+  className?: string;
+}) {
+  return (
+    <ContactButton
+      label={label}
+      context={context}
+      variant={variant}
+      className={className}
+      title={PRIMARY_CTA_MODAL_TITLE}
+      intro={PRIMARY_CTA_MODAL_INTRO}
+    />
   );
 }

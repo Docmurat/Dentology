@@ -9,6 +9,7 @@ import { getPageHeading } from "@/lib/page-content";
 
 export const metadata: Metadata = {
   title: "Команда",
+  alternates: { canonical: "/team" },
   description:
     "Клиническая команда Lucenta: главный врач, ведущие специалисты направлений и персонал, работающие в единой системе клинического мышления.",
 };

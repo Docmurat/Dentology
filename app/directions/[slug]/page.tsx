@@ -8,7 +8,14 @@ import { PageHero } from "@/components/layout/page-hero";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ContactButton } from "@/components/contact/contact-modal";
+import {
+  ContactButton,
+  PrimaryCtaButton,
+} from "@/components/contact/contact-modal";
+import { CtaCaption } from "@/components/consultation/cta-caption";
+import { ConsultationInfo } from "@/components/consultation/consultation-info";
+import { getConsultationContent } from "@/lib/homepage";
+import { SITUATIONS } from "@/lib/situations";
 import {
   getDirectionBySlug,
   getDirectionLabelMap,
@@ -24,6 +31,29 @@ import { FaqSection } from "@/components/ui/faq-section";
 import { typography } from "@/lib/typography";
 
 export const revalidate = 60;
+
+/**
+ * Заголовки страницы направления, написанные языком пациента.
+ *
+ * Название направления из базы («Эндодонтия») остаётся коротким: оно
+ * используется как подпись в меню, фильтрах и карточках. Но человек ищет
+ * не «эндодонтию», а «перелечивание каналов» и «кисту зуба» — эти слова
+ * должны стоять в заголовке страницы и в названии для поиска.
+ *
+ * Направления без записи здесь показываются как раньше.
+ */
+const PAGE_COPY: Record<
+  string,
+  { h1: string; seoTitle: string; patientFlow: boolean }
+> = {
+  endodontics: {
+    h1: "Лечение и перелечивание каналов: сохраняем зубы, которые рекомендовали удалить",
+    seoTitle:
+      "Перелечивание каналов и лечение кисты зуба в Москве — сохранение зубов",
+    // Первый шаг пациента здесь — прислать снимок, а не «записаться».
+    patientFlow: true,
+  },
+};
 
 type Props = {
   params: Promise<{
@@ -52,20 +82,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description =
     direction.heroDescription || direction.description || undefined;
   const url = `/directions/${slug}`;
+  const title = PAGE_COPY[slug]?.seoTitle ?? direction.title;
 
   return {
-    title: direction.title,
+    title,
     description,
     alternates: { canonical: url },
     openGraph: {
-      title: direction.title,
+      title,
       description,
       url,
       type: "article",
     },
     twitter: {
       card: "summary_large_image",
-      title: direction.title,
+      title,
       description,
     },
   };
@@ -81,6 +112,10 @@ export default async function DirectionPage({ params }: Props) {
   }
 
   const relatedDoctor = await getLeadByDirection(slug);
+
+  const copy = PAGE_COPY[slug];
+  const patientFlow = Boolean(copy?.patientFlow);
+  const consultation = patientFlow ? await getConsultationContent() : null;
 
   // Кейсы направления: фильтр и лимит в SQL. Раньше читались все
   // опубликованные кейсы целиком (вместе с content_blocks) и отсеивались в JS.
@@ -110,8 +145,10 @@ export default async function DirectionPage({ params }: Props) {
   return (
     <SiteShell>
       <PageHero
-        eyebrow="Направление"
-        title={direction.title}
+        // Длинный заголовок уже не называет направление одним словом —
+        // это делает надзаголовок.
+        eyebrow={copy ? direction.title : "Направление"}
+        title={copy?.h1 ?? direction.title}
         description={direction.heroDescription}
       />
 
@@ -191,18 +228,57 @@ export default async function DirectionPage({ params }: Props) {
                     </div>
 
                     <div className="mt-8">
-                      <ContactButton
-                        label="Записаться на консультацию"
-                        variant="teal"
-                        context={direction.title}
-                        className="w-full"
-                      />
+                      {patientFlow ? (
+                        <>
+                          <PrimaryCtaButton
+                            context={direction.title}
+                            className="w-full"
+                          />
+                          <CtaCaption className="mt-3 text-center" />
+                        </>
+                      ) : (
+                        <ContactButton
+                          label="Записаться на консультацию"
+                          variant="teal"
+                          context={direction.title}
+                          className="w-full"
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
               </Card>
             ) : null}
           </div>
+
+          {patientFlow ? (
+            <div>
+              <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
+                Ваша ситуация
+              </h2>
+
+              <div className="mt-6 grid gap-4 sm:gap-6 lg:grid-cols-3">
+                {SITUATIONS.map((item) => (
+                  <Link
+                    key={item.slug}
+                    href={`/situations/${item.slug}`}
+                    className="group block h-full"
+                  >
+                    <Card className="h-full p-4 transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg sm:p-6">
+                      <h3 className={`${typography.h4} text-[var(--color-navy)]`}>
+                        {item.name}
+                      </h3>
+                      <p
+                        className={`mt-2 ${typography.bodySm} text-[var(--color-gray-700)]`}
+                      >
+                        {item.description}
+                      </p>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {direction.fears.length ? (
             /* Без внешнего контейнера: карточки страхов занимают всю ширину
@@ -385,6 +461,25 @@ export default async function DirectionPage({ params }: Props) {
             </div>
           ) : null}
 
+          {consultation ? (
+            <div>
+              <h2 className={`${typography.h3} text-[var(--color-navy)]`}>
+                {consultation.title}
+              </h2>
+              {consultation.description ? (
+                <p
+                  className={`mt-2 max-w-3xl sm:mt-3 ${typography.body} text-[var(--color-gray-700)]`}
+                >
+                  {consultation.description}
+                </p>
+              ) : null}
+
+              <div className="mt-6 sm:mt-8">
+                <ConsultationInfo context={direction.title} />
+              </div>
+            </div>
+          ) : null}
+
           {/* Частые вопросы — общий компонент, он же отдаёт разметку FAQPage.
               Разметка была продублирована со страницей курса; теперь одно место. */}
           <FaqSection items={direction.faq} />
@@ -392,24 +487,30 @@ export default async function DirectionPage({ params }: Props) {
           <div className="rounded-[28px] bg-[var(--color-navy)] px-5 py-8 text-white sm:px-6 sm:py-10 md:px-10 md:py-12">
             <div className="max-w-3xl">
               <h2 className={typography.h2}>
-                {slug === "endodontics"
-                  ? "Запись на консультацию по эндодонтическому лечению"
+                {patientFlow
+                  ? "Пришлите снимок — скажем, есть ли шанс сохранить зуб"
                   : "Запись на консультацию"}
               </h2>
 
               <p className="mt-4 text-sm leading-6 text-white/80 sm:mt-6 sm:text-base sm:leading-7">
-                {slug === "endodontics"
-                  ? "Консультация позволяет оценить клиническую ситуацию, уточнить диагноз и определить, возможно ли сохранить зуб даже в тех случаях, где ранее рекомендовано удаление."
+                {patientFlow
+                  ? "Это предварительная оценка. На консультации врач уточнит диагноз и определит, возможно ли сохранить зуб даже там, где ранее рекомендовали удаление."
                   : "Консультация позволяет оценить клиническую ситуацию и определить возможные варианты лечения."}
               </p>
 
               <div className="mt-8">
-                <ContactButton
-                  label="Записаться на консультацию"
-                  variant="teal"
-                  context={direction.title}
-                />
+                {patientFlow ? (
+                  <PrimaryCtaButton context={direction.title} />
+                ) : (
+                  <ContactButton
+                    label="Записаться на консультацию"
+                    variant="teal"
+                    context={direction.title}
+                  />
+                )}
               </div>
+
+              {patientFlow ? <CtaCaption inverted className="mt-3" /> : null}
             </div>
           </div>
 
