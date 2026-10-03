@@ -37,6 +37,10 @@ try {
   ca = undefined;
 }
 
+const viaTunnel = ["localhost", "127.0.0.1", "::1"].includes(
+  process.env.PGHOST ?? ""
+);
+
 const client = new pg.Client({
   host: process.env.PGHOST,
   port: Number(process.env.PGPORT || 6432),
@@ -47,7 +51,13 @@ const client = new pg.Client({
     process.env.PGSSLMODE === "disable"
       ? false
       : ca
-        ? { ca, rejectUnauthorized: true }
+        ? {
+            ca,
+            rejectUnauthorized: true,
+            // Через туннель адрес — localhost, а сертификат выписан на имя
+            // кластера: имя не сверяем, сам сертификат проверяем (см. lib/db.ts).
+            ...(viaTunnel ? { checkServerIdentity: () => undefined } : {}),
+          }
         : { rejectUnauthorized: false },
 });
 
