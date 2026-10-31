@@ -13,7 +13,7 @@
 через SSH-туннель. Открой **PowerShell** и выполни:
 
 ```
-ssh -o ServerAliveInterval=30 -L 6432:rc1a-kicoc4psaq9sd2vm.mdb.yandexcloud.net:6432 ubuntu@89.169.158.99
+ssh -i $env:USERPROFILE\.ssh\lucenta -o ServerAliveInterval=30 -L 6432:rc1a-kicoc4psaq9sd2vm.mdb.yandexcloud.net:6432 ubuntu@46.21.246.139
 ```
 
 Окажешься на сервере. **Это окно не закрывать** — оно держит туннель.
@@ -68,7 +68,7 @@ git push
 (окно с туннелем не трогать):
 
 ```
-ssh ubuntu@89.169.158.99
+ssh -i $env:USERPROFILE\.ssh\lucenta ubuntu@46.21.246.139
 ```
 
 Затем одной командой:
@@ -117,7 +117,7 @@ psql "host=rc1a-kicoc4psaq9sd2vm.mdb.yandexcloud.net port=6432 sslmode=verify-fu
 
 | Что | Где |
 |---|---|
-| Сервер | Yandex Compute Cloud, `89.169.158.99`, Ubuntu 24.04 |
+| Сервер | Yandex Compute Cloud, `46.21.246.139`, Ubuntu 24.04 |
 | База данных | Yandex Managed PostgreSQL, `lucenta`, порт 6432 |
 | Файлы (фото) | Yandex Object Storage, бакет `lucenta-media` |
 | Домен | lucenta.ru (регистратор Руцентр, DNS — Yandex Cloud DNS) |

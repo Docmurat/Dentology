@@ -11,6 +11,7 @@ import { getTeamMembers } from "@/lib/team";
 
 export const metadata: Metadata = {
   title: "Обучение",
+  alternates: { canonical: "/education" },
   description:
     "Lucenta Обучение — практико-ориентированные курсы для врачей стоматологов по эндодонтии, диагностике и сложным клиническим случаям.",
 };
@@ -27,7 +28,7 @@ export default async function EducationPage() {
   const doctorBySlug = new Map(team.map((d) => [d.slug, d]));
 
   return (
-    <SiteShell>
+    <SiteShell contactBar={false}>
       <PageHero
         eyebrow={heading.eyebrow}
         title={heading.title}

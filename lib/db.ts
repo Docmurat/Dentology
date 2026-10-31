@@ -16,6 +16,26 @@ try {
   ca = undefined;
 }
 
+// Через SSH-туннель мы подключаемся к адресу localhost, а сертификат базы
+// выписан на имя кластера (rc1a-….mdb.yandexcloud.net). Имя не совпадает,
+// и строгая проверка обрывает соединение: «Hostname/IP does not match
+// certificate's altnames». Поэтому для localhost сверку ИМЕНИ отключаем,
+// а проверку самого сертификата по CA оставляем — подлинность базы
+// по-прежнему подтверждается. На сервере (PGHOST — настоящее имя кластера)
+// проверка остаётся полной.
+const viaTunnel = ["localhost", "127.0.0.1", "::1"].includes(
+  process.env.PGHOST ?? ""
+);
+
+function sslOptions() {
+  if (!ca) return { rejectUnauthorized: false };
+  return {
+    ca,
+    rejectUnauthorized: true,
+    ...(viaTunnel ? { checkServerIdentity: () => undefined } : {}),
+  };
+}
+
 // Единый пул на весь процесс. В dev-режиме Next перезагружает модули,
 // поэтому кэшируем пул в globalThis, чтобы не плодить соединения.
 const globalForDb = globalThis as unknown as { _pgPool?: Pool };
@@ -28,7 +48,7 @@ export const pool =
     database: process.env.PGDATABASE,
     user: process.env.PGUSER,
     password: process.env.PGPASSWORD,
-    ssl: ca ? { ca, rejectUnauthorized: true } : { rejectUnauthorized: false },
+    ssl: sslOptions(),
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,

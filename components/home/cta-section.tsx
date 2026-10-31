@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Section } from "@/components/layout/section";
 import { getCtaContent } from "@/lib/homepage";
-import { ContactButton } from "@/components/contact/contact-modal";
+import { PrimaryCtaButton } from "@/components/contact/contact-modal";
+import { CtaCaption } from "@/components/consultation/cta-caption";
 import { typography } from "@/lib/typography";
 
 export async function CtaSection() {
@@ -26,7 +27,7 @@ export async function CtaSection() {
           ) : null}
 
           <div className="mt-6 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:gap-4">
-            <ContactButton label={cta.primaryLabel} variant="teal" />
+            <PrimaryCtaButton label={cta.primaryLabel} />
 
             <Link
               href="/contacts"
@@ -35,6 +36,8 @@ export async function CtaSection() {
               {cta.secondaryLabel}
             </Link>
           </div>
+
+          <CtaCaption inverted className="mt-3" />
         </div>
       </div>
     </Section>

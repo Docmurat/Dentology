@@ -23,9 +23,9 @@ export const metadata: Metadata = {
     "гнатология",
     "Lucenta",
   ],
-  alternates: {
-    canonical: "/",
-  },
+  // canonical здесь не задаётся: он наследовался всеми страницами без
+  // собственного значения, и поисковик считал их копиями главной.
+  // Каждая страница указывает свой адрес сама.
   openGraph: {
     title: "Lucenta",
     description:

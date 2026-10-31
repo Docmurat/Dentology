@@ -1,5 +1,6 @@
 // lib/leads.ts
 import { query, queryOne } from "@/lib/db";
+import { getFilesForLeads, type LeadFile } from "@/lib/lead-files";
 
 export const LEAD_STATUSES = ["new", "in_progress", "done", "spam"] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
@@ -28,6 +29,8 @@ export type Lead = {
   handledAt: string | null;
   /** Кто последним менял статус — имя из профиля, иначе почта. */
   handledByName: string | null;
+  /** Приложенные снимки. Пусто, если их нет. */
+  files: LeadFile[];
 };
 
 type Row = {
@@ -68,6 +71,7 @@ function mapRow(row: Row): Lead {
     createdAt: row.created_at,
     handledAt: row.handled_at,
     handledByName: row.handled_by_name || row.handled_by_email || null,
+    files: [],
   };
 }
 
@@ -140,7 +144,16 @@ export async function getLeads(status?: LeadStatus): Promise<Lead[]> {
         [status]
       )
     : await query<Row>(`${SELECT} order by l.created_at desc limit 500`);
-  return rows.map(mapRow);
+  const leads = rows.map(mapRow);
+
+  // Файлы — вторым запросом: так список заявок не зависит от таблицы
+  // lead_files и продолжает работать, даже если её ещё нет.
+  const files = await getFilesForLeads(leads.map((lead) => lead.id));
+  for (const lead of leads) {
+    lead.files = files.get(lead.id) ?? [];
+  }
+
+  return leads;
 }
 
 /** Счётчики по статусам — для вкладок и бейджа «новых». */

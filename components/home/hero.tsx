@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ContactButton } from "@/components/contact/contact-modal";
+import { PrimaryCtaButton } from "@/components/contact/contact-modal";
+import { CtaCaption } from "@/components/consultation/cta-caption";
 import { Section } from "@/components/layout/section";
 import { getHeroContent } from "@/lib/homepage";
 import { typography } from "@/lib/typography";
@@ -35,11 +36,13 @@ export async function Hero() {
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:gap-4">
-            <ContactButton label="Записаться на консультацию" variant="teal" />
+            <PrimaryCtaButton />
             <Button href="/cases" variant="secondary">
               Клинические случаи
             </Button>
           </div>
+
+          <CtaCaption className="mt-3" />
 
           <div className="mt-8 grid max-w-2xl grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-3 sm:gap-4">
             <div className="rounded-2xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] px-3 py-3 sm:px-4 sm:py-5">

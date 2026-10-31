@@ -3,6 +3,7 @@ import { getPublishedCourses } from "@/lib/courses";
 import { getAllCases } from "@/lib/cases";
 import { getTeamMembers } from "@/lib/team";
 import { getDirections } from "@/lib/directions-db";
+import { SITUATIONS } from "@/lib/situations";
 
 const BASE = "https://lucenta.ru";
 
@@ -14,6 +15,8 @@ const STATIC_PATHS = [
   "/education",
   "/contacts",
   "/reviews",
+  "/situations",
+  ...SITUATIONS.map((item) => `/situations/${item.slug}`),
   "/sitemap",
   "/legal/privacy",
   "/legal/license",

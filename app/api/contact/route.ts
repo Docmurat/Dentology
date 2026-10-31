@@ -5,6 +5,8 @@ import nodemailer from "nodemailer";
 import { sendTelegramMessage, tgEscape } from "@/lib/telegram";
 import { sendPushToStaff } from "@/lib/push";
 import { createLead, markLeadNotified } from "@/lib/leads";
+import { createUploadToken, MAX_FILES_PER_LEAD } from "@/lib/lead-files";
+import { XRAY_UPLOAD_ENABLED } from "@/lib/constants";
 import {
   isHoneypotFilled,
   isTooFast,
@@ -20,6 +22,10 @@ type ContactPayload = {
   message?: string;
   consent?: boolean;
   context?: string;
+  // Сколько файлов (снимков) посетитель собирается приложить. Сами файлы
+  // приходят отдельными запросами на /api/contact/files уже после того,
+  // как заявка сохранена: так сбой загрузки не теряет заявку.
+  filesCount?: number;
   // Антиспам: скрытое поле и метка времени открытия формы.
   website?: string;
   startedAt?: number;
@@ -38,6 +44,22 @@ const MAX_LENGTH: Record<string, number> = {
   message: 4000,
   context: 200,
 };
+
+function htmlEscape(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Число обещанных файлов, приведённое к допустимому диапазону. */
+function expectedFiles(data: ContactPayload): number {
+  if (!XRAY_UPLOAD_ENABLED) return 0;
+  const n = Math.floor(Number(data.filesCount));
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(n, MAX_FILES_PER_LEAD);
+}
 
 function isTooLong(data: ContactPayload): boolean {
   return (
@@ -76,6 +98,15 @@ async function notifyInBackground(
     .startsWith("курс");
   const headerEmoji = isCourseRequest ? "📅" : "🦷";
 
+  // Сами снимки в уведомление не кладём: это сведения о здоровье, а почта
+  // и Telegram — открытые каналы. Сообщаем только, что они есть в заявке.
+  const files = expectedFiles(body);
+  // Уведомление уходит раньше, чем файлы загрузятся, поэтому пишем
+  // «прикладывает», а не «приложено»: дошли ли они, видно в заявке.
+  const filesNote = files
+    ? `посетитель прикладывает ${files} шт. — проверьте в разделе «Заявки»`
+    : "";
+
   const tgText = [
     `${headerEmoji} <b>Новая заявка с сайта Lucenta</b>`,
     "",
@@ -84,6 +115,7 @@ async function notifyInBackground(
     `<b>Способ связи:</b> ${tgEscape(body.contactMethod || "Не указан")}`,
     `<b>Заявка по:</b> ${tgEscape(body.context || "Общая заявка")}`,
     body.message ? `<b>Сообщение:</b> ${tgEscape(body.message)}` : "",
+    filesNote ? `<b>Снимки:</b> ${filesNote}` : "",
     "",
     "Все заявки: /admin/leads",
   ]
@@ -107,7 +139,7 @@ async function notifyInBackground(
   tasks.push(
     sendPushToStaff({
       title: isCourseRequest ? "📅 Заявка с курса" : "🦷 Новая заявка",
-      body: `${body.name} · ${body.phone}${body.context ? ` · ${body.context}` : ""}`,
+      body: `${body.name} · ${body.phone}${body.context ? ` · ${body.context}` : ""}${files ? " · со снимком" : ""}`,
       url: "/moderator",
     })
       .then((result) => markLeadNotified(leadId, "push", result.ok))
@@ -147,16 +179,22 @@ async function notifyInBackground(
       `Способ связи: ${body.contactMethod || "Не указан"}`,
       `Сообщение: ${body.message || "Не указано"}`,
       `Заявка по: ${body.context || "Общая заявка"}`,
+      filesNote ? `Снимки: ${filesNote}` : "",
       `Согласие на обработку ПДн: да`,
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
 
+    // Поля заявки пишет посетитель: в HTML письма они попадают только
+    // экранированными, иначе в письмо можно подмешать свою разметку.
     const html = `
       <h2>Новая заявка с сайта Lucenta</h2>
-      <p><strong>Имя:</strong> ${body.name}</p>
-      <p><strong>Телефон:</strong> ${body.phone}</p>
-      <p><strong>Способ связи:</strong> ${body.contactMethod || "Не указан"}</p>
-      <p><strong>Сообщение:</strong><br />${(body.message || "Не указано").replace(/\n/g, "<br />")}</p>
-      <p><strong>Заявка по:</strong> ${body.context || "Общая заявка"}</p>
+      <p><strong>Имя:</strong> ${htmlEscape(body.name)}</p>
+      <p><strong>Телефон:</strong> ${htmlEscape(body.phone)}</p>
+      <p><strong>Способ связи:</strong> ${htmlEscape(body.contactMethod || "Не указан")}</p>
+      <p><strong>Сообщение:</strong><br />${htmlEscape(body.message || "Не указано").replace(/\n/g, "<br />")}</p>
+      <p><strong>Заявка по:</strong> ${htmlEscape(body.context || "Общая заявка")}</p>
+      ${filesNote ? `<p><strong>Снимки:</strong> ${filesNote}</p>` : ""}
       <p><strong>Согласие на обработку ПДн:</strong> да</p>
     `;
 
@@ -292,9 +330,13 @@ export async function POST(request: Request) {
     // уходит немедленно.
     after(() => notifyInBackground(leadId, body, smtpConfigured));
 
+    // Пропуск на загрузку файлов выдаём только тому, кто их обещал.
+    const uploadToken = expectedFiles(body) ? createUploadToken(leadId) : null;
+
     return NextResponse.json({
       ok: true,
       message: "Запрос отправлен. Мы свяжемся с вами.",
+      ...(uploadToken ? { uploadToken } : {}),
     });
   } catch (error) {
     console.error("CONTACT_FORM_ERROR", error);

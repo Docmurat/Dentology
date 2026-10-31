@@ -7,6 +7,7 @@ import { typography } from "@/lib/typography";
 
 export const metadata: Metadata = {
   title: "Политика обработки персональных данных",
+  alternates: { canonical: "/legal/privacy" },
   robots: { index: true, follow: true },
 };
 

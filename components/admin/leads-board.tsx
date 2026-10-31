@@ -29,6 +29,11 @@ function fmtDate(value: string) {
   });
 }
 
+function fmtSize(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+  return `${Math.max(1, Math.round(bytes / 1024))} КБ`;
+}
+
 const statusBadge: Record<LeadStatus, string> = {
   new: "bg-amber-100 text-amber-700",
   in_progress: "bg-blue-100 text-blue-700",
@@ -199,6 +204,31 @@ export async function LeadsBoard({
                 <p className="mt-3 whitespace-pre-line rounded-xl bg-[var(--color-gray-50)] px-4 py-3 text-sm leading-6 text-[var(--color-gray-700)]">
                   {lead.message}
                 </p>
+              ) : null}
+
+              {lead.files.length ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-[var(--color-navy)]">
+                    Снимки:
+                  </span>
+                  {lead.files.map((file, index) => (
+                    // Обычная ссылка, не <Link>: это файл, а не страница.
+                    <a
+                      key={file.id}
+                      href={`/api/leads/files/${file.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={file.fileName}
+                      className="rounded-lg border border-[var(--color-teal)] px-3 py-1.5 text-sm font-medium text-[var(--color-teal)] hover:bg-[var(--color-teal)]/10"
+                    >
+                      {file.contentType === "application/pdf" ? "PDF" : "Снимок"}{" "}
+                      {index + 1}
+                      <span className="ml-1.5 font-normal text-[var(--color-gray-500)]">
+                        {fmtSize(file.sizeBytes)}
+                      </span>
+                    </a>
+                  ))}
+                </div>
               ) : null}
 
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-gray-500)]">
