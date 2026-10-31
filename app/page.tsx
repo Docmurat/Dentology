@@ -14,6 +14,7 @@ import { CtaSection } from "@/components/home/cta-section";
 import { ReviewsPreview } from "@/components/home/reviews-preview";
 import { PromoBanner } from "@/components/home/promo-banner";
 import { ConsultationSection } from "@/components/home/consultation-section";
+import { EndoPricesBlock } from "@/components/home/endo-prices-block";
 import { StickyContactBar } from "@/components/contact/sticky-contact-bar";
 import { getEnabledHomepageBlocks } from "@/lib/homepage";
 
@@ -43,6 +44,7 @@ const BLOCKS = {
   team: TeamPreview,
   reviews: ReviewsPreview,
   education: EducationPreview,
+  endo_prices: EndoPricesBlock,
   consultation: ConsultationSection,
   cta: CtaSection,
   promo: PromoBanner,

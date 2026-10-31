@@ -1,4 +1,4 @@
-import { getHomepageBlocks, getHeroContent, getAboutContent, getWhenContent, getWhyContent, getSectionHeadingContent, getEducationContent, getCtaContent, getPromoContent, getConsultationContent } from "@/lib/homepage";
+import { getHomepageBlocks, getHeroContent, getAboutContent, getWhenContent, getWhyContent, getSectionHeadingContent, getEducationContent, getCtaContent, getPromoContent, getConsultationContent, getEndoPricesContent } from "@/lib/homepage";
 import { toggleHomepageBlock, moveHomepageBlock } from "./actions";
 import { HeroEditor } from "@/components/admin/hero-editor";
 import { AboutEditor } from "@/components/admin/about-editor";
@@ -9,6 +9,7 @@ import { EducationEditor } from "@/components/admin/education-editor";
 import { CtaEditor } from "@/components/admin/cta-editor";
 import { PromoEditor } from "@/components/admin/promo-editor";
 import { ConsultationEditor } from "@/components/admin/consultation-editor";
+import { EndoPricesEditor } from "@/components/admin/endo-prices-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function AdminHomepagePage() {
   const ctaContent = await getCtaContent();
   const promoContent = await getPromoContent();
   const consultationContent = await getConsultationContent();
+  const endoPricesContent = await getEndoPricesContent();
 
   // Заголовки блоков с собственной механикой (карточки — из своих разделов).
   const headings: Record<string, Awaited<ReturnType<typeof getSectionHeadingContent>>> = {
@@ -189,6 +191,17 @@ export default async function AdminHomepagePage() {
                   </summary>
                   <div className="mt-4">
                     <CtaEditor initial={ctaContent} />
+                  </div>
+                </details>
+              ) : null}
+
+              {block.key === "endo_prices" ? (
+                <details className="mt-4 rounded-xl border border-[var(--color-gray-200)] bg-[var(--color-gray-50)] p-4">
+                  <summary className="cursor-pointer text-sm font-medium text-[var(--color-navy-secondary)]">
+                    Редактировать этапы и цены
+                  </summary>
+                  <div className="mt-4">
+                    <EndoPricesEditor initial={endoPricesContent} />
                   </div>
                 </details>
               ) : null}

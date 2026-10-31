@@ -41,7 +41,10 @@ export async function POST(request: Request) {
   // Пропуск идёт заголовком и проверяется ДО чтения тела: адрес открытый,
   // и без этого сервер послушно загружал бы в память любой присланный
   // файл, прежде чем понять, что отправитель посторонний.
-  const leadId = verifyUploadToken(request.headers.get("x-upload-token"));
+  const leadId = verifyUploadToken(
+    request.headers.get("x-upload-token"),
+    "files"
+  );
   if (!leadId) {
     return fail("Срок загрузки истёк. Заявка принята без файла.", 403);
   }
@@ -102,6 +105,7 @@ export async function POST(request: Request) {
     const inserted = await insertLeadFile({
       id: fileId,
       leadId,
+      kind: "image",
       storageKey,
       fileName: cleanFileName(file.name, type.ext),
       contentType: type.contentType,

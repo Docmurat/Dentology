@@ -16,8 +16,30 @@ import { query, queryOne } from "@/lib/db";
  * сами заявки при этом принимаются как раньше.
  */
 
-export const MAX_FILES_PER_LEAD = 3;
+// Снимков-картинок — до трёх (места 1–3), архив КЛКТ — один (место 0).
+// Пару «заявка + место» держит уникальный индекс, поэтому оба лимита
+// соблюдаются и при одновременных запросах.
+export const MAX_IMAGES_PER_LEAD = 3;
+export const MAX_SCANS_PER_LEAD = 1;
+export const MAX_FILES_PER_LEAD = MAX_IMAGES_PER_LEAD + MAX_SCANS_PER_LEAD;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 МБ
+
+// КЛКТ: до 1,5 ГБ (влезает в integer столбца size_bytes), частями по 16 МБ.
+export const MAX_SCAN_BYTES = 1536 * 1024 * 1024;
+export const SCAN_PART_BYTES = 16 * 1024 * 1024;
+
+/** Ключ хранилища архива КЛКТ. Отдельная папка — у неё свой срок хранения. */
+export const SCAN_PREFIX = "lead-scans";
+
+// Типы архивов и их проверка — в lib/archive-sniff.ts: ту же проверку
+// делает браузер до загрузки, а этот модуль в браузер попадать не должен.
+export {
+  ARCHIVE_TYPES,
+  archiveExtFromName,
+  isArchiveType,
+  sniffArchive,
+} from "@/lib/archive-sniff";
+import { isArchiveType } from "@/lib/archive-sniff";
 
 export type LeadFile = {
   id: string;
@@ -25,7 +47,11 @@ export type LeadFile = {
   fileName: string;
   contentType: string;
   sizeBytes: number;
+  createdAt: string;
 };
+
+/** Сколько дней хранится архив КЛКТ (правило бакета, scripts/setup-bucket.mjs). */
+export const SCAN_KEEP_DAYS = 90;
 
 type Row = {
   id: string;
@@ -34,6 +60,7 @@ type Row = {
   file_name: string;
   content_type: string;
   size_bytes: number;
+  created_at: string;
 };
 
 // ── Определение типа по содержимому ──
@@ -117,7 +144,15 @@ export function cleanFileName(raw: string, ext: string): string {
 // сохранена. Чтобы к чужой заявке нельзя было приложить файл, сервер
 // выдаёт подписанный пропуск: «к заявке такой-то, до такого-то времени».
 
-const TOKEN_TTL_MS = 30 * 60 * 1000;
+// Два вида пропуска с разным сроком: снимки уходят сразу после заявки
+// (30 минут), а архив КЛКТ по медленному интернету может грузиться часами
+// и завершается тем же пропуском (12 часов). Вид вшит в подпись: пропуск
+// на КЛКТ не годится для снимков, и наоборот.
+export type UploadKind = "files" | "scan";
+const TOKEN_TTL_MS: Record<UploadKind, number> = {
+  files: 30 * 60 * 1000,
+  scan: 12 * 60 * 60 * 1000,
+};
 
 function tokenSecret(): string | null {
   return process.env.AUTH_SECRET || null;
@@ -128,24 +163,31 @@ function sign(payload: string, secret: string): string {
 }
 
 /** null — если подписать нечем (не задан AUTH_SECRET): загрузка выключена. */
-export function createUploadToken(leadId: string): string | null {
+export function createUploadToken(
+  leadId: string,
+  kind: UploadKind
+): string | null {
   const secret = tokenSecret();
   if (!secret) return null;
-  const exp = Date.now() + TOKEN_TTL_MS;
-  const payload = `${leadId}.${exp}`;
+  const exp = Date.now() + TOKEN_TTL_MS[kind];
+  const payload = `${leadId}.${kind}.${exp}`;
   return `${payload}.${sign(payload, secret)}`;
 }
 
 /** Возвращает id заявки или null, если пропуск подделан или истёк. */
-export function verifyUploadToken(token: unknown): string | null {
+export function verifyUploadToken(
+  token: unknown,
+  kind: UploadKind
+): string | null {
   const secret = tokenSecret();
   if (!secret || typeof token !== "string") return null;
 
   const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  const [leadId, expRaw, signature] = parts;
+  if (parts.length !== 4) return null;
+  const [leadId, tokenKind, expRaw, signature] = parts;
+  if (tokenKind !== kind) return null;
 
-  const expected = sign(`${leadId}.${expRaw}`, secret);
+  const expected = sign(`${leadId}.${tokenKind}.${expRaw}`, secret);
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
@@ -174,6 +216,7 @@ export async function leadExists(leadId: string): Promise<boolean> {
 export async function insertLeadFile(file: {
   id: string;
   leadId: string;
+  kind: "image" | "scan";
   storageKey: string;
   fileName: string;
   contentType: string;
@@ -184,6 +227,9 @@ export async function insertLeadFile(file: {
   // одновременных запросов: все они видят одно и то же число. С местами
   // лишний запрос упирается в уникальный индекс и повторяет попытку —
   // уже видя занятые места.
+  const [firstSlot, lastSlot] =
+    file.kind === "scan" ? [0, 0] : [1, MAX_IMAGES_PER_LEAD];
+
   for (let attempt = 0; attempt <= MAX_FILES_PER_LEAD; attempt++) {
     try {
       const rows = await query<{ id: string }>(
@@ -192,7 +238,7 @@ export async function insertLeadFile(file: {
          select $1, $2, free.slot, $3, $4, $5, $6
            from (
              select s as slot
-               from generate_series(1, $7::int) as s
+               from generate_series($7::int, $8::int) as s
               where not exists (
                       select 1 from lead_files
                        where lead_id = $2 and slot = s
@@ -208,7 +254,8 @@ export async function insertLeadFile(file: {
           file.fileName,
           file.contentType,
           file.sizeBytes,
-          MAX_FILES_PER_LEAD,
+          firstSlot,
+          lastSlot,
         ]
       );
       return rows.length > 0;
@@ -220,6 +267,15 @@ export async function insertLeadFile(file: {
   return false;
 }
 
+/** Есть ли уже запись о файле с таким ключом (повторное завершение загрузки). */
+export async function leadFileKeyExists(storageKey: string): Promise<boolean> {
+  const row = await queryOne<{ ok: number }>(
+    `select 1 as ok from lead_files where storage_key = $1`,
+    [storageKey]
+  );
+  return Boolean(row);
+}
+
 export async function deleteLeadFileRow(id: string): Promise<void> {
   await query(`delete from lead_files where id = $1`, [id]);
 }
@@ -229,7 +285,8 @@ export async function getLeadFileForDownload(
   id: string
 ): Promise<(LeadFile & { storageKey: string }) | null> {
   const row = await queryOne<Row>(
-    `select id, lead_id, storage_key, file_name, content_type, size_bytes
+    `select id, lead_id, storage_key, file_name, content_type, size_bytes,
+            created_at
        from lead_files where id = $1`,
     [id]
   );
@@ -240,6 +297,7 @@ export async function getLeadFileForDownload(
     fileName: row.file_name,
     contentType: row.content_type,
     sizeBytes: Number(row.size_bytes),
+    createdAt: row.created_at,
     storageKey: row.storage_key,
   };
 }
@@ -256,7 +314,8 @@ export async function getFilesForLeads(
 
   try {
     const rows = await query<Row>(
-      `select id, lead_id, storage_key, file_name, content_type, size_bytes
+      `select id, lead_id, storage_key, file_name, content_type, size_bytes,
+              created_at
          from lead_files
         where lead_id = any($1::text[])
         order by created_at`,
@@ -270,6 +329,7 @@ export async function getFilesForLeads(
         fileName: row.file_name,
         contentType: row.content_type,
         sizeBytes: Number(row.size_bytes),
+        createdAt: row.created_at,
       });
       out.set(row.lead_id, list);
     }
@@ -292,4 +352,36 @@ export async function takeLeadFileKeys(leadId: string): Promise<string[]> {
     console.error("takeLeadFileKeys:", err);
     return [];
   }
+}
+
+
+/**
+ * Сколько у заявки уже файлов каждого вида. Проверка не атомарная —
+ * общий потолок всё равно держит уникальный индекс (lead_id, slot).
+ */
+export async function countLeadFiles(
+  leadId: string
+): Promise<{ images: number; scans: number }> {
+  const rows = await query<{ content_type: string; count: number }>(
+    `select content_type, count(*)::int as count
+       from lead_files where lead_id = $1 group by content_type`,
+    [leadId]
+  );
+  let images = 0;
+  let scans = 0;
+  for (const row of rows) {
+    if (isArchiveType(row.content_type)) scans += Number(row.count);
+    else images += Number(row.count);
+  }
+  return { images, scans };
+}
+
+/** Имя и телефон заявки — для уведомления о КЛКТ. */
+export async function leadContact(
+  leadId: string
+): Promise<{ name: string; phone: string } | null> {
+  return queryOne<{ name: string; phone: string }>(
+    `select name, phone from leads where id::text = $1`,
+    [leadId]
+  );
 }

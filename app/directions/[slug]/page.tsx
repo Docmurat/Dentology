@@ -16,6 +16,7 @@ import { CtaCaption } from "@/components/consultation/cta-caption";
 import { ConsultationInfo } from "@/components/consultation/consultation-info";
 import { getConsultationContent } from "@/lib/homepage";
 import { SITUATIONS } from "@/lib/situations";
+import { EndoPricesContentBlock } from "@/components/endo-prices/endo-prices-section";
 import { pageOpenGraph } from "@/lib/seo";
 import {
   getDirectionBySlug,
@@ -454,6 +455,13 @@ export default async function DirectionPage({ params }: Props) {
                   <ReviewCard key={item.slug} review={item} />
                 ))}
               </div>
+            </div>
+          ) : null}
+
+          {patientFlow ? (
+            // Якорь #prices: на него ведут ссылки «Этапы и цены».
+            <div id="prices" className="scroll-mt-24 md:scroll-mt-28">
+              <EndoPricesContentBlock variant="page" />
             </div>
           ) : null}
 

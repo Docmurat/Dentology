@@ -1,14 +1,29 @@
 // components/forms/contact-form.tsx
 "use client";
 
-import { FormEvent, useId, useState } from "react";
+import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { compressImage } from "@/lib/image-compress";
 import { XRAY_UPLOAD_ENABLED } from "@/lib/constants";
+import { COMPANY } from "@/lib/company";
+import {
+  checkScanFile,
+  uploadScan,
+  type ScanProgress,
+} from "@/lib/scan-upload";
 
 // Те же пределы, что проверяет сервер (lib/lead-files.ts). Здесь они
 // нужны, чтобы сказать о проблеме сразу, а не после отправки.
 const MAX_FILES = 3;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_SCAN_BYTES = 1536 * 1024 * 1024;
+const SCAN_EXTENSIONS = ["zip", "rar", "7z"];
+
+function isScanArchive(file: File): boolean {
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  return SCAN_EXTENSIONS.includes(ext);
+}
+
+const SCAN_FALLBACK = `Перешлите архив или ссылку на него на ${COMPANY.email} — укажите имя и телефон.`;
 
 function formatSize(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
@@ -73,8 +88,9 @@ type FormState = {
 type ApiResponse = {
   ok: boolean;
   message: string;
-  // Пропуск на загрузку файлов к этой заявке (если файлы были заявлены).
+  // Пропуска на загрузку к этой заявке: снимков и архива КЛКТ.
   uploadToken?: string;
+  scanToken?: string;
 };
 
 const initialState: FormState = {
@@ -87,11 +103,14 @@ const initialState: FormState = {
 export function ContactForm({
   context,
   onSuccess,
+  onBusyChange,
 }: {
   // Контекст заявки (напр. "Курс «Осознанная эндодонтия» — Индивидуальное").
   context?: string;
   // Вызывается после успешной отправки (для авто-закрытия модалки).
   onSuccess?: () => void;
+  // Идёт отправка или загрузка: окно с формой закрывать нельзя.
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [form, setForm] = useState<FormState>(initialState);
   const [consent, setConsent] = useState(false);
@@ -107,6 +126,52 @@ export function ContactForm({
   // общей галочки для них недостаточно.
   const [healthConsent, setHealthConsent] = useState(false);
   const fileInputId = useId();
+  // Архив КЛКТ — отдельно от снимков: другой путь загрузки и свой прогресс.
+  const [scanFile, setScanFile] = useState<File | null>(null);
+  const [scanError, setScanError] = useState("");
+  const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null);
+  const scanAbortRef = useRef<AbortController | null>(null);
+  const scanInputId = useId();
+  const hasAttachments = files.length > 0 || scanFile !== null;
+
+  const busy = isSubmitting || isUploading;
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
+
+  // Пока грузятся файлы, браузер переспросит перед закрытием вкладки.
+  useEffect(() => {
+    if (!isUploading) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Старые Safari и Chrome смотрят только на returnValue.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isUploading]);
+
+  async function pickScan(list: FileList | null) {
+    const file = list?.[0];
+    if (!file) return;
+    setScanError("");
+    if (!isScanArchive(file)) {
+      setScanError("Нужен архив .zip, .rar или .7z. Папку с КЛКТ сначала сожмите в zip.");
+      return;
+    }
+    if (file.size > MAX_SCAN_BYTES) {
+      setScanError(`Архив больше 1,5 ГБ. ${SCAN_FALLBACK}`);
+      return;
+    }
+    // Сразу проверяем, что внутри действительно архив, — до отправки,
+    // а не после загрузки полутора гигабайт.
+    const problem = await checkScanFile(file);
+    if (problem) {
+      setScanError(problem);
+      return;
+    }
+    setScanFile(file);
+  }
   // Снимок нужен пациенту. В заявке на курс (её отправляет врач) поле
   // файла только мешает. Признак тот же, что у сервера: контекст
   // начинается со слова «Курс».
@@ -167,7 +232,7 @@ export function ContactForm({
       return;
     }
 
-    if (files.length && !healthConsent) {
+    if (hasAttachments && !healthConsent) {
       setServerError("Подтвердите согласие на обработку снимков.");
       return;
     }
@@ -188,6 +253,7 @@ export function ContactForm({
           consent,
           context: context ?? "",
           filesCount: files.length,
+          scan: scanFile !== null,
           website: honeypot,
           startedAt,
         }),
@@ -209,20 +275,43 @@ export function ContactForm({
 
       // Заявка сохранена. Теперь снимки — по одному, отдельными запросами:
       // если загрузка сорвётся, заявка всё равно уже у клиники.
+      // Заявка уже сохранена: дальше 15-секундный предел не нужен,
+      // архив КЛКТ может грузиться десятки минут.
+      clearTimeout(timeout);
+
       const failed: string[] = [];
-      if (files.length) {
-        if (result.uploadToken) {
-          setIsUploading(true);
-          for (const file of files) {
-            const problem = await uploadLeadFile(result.uploadToken, file);
-            if (problem) {
-              failed.push(`«${file.name}» — ${problem.replace(/\.+$/, "")}`);
+      let scanFailed = "";
+      if (hasAttachments) {
+        setIsUploading(true);
+        if (files.length) {
+          if (result.uploadToken) {
+            for (const file of files) {
+              const problem = await uploadLeadFile(result.uploadToken, file);
+              if (problem) {
+                failed.push(`«${file.name}» — ${problem.replace(/\.+$/, "")}`);
+              }
             }
+          } else {
+            failed.push("загрузка файлов сейчас недоступна");
           }
-          setIsUploading(false);
-        } else {
-          failed.push("загрузка файлов сейчас недоступна");
         }
+        if (scanFile) {
+          if (result.scanToken) {
+            const abort = new AbortController();
+            scanAbortRef.current = abort;
+            const problem = await uploadScan(
+              result.scanToken,
+              scanFile,
+              setScanProgress,
+              abort.signal
+            );
+            scanAbortRef.current = null;
+            if (problem) scanFailed = problem;
+          } else {
+            scanFailed = "загрузка сейчас недоступна.";
+          }
+        }
+        setIsUploading(false);
       }
 
       setForm(initialState);
@@ -230,20 +319,29 @@ export function ContactForm({
       setHealthConsent(false);
       setFiles([]);
       setFileError("");
+      setScanFile(null);
+      setScanProgress(null);
 
-      if (failed.length) {
-        // Окно не закрываем: человек должен успеть прочитать, что снимок
+      if (failed.length || scanFailed) {
+        // Окно не закрываем: человек должен успеть прочитать, что файл
         // не дошёл и как его передать иначе.
         setServerMessage("Заявка принята, мы свяжемся с вами.");
-        setServerError(
-          `Снимок загрузить не удалось: ${failed.join("; ")}. Пришлите его в мессенджер или возьмите с собой на приём.`
-        );
+        const parts: string[] = [];
+        if (failed.length) {
+          parts.push(
+            `Снимок загрузить не удалось: ${failed.join("; ")}. Пришлите его в мессенджер или возьмите с собой на приём.`
+          );
+        }
+        if (scanFailed) {
+          parts.push(`КЛКТ не загрузился: ${scanFailed} ${SCAN_FALLBACK}`);
+        }
+        setServerError(parts.join(" "));
         return;
       }
 
       setServerMessage(
-        files.length
-          ? "Заявка и снимки получены. Мы свяжемся с вами."
+        hasAttachments
+          ? "Заявка и файлы получены. Мы свяжемся с вами."
           : result.message || "Запрос успешно отправлен."
       );
       onSuccess?.();
@@ -350,8 +448,8 @@ export function ContactForm({
           </label>
 
           <p className="mt-2 text-xs leading-5 text-[var(--color-gray-500)]">
-            Необязательно. До {MAX_FILES} файлов: фото снимка, JPG, PNG или PDF
-            до 10 МБ. КТ целиком удобнее передать ссылкой в сообщении.
+            Необязательно. До {MAX_FILES} файлов: фото прицельного снимка, JPG,
+            PNG или PDF до 10 МБ.
           </p>
 
           {files.length ? (
@@ -386,6 +484,120 @@ export function ContactForm({
         </div>
       ) : null}
 
+      {filesEnabled ? (
+        <div>
+          {scanFile ? (
+            <div className="rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-3 text-sm text-[var(--color-navy)]">
+              <div className="flex items-center justify-between gap-3">
+                <span className="min-w-0 truncate">
+                  <span className="font-medium">КЛКТ:</span> {scanFile.name}
+                  <span className="ml-2 text-[var(--color-gray-500)]">
+                    {formatSize(scanFile.size)}
+                  </span>
+                </span>
+                {scanProgress ? (
+                  <button
+                    type="button"
+                    onClick={() => scanAbortRef.current?.abort()}
+                    className="shrink-0 text-sm font-medium text-[var(--color-gray-500)] hover:text-[#9B4C4C]"
+                  >
+                    Отменить
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setScanFile(null)}
+                    disabled={busy}
+                    aria-label={`Убрать архив ${scanFile.name}`}
+                    className="shrink-0 text-sm font-medium text-[var(--color-gray-500)] hover:text-[#9B4C4C] disabled:opacity-50"
+                  >
+                    Убрать
+                  </button>
+                )}
+              </div>
+
+              {scanProgress ? (
+                <div className="mt-3">
+                  <div
+                    role="progressbar"
+                    aria-label="Загрузка КЛКТ"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round((scanProgress.sent / scanProgress.total) * 100)}
+                    className="h-2 overflow-hidden rounded-full bg-[var(--color-gray-100)]"
+                  >
+                    <div
+                      className="h-full rounded-full bg-[var(--color-teal)] transition-[width] duration-300"
+                      style={{
+                        width: `${Math.max(2, (scanProgress.sent / scanProgress.total) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-[var(--color-gray-600)]">
+                    Загружено {formatSize(scanProgress.sent)} из{" "}
+                    {formatSize(scanProgress.total)}. Не закрывайте страницу:
+                    заявка уже у нас, а архив догружается.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <label
+              htmlFor={scanInputId}
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--color-gray-300)] bg-[var(--color-gray-50)] px-4 py-4 text-sm font-medium text-[var(--color-navy)] transition hover:border-[var(--color-teal)] focus-within:border-[var(--color-teal)]"
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5 text-[var(--color-teal)]"
+              >
+                <path d="M21 8v13H3V8" />
+                <path d="M1 3h22v5H1z" />
+                <path d="M10 12h4" />
+              </svg>
+              Прикрепить КЛКТ (архив)
+              <input
+                id={scanInputId}
+                type="file"
+                accept=".zip,.rar,.7z,application/zip,application/x-zip-compressed,application/vnd.rar,application/x-rar-compressed,application/x-7z-compressed"
+                className="sr-only"
+                onChange={(e) => {
+                  const list = e.target.files;
+                  void pickScan(list).finally(() => {
+                    e.target.value = "";
+                  });
+                }}
+              />
+            </label>
+          )}
+
+          {!scanProgress ? (
+            <p className="mt-2 text-xs leading-5 text-[var(--color-gray-500)]">
+              Лучше всего для оценки — КЛКТ. Архив .zip, .rar или .7z до 1,5 ГБ.
+              Если КЛКТ на диске или в папке, сожмите папку в zip: правый клик →
+              «Отправить» → «Сжатая ZIP-папка» (на Mac — «Сжать»). Если КЛКТ
+              пришёл вам письмом или ссылкой, перешлите его на{" "}
+              <a
+                href={`mailto:${COMPANY.email}?subject=${encodeURIComponent("КЛКТ к заявке")}`}
+                className="font-medium text-[var(--color-teal)] underline underline-offset-2"
+              >
+                {COMPANY.email}
+              </a>
+              .
+            </p>
+          ) : null}
+
+          {scanError ? (
+            <p className="mt-2 text-sm leading-6 text-[#9B4C4C]">{scanError}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       <textarea
         placeholder="Кратко опишите ситуацию"
         rows={5}
@@ -396,7 +608,7 @@ export function ContactForm({
         className="w-full rounded-xl border border-[var(--color-gray-200)] bg-white px-4 py-4 text-base outline-none transition focus:border-[var(--color-teal)] sm:text-sm"
       />
 
-      {files.length ? (
+      {hasAttachments ? (
         <label className="flex items-start gap-2 text-xs leading-5 text-[var(--color-gray-600)]">
           <input
             type="checkbox"
@@ -405,8 +617,8 @@ export function ContactForm({
             className="mt-0.5"
           />
           <span>
-            Я согласен(на) на обработку прикреплённых снимков и сведений о
-            состоянии здоровья для предварительной оценки врачом. Снимки
+            Я согласен(на) на обработку прикреплённых снимков, КЛКТ и сведений
+            о состоянии здоровья для предварительной оценки врачом. Файлы
             доступны только сотрудникам клиники.
           </span>
         </label>
@@ -436,16 +648,18 @@ export function ContactForm({
       <button
         type="submit"
         disabled={
-          isSubmitting || !consent || (files.length > 0 && !healthConsent)
+          isSubmitting || !consent || (hasAttachments && !healthConsent)
         }
         className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--color-teal)] px-6 py-4 text-sm font-medium text-white transition-colors duration-200 hover:bg-[var(--color-teal-hover)] disabled:cursor-not-allowed disabled:opacity-70"
       >
         {isUploading
-          ? "Загружаем снимки..."
+          ? scanProgress
+            ? "Загружаем КЛКТ..."
+            : "Загружаем снимки..."
           : isSubmitting
             ? "Отправка..."
-            : files.length
-              ? "Отправить со снимком"
+            : hasAttachments
+              ? "Отправить с файлами"
               : "Отправить запрос"}
       </button>
 
