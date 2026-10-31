@@ -67,10 +67,40 @@ export const PRICE_LIST_DEFAULTS: PriceListContent = {
     {
       slug: "restoration",
       title: "Реставрация зубов",
-      description: "",
+      description:
+        "Восстановление зуба композитом. Цена зависит от числа восстанавливаемых поверхностей.",
       directionSlug: "restoration",
       source: "none",
-      items: [],
+      items: [
+        {
+          name: "Восстановление зуба: одна поверхность",
+          price: 6500,
+          priceFrom: false,
+          unit: "",
+          note: "",
+        },
+        {
+          name: "Восстановление зуба: две поверхности",
+          price: 8500,
+          priceFrom: false,
+          unit: "",
+          note: "",
+        },
+        {
+          name: "Восстановление зуба: три поверхности",
+          price: 10500,
+          priceFrom: false,
+          unit: "",
+          note: "",
+        },
+        {
+          name: "Фронтальная эстетическая реставрация",
+          price: 12000,
+          priceFrom: true,
+          unit: "за зуб",
+          note: "",
+        },
+      ],
     },
     {
       slug: "prosthetics",
@@ -78,7 +108,22 @@ export const PRICE_LIST_DEFAULTS: PriceListContent = {
       description: "",
       directionSlug: "prosthetics",
       source: "none",
-      items: [],
+      items: [
+        {
+          name: "Керамическая коронка",
+          price: 40000,
+          priceFrom: false,
+          unit: "за единицу",
+          note: "",
+        },
+        {
+          name: "Временная коронка",
+          price: 15000,
+          priceFrom: false,
+          unit: "за единицу",
+          note: "",
+        },
+      ],
     },
     {
       slug: "implantation",
@@ -86,7 +131,38 @@ export const PRICE_LIST_DEFAULTS: PriceListContent = {
       description: "",
       directionSlug: "implantation",
       source: "none",
-      items: [],
+      items: [
+        {
+          name: "Имплантат Osstem или Dentium (Корея)",
+          price: 45000,
+          priceFrom: false,
+          unit: "",
+          note: "",
+        },
+        {
+          name: "Имплантат Straumann (Швейцария)",
+          price: 90000,
+          priceFrom: false,
+          unit: "",
+          note: "",
+        },
+      ],
+    },
+    {
+      slug: "surgery",
+      title: "Хирургия",
+      description: "",
+      directionSlug: "",
+      source: "none",
+      items: [
+        {
+          name: "Удаление зуба",
+          price: 7000,
+          priceFrom: true,
+          unit: "",
+          note: "",
+        },
+      ],
     },
     {
       slug: "hygiene",
@@ -94,7 +170,43 @@ export const PRICE_LIST_DEFAULTS: PriceListContent = {
       description: "",
       directionSlug: "",
       source: "none",
-      items: [],
+      items: [
+        {
+          name: "Профессиональная гигиена полости рта",
+          price: 7000,
+          priceFrom: false,
+          unit: "",
+          note: "",
+        },
+        {
+          name: "Гигиена с ортодонтической конструкцией",
+          price: 10000,
+          priceFrom: false,
+          unit: "",
+          note: "Брекеты, элайнеры и другие конструкции",
+        },
+        {
+          name: "Гигиена для пациентов на ортодонтическом лечении в нашей клинике",
+          price: 5000,
+          priceFrom: false,
+          unit: "раз в 3 месяца",
+          note: "",
+        },
+        {
+          name: "Гигиена курильщика",
+          price: 12000,
+          priceFrom: false,
+          unit: "",
+          note: "",
+        },
+        {
+          name: "Пародонтологическая чистка",
+          price: 15000,
+          priceFrom: false,
+          unit: "",
+          note: "С кюретажем под увеличением",
+        },
+      ],
     },
   ],
   notes: [
@@ -119,11 +231,13 @@ export function normalizePriceItem(raw: Partial<PriceItem>): PriceItem | null {
 }
 
 export function normalizePriceCategory(
-  raw: Partial<PriceCategory>
+  raw: Partial<PriceCategory>,
 ): PriceCategory | null {
   const title = String(raw?.title ?? "").trim();
   if (!title) return null;
-  const slugRaw = String(raw?.slug ?? "").trim().toLowerCase();
+  const slugRaw = String(raw?.slug ?? "")
+    .trim()
+    .toLowerCase();
   const source: PriceSource =
     raw?.source === "endo-stages" || raw?.source === "consultation"
       ? raw.source
