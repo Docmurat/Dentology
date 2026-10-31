@@ -70,6 +70,7 @@ export default async function AdminLayout({
           { href: "/admin/directions", label: "Направления" },
           { href: "/admin/homepage", label: "Главная" },
           { href: "/admin/prices", label: "Цены" },
+          { href: "/admin/account", label: "Аккаунт" },
           { href: "/admin/education", label: "Обучение" },
           { href: "/admin/cases/new", label: "Добавить" },
         ]}
