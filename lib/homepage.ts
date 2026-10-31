@@ -1,5 +1,11 @@
 import { query, queryOne } from "@/lib/db";
 import { PRIMARY_CTA_LABEL } from "@/lib/constants";
+import {
+  ENDO_PRICES_DEFAULTS,
+  normalizeEndoStage,
+  type EndoPricesContent,
+  type EndoStage,
+} from "@/lib/endo-prices";
 
 // Внутренний хелпер: контент блока из homepage_content по ключу (или null).
 async function getBlockContent<T>(blockKey: string): Promise<Partial<T> | null> {
@@ -35,6 +41,7 @@ export const HOMEPAGE_BLOCK_DEFS: {
   { key: "team", title: "Команда" },
   { key: "reviews", title: "Отзывы" },
   { key: "education", title: "Обучение" },
+  { key: "endo_prices", title: "Этапы и стоимость лечения каналов" },
   { key: "consultation", title: "Как проходит консультация" },
   { key: "cta", title: "Призыв к действию" },
   {
@@ -477,4 +484,28 @@ export function consultationCaption(
   if (facts.length) parts.push(`Консультация: ${facts.join(", ")}`);
 
   return parts.join(" ");
+}
+
+
+// ── Этапы и стоимость лечения каналов (инфографика с зубом) ──
+// Типы и значения по умолчанию — в lib/endo-prices.ts: их используют и
+// клиентские компоненты, которым нельзя тянуть за собой доступ к базе.
+export async function getEndoPricesContent(): Promise<EndoPricesContent> {
+  const d = ENDO_PRICES_DEFAULTS;
+  const c = await getBlockContent<EndoPricesContent>("endo_prices");
+  if (!c) return d;
+  const stages = Array.isArray(c.stages)
+    ? c.stages
+        .map((s) => normalizeEndoStage(s))
+        .filter((s): s is EndoStage => s !== null)
+    : d.stages;
+  return {
+    eyebrow: c.eyebrow ?? d.eyebrow,
+    title: c.title ?? d.title,
+    description: c.description ?? d.description,
+    stages: stages.length ? stages : d.stages,
+    notes: Array.isArray(c.notes)
+      ? c.notes.map((n) => String(n).trim()).filter(Boolean)
+      : d.notes,
+  };
 }

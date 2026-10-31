@@ -5,7 +5,9 @@ import { uploadPrivate } from "@/lib/storage";
 import { XRAY_UPLOAD_ENABLED } from "@/lib/constants";
 import {
   MAX_FILE_BYTES,
+  MAX_IMAGES_PER_LEAD,
   cleanFileName,
+  countLeadFiles,
   deleteLeadFileRow,
   insertLeadFile,
   leadExists,
@@ -95,6 +97,12 @@ export async function POST(request: Request) {
   try {
     if (!(await leadExists(leadId))) {
       return fail(UNAVAILABLE, 404);
+    }
+
+    // Место под архив КЛКТ снимками не занимаем.
+    const { images } = await countLeadFiles(leadId);
+    if (images >= MAX_IMAGES_PER_LEAD) {
+      return fail("К заявке уже приложено максимальное число снимков.", 409);
     }
 
     // Сначала строка в базе, потом объект: если таблицы ещё нет или лимит

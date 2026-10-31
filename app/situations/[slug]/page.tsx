@@ -102,8 +102,8 @@ export default async function SituationPage({ params }: Props) {
           <div className="-mt-6 md:-mt-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
               <PrimaryCtaButton context={context} />
-              <Button href="/directions/endodontics" variant="secondary">
-                Как мы лечим каналы
+              <Button href="/directions/endodontics#prices" variant="secondary">
+                Этапы и цены лечения
               </Button>
             </div>
             <CtaCaption className="mt-3" />

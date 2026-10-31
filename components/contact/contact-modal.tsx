@@ -1,7 +1,7 @@
 // components/contact/contact-modal.tsx
 "use client";
 
-import { useId, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ContactForm } from "@/components/forms/contact-form";
 import { useModalA11y } from "@/lib/use-modal-a11y";
@@ -45,13 +45,26 @@ function ContactModal({
   context?: string;
   onClose: () => void;
 }) {
-  const ref = useModalA11y<HTMLDivElement>(onClose);
+  // Пока форма отправляет заявку или грузит файлы, окно не закрывается:
+  // ни крестиком, ни кликом мимо, ни клавишей Escape. Иначе загрузка
+  // КЛКТ оборвалась бы молча.
+  const busyRef = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const onBusyChange = useCallback((value: boolean) => {
+    busyRef.current = value;
+    setBusy(value);
+  }, []);
+  const safeClose = useCallback(() => {
+    if (!busyRef.current) onClose();
+  }, [onClose]);
+
+  const ref = useModalA11y<HTMLDivElement>(safeClose);
   const titleId = useId();
 
   return (
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+      onClick={safeClose}
     >
       <div
         ref={ref}
@@ -70,9 +83,10 @@ function ContactModal({
           </h3>
           <button
             type="button"
-            onClick={onClose}
+            onClick={safeClose}
+            disabled={busy}
             aria-label="Закрыть"
-            className="text-xl leading-none text-[var(--color-gray-400)] hover:text-[var(--color-navy)]"
+            className="text-xl leading-none text-[var(--color-gray-400)] hover:text-[var(--color-navy)] disabled:opacity-30"
           >
             ×
           </button>
@@ -85,6 +99,7 @@ function ContactModal({
         <ContactForm
           context={context}
           onSuccess={() => setTimeout(onClose, 2500)}
+          onBusyChange={onBusyChange}
         />
       </div>
     </div>

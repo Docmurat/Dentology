@@ -29,6 +29,12 @@ function fmtDate(value: string) {
   });
 }
 
+function fileLabel(contentType: string) {
+  if (contentType === "application/pdf") return "PDF";
+  if (contentType.startsWith("image/")) return "Снимок";
+  return "КЛКТ";
+}
+
 function fmtSize(bytes: number) {
   if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
   return `${Math.max(1, Math.round(bytes / 1024))} КБ`;
@@ -209,7 +215,7 @@ export async function LeadsBoard({
               {lead.files.length ? (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium text-[var(--color-navy)]">
-                    Снимки:
+                    Файлы:
                   </span>
                   {lead.files.map((file, index) => (
                     // Обычная ссылка, не <Link>: это файл, а не страница.
@@ -221,8 +227,7 @@ export async function LeadsBoard({
                       title={file.fileName}
                       className="rounded-lg border border-[var(--color-teal)] px-3 py-1.5 text-sm font-medium text-[var(--color-teal)] hover:bg-[var(--color-teal)]/10"
                     >
-                      {file.contentType === "application/pdf" ? "PDF" : "Снимок"}{" "}
-                      {index + 1}
+                      {fileLabel(file.contentType)} {index + 1}
                       <span className="ml-1.5 font-normal text-[var(--color-gray-500)]">
                         {fmtSize(file.sizeBytes)}
                       </span>

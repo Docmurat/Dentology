@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import { requireStaff } from "@/lib/auth-guards";
 import { getHomepageBlocks } from "@/lib/homepage";
+import { normalizeEndoStage, type EndoStage } from "@/lib/endo-prices";
 
 function revalidateHomepage() {
   revalidatePath("/");
@@ -285,6 +286,40 @@ export async function saveConsultationContent(formData: FormData) {
     steps,
     bringTitle: String(formData.get("bringTitle") || "").trim(),
     bring,
+  });
+
+  revalidateHomepage();
+  revalidateEverywhere();
+}
+
+
+// Сохранить блок «Этапы и стоимость лечения каналов».
+export async function saveEndoPricesContent(formData: FormData) {
+  await requireStaff();
+
+  let stages: EndoStage[] = [];
+  try {
+    const parsed = JSON.parse(String(formData.get("stages") || "[]"));
+    if (Array.isArray(parsed)) {
+      stages = parsed
+        .map((it) => normalizeEndoStage(it))
+        .filter((it): it is EndoStage => it !== null);
+    }
+  } catch {
+    stages = [];
+  }
+
+  const notes = String(formData.get("notes") || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  await saveBlockContent("endo_prices", {
+    eyebrow: String(formData.get("eyebrow") || "").trim(),
+    title: String(formData.get("title") || "").trim(),
+    description: String(formData.get("description") || "").trim(),
+    stages,
+    notes,
   });
 
   revalidateHomepage();

@@ -1,7 +1,7 @@
 // app/api/leads/files/[id]/route.ts
 import { canModerate, getCurrentUser } from "@/lib/auth-guards";
-import { getLeadFileForDownload } from "@/lib/lead-files";
-import { getPrivateObject } from "@/lib/storage";
+import { getLeadFileForDownload, isArchiveType } from "@/lib/lead-files";
+import { getPrivateObject, signDownload } from "@/lib/storage";
 
 /**
  * Выдача файла заявки (снимка пациента) сотруднику.
@@ -44,7 +44,25 @@ export async function GET(
     console.error("LEAD_FILE_LOOKUP_ERROR", error);
     return notFound();
   }
-  if (!file || !SAFE_TYPES.has(file.contentType)) return notFound();
+  if (!file) return notFound();
+
+  // Архив КЛКТ (сотни мегабайт) не читаем в память сервера: выдаём
+  // короткую подписанную ссылку, и браузер скачивает его из хранилища
+  // сам. Ссылка живёт 5 минут и уже после проверки прав выше.
+  if (isArchiveType(file.contentType)) {
+    try {
+      const url = await signDownload(file.storageKey, file.fileName);
+      return new Response(null, {
+        status: 302,
+        headers: { Location: url, "Cache-Control": "private, no-store" },
+      });
+    } catch (error) {
+      console.error("LEAD_SCAN_SIGN_ERROR", error);
+      return new Response("Storage error", { status: 502 });
+    }
+  }
+
+  if (!SAFE_TYPES.has(file.contentType)) return notFound();
 
   let bytes: Uint8Array | null;
   try {

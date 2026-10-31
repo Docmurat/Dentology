@@ -103,8 +103,9 @@ async function notifyInBackground(
   const files = expectedFiles(body);
   // Уведомление уходит раньше, чем файлы загрузятся, поэтому пишем
   // «прикладывает», а не «приложено»: дошли ли они, видно в заявке.
+  // Об архиве КЛКТ придёт отдельное уведомление, когда он загрузится.
   const filesNote = files
-    ? `посетитель прикладывает ${files} шт. — проверьте в разделе «Заявки»`
+    ? `посетитель прикладывает файлов: ${files} — проверьте в разделе «Заявки»`
     : "";
 
   const tgText = [
@@ -115,7 +116,7 @@ async function notifyInBackground(
     `<b>Способ связи:</b> ${tgEscape(body.contactMethod || "Не указан")}`,
     `<b>Заявка по:</b> ${tgEscape(body.context || "Общая заявка")}`,
     body.message ? `<b>Сообщение:</b> ${tgEscape(body.message)}` : "",
-    filesNote ? `<b>Снимки:</b> ${filesNote}` : "",
+    filesNote ? `<b>Файлы:</b> ${filesNote}` : "",
     "",
     "Все заявки: /admin/leads",
   ]
@@ -179,7 +180,7 @@ async function notifyInBackground(
       `Способ связи: ${body.contactMethod || "Не указан"}`,
       `Сообщение: ${body.message || "Не указано"}`,
       `Заявка по: ${body.context || "Общая заявка"}`,
-      filesNote ? `Снимки: ${filesNote}` : "",
+      filesNote ? `Файлы: ${filesNote}` : "",
       `Согласие на обработку ПДн: да`,
     ]
       .filter(Boolean)
@@ -194,7 +195,7 @@ async function notifyInBackground(
       <p><strong>Способ связи:</strong> ${htmlEscape(body.contactMethod || "Не указан")}</p>
       <p><strong>Сообщение:</strong><br />${htmlEscape(body.message || "Не указано").replace(/\n/g, "<br />")}</p>
       <p><strong>Заявка по:</strong> ${htmlEscape(body.context || "Общая заявка")}</p>
-      ${filesNote ? `<p><strong>Снимки:</strong> ${filesNote}</p>` : ""}
+      ${filesNote ? `<p><strong>Файлы:</strong> ${filesNote}</p>` : ""}
       <p><strong>Согласие на обработку ПДн:</strong> да</p>
     `;
 
