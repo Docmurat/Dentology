@@ -3,6 +3,7 @@ import { EndoPricesInteractive } from "@/components/endo-prices/endo-prices-inte
 import { SectionHeading } from "@/components/ui/section-heading";
 import { getEndoPricesContent } from "@/lib/homepage";
 import { typography } from "@/lib/typography";
+import Link from "next/link";
 
 /**
  * Этапы и стоимость лечения каналов. Данные — из админки
@@ -40,6 +41,18 @@ export async function EndoPricesContentBlock({
       <div className="mt-8 sm:mt-10">
         <EndoPricesInteractive content={content} />
       </div>
+
+      <p className={`mt-4 ${typography.bodySm} text-[var(--color-gray-600)]`}>
+        Цены на другие услуги — реставрацию, протезирование, имплантацию,
+        гигиену —{" "}
+        <Link
+          href="/prices"
+          className="font-medium text-[var(--color-teal)] underline underline-offset-2 hover:text-[var(--color-navy)]"
+        >
+          на странице «Цены»
+        </Link>
+        .
+      </p>
     </div>
   );
 }

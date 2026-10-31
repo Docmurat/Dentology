@@ -6,6 +6,12 @@ import {
   type EndoPricesContent,
   type EndoStage,
 } from "@/lib/endo-prices";
+import {
+  PRICE_LIST_DEFAULTS,
+  normalizePriceCategory,
+  type PriceCategory,
+  type PriceListContent,
+} from "@/lib/price-list";
 
 // Внутренний хелпер: контент блока из homepage_content по ключу (или null).
 async function getBlockContent<T>(blockKey: string): Promise<Partial<T> | null> {
@@ -41,7 +47,13 @@ export const HOMEPAGE_BLOCK_DEFS: {
   { key: "team", title: "Команда" },
   { key: "reviews", title: "Отзывы" },
   { key: "education", title: "Обучение" },
-  { key: "endo_prices", title: "Этапы и стоимость лечения каналов" },
+  // На главной по умолчанию скрыт: цены живут на отдельной странице
+  // «Цены» и на странице эндодонтии. Включается здесь, в конструкторе.
+  {
+    key: "endo_prices",
+    title: "Этапы и стоимость лечения каналов",
+    enabledByDefault: false,
+  },
   { key: "consultation", title: "Как проходит консультация" },
   { key: "cta", title: "Призыв к действию" },
   {
@@ -505,6 +517,29 @@ export async function getEndoPricesContent(): Promise<EndoPricesContent> {
     title: c.title || d.title,
     description: c.description ?? d.description,
     stages: stages.length ? stages : d.stages,
+    notes: Array.isArray(c.notes)
+      ? c.notes.map((n) => String(n).trim()).filter(Boolean)
+      : d.notes,
+  };
+}
+
+
+// ── Страница «Цены» ──
+// Хранится в той же таблице под ключом price_list (это не блок главной,
+// редактируется в разделе админки «Цены»).
+export async function getPriceListContent(): Promise<PriceListContent> {
+  const d = PRICE_LIST_DEFAULTS;
+  const c = await getBlockContent<PriceListContent>("price_list");
+  if (!c) return d;
+  const categories = Array.isArray(c.categories)
+    ? c.categories
+        .map((cat) => normalizePriceCategory(cat))
+        .filter((cat): cat is PriceCategory => cat !== null)
+    : d.categories;
+  return {
+    title: c.title || d.title,
+    description: c.description ?? d.description,
+    categories: categories.length ? categories : d.categories,
     notes: Array.isArray(c.notes)
       ? c.notes.map((n) => String(n).trim()).filter(Boolean)
       : d.notes,
