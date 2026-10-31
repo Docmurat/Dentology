@@ -95,8 +95,8 @@ export function ToothIllustration({
   return (
     <svg
       viewBox="0 0 240 330"
-      role="img"
       aria-hidden="true"
+      focusable="false"
       className={className}
     >
       {/* Кость и десна */}

@@ -501,7 +501,8 @@ export async function getEndoPricesContent(): Promise<EndoPricesContent> {
     : d.stages;
   return {
     eyebrow: c.eyebrow ?? d.eyebrow,
-    title: c.title ?? d.title,
+    // Пустой заголовок дал бы пустой h2 — подставляем стандартный.
+    title: c.title || d.title,
     description: c.description ?? d.description,
     stages: stages.length ? stages : d.stages,
     notes: Array.isArray(c.notes)

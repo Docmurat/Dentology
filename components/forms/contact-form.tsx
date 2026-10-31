@@ -5,7 +5,11 @@ import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { compressImage } from "@/lib/image-compress";
 import { XRAY_UPLOAD_ENABLED } from "@/lib/constants";
 import { COMPANY } from "@/lib/company";
-import { uploadScan, type ScanProgress } from "@/lib/scan-upload";
+import {
+  checkScanFile,
+  uploadScan,
+  type ScanProgress,
+} from "@/lib/scan-upload";
 
 // Те же пределы, что проверяет сервер (lib/lead-files.ts). Здесь они
 // нужны, чтобы сказать о проблеме сразу, а не после отправки.
@@ -84,8 +88,9 @@ type FormState = {
 type ApiResponse = {
   ok: boolean;
   message: string;
-  // Пропуск на загрузку файлов к этой заявке (если файлы были заявлены).
+  // Пропуска на загрузку к этой заявке: снимков и архива КЛКТ.
   uploadToken?: string;
+  scanToken?: string;
 };
 
 const initialState: FormState = {
@@ -139,12 +144,14 @@ export function ContactForm({
     if (!isUploading) return;
     const warn = (e: BeforeUnloadEvent) => {
       e.preventDefault();
+      // Старые Safari и Chrome смотрят только на returnValue.
+      e.returnValue = "";
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [isUploading]);
 
-  function pickScan(list: FileList | null) {
+  async function pickScan(list: FileList | null) {
     const file = list?.[0];
     if (!file) return;
     setScanError("");
@@ -154,6 +161,13 @@ export function ContactForm({
     }
     if (file.size > MAX_SCAN_BYTES) {
       setScanError(`Архив больше 1,5 ГБ. ${SCAN_FALLBACK}`);
+      return;
+    }
+    // Сразу проверяем, что внутри действительно архив, — до отправки,
+    // а не после загрузки полутора гигабайт.
+    const problem = await checkScanFile(file);
+    if (problem) {
+      setScanError(problem);
       return;
     }
     setScanFile(file);
@@ -238,7 +252,8 @@ export function ContactForm({
           ...form,
           consent,
           context: context ?? "",
-          filesCount: files.length + (scanFile ? 1 : 0),
+          filesCount: files.length,
+          scan: scanFile !== null,
           website: honeypot,
           startedAt,
         }),
@@ -267,30 +282,36 @@ export function ContactForm({
       const failed: string[] = [];
       let scanFailed = "";
       if (hasAttachments) {
-        if (result.uploadToken) {
-          setIsUploading(true);
-          for (const file of files) {
-            const problem = await uploadLeadFile(result.uploadToken, file);
-            if (problem) {
-              failed.push(`«${file.name}» — ${problem.replace(/\.+$/, "")}`);
+        setIsUploading(true);
+        if (files.length) {
+          if (result.uploadToken) {
+            for (const file of files) {
+              const problem = await uploadLeadFile(result.uploadToken, file);
+              if (problem) {
+                failed.push(`«${file.name}» — ${problem.replace(/\.+$/, "")}`);
+              }
             }
+          } else {
+            failed.push("загрузка файлов сейчас недоступна");
           }
-          if (scanFile) {
+        }
+        if (scanFile) {
+          if (result.scanToken) {
             const abort = new AbortController();
             scanAbortRef.current = abort;
             const problem = await uploadScan(
-              result.uploadToken,
+              result.scanToken,
               scanFile,
               setScanProgress,
               abort.signal
             );
             scanAbortRef.current = null;
             if (problem) scanFailed = problem;
+          } else {
+            scanFailed = "загрузка сейчас недоступна.";
           }
-          setIsUploading(false);
-        } else {
-          failed.push("загрузка файлов сейчас недоступна");
         }
+        setIsUploading(false);
       }
 
       setForm(initialState);
@@ -546,8 +567,10 @@ export function ContactForm({
                 accept=".zip,.rar,.7z,application/zip,application/x-zip-compressed,application/vnd.rar,application/x-rar-compressed,application/x-7z-compressed"
                 className="sr-only"
                 onChange={(e) => {
-                  pickScan(e.target.files);
-                  e.target.value = "";
+                  const list = e.target.files;
+                  void pickScan(list).finally(() => {
+                    e.target.value = "";
+                  });
                 }}
               />
             </label>

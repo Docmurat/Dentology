@@ -5,9 +5,7 @@ import { uploadPrivate } from "@/lib/storage";
 import { XRAY_UPLOAD_ENABLED } from "@/lib/constants";
 import {
   MAX_FILE_BYTES,
-  MAX_IMAGES_PER_LEAD,
   cleanFileName,
-  countLeadFiles,
   deleteLeadFileRow,
   insertLeadFile,
   leadExists,
@@ -43,7 +41,10 @@ export async function POST(request: Request) {
   // Пропуск идёт заголовком и проверяется ДО чтения тела: адрес открытый,
   // и без этого сервер послушно загружал бы в память любой присланный
   // файл, прежде чем понять, что отправитель посторонний.
-  const leadId = verifyUploadToken(request.headers.get("x-upload-token"));
+  const leadId = verifyUploadToken(
+    request.headers.get("x-upload-token"),
+    "files"
+  );
   if (!leadId) {
     return fail("Срок загрузки истёк. Заявка принята без файла.", 403);
   }
@@ -99,17 +100,12 @@ export async function POST(request: Request) {
       return fail(UNAVAILABLE, 404);
     }
 
-    // Место под архив КЛКТ снимками не занимаем.
-    const { images } = await countLeadFiles(leadId);
-    if (images >= MAX_IMAGES_PER_LEAD) {
-      return fail("К заявке уже приложено максимальное число снимков.", 409);
-    }
-
     // Сначала строка в базе, потом объект: если таблицы ещё нет или лимит
     // исчерпан, в хранилище ничего не попадёт и «бесхозных» файлов не будет.
     const inserted = await insertLeadFile({
       id: fileId,
       leadId,
+      kind: "image",
       storageKey,
       fileName: cleanFileName(file.name, type.ext),
       contentType: type.contentType,

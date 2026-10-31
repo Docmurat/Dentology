@@ -177,25 +177,37 @@ export function stageCost(stage: EndoStage, canals: number): number {
 }
 
 /**
- * Ориентировочный итог: обязательные этапы и, отдельно, необязательные.
- * fromPrice — в сумме есть цены «от», итог тоже показывается как «от».
+ * Ориентировочный итог по обязательным этапам. fromPrice — среди них
+ * есть цена «от», и итог тоже показывается как «от». Необязательные этапы
+ * в сумму не входят и перечисляются под ней отдельно.
  */
 export function estimate(
   stages: EndoStage[],
   scenario: EndoScenario,
   canals: number
-): { base: number; extras: number; fromPrice: boolean } {
+): { base: number; fromPrice: boolean } {
   let base = 0;
-  let extras = 0;
   let fromPrice = false;
   for (const stage of stagesFor(stages, scenario)) {
+    if (stage.optional) continue;
     const cost = stageCost(stage, canals);
     if (!cost) continue;
-    if (stage.optional) extras += cost;
-    else base += cost;
+    base += cost;
     if (stage.priceFrom) fromPrice = true;
   }
-  return { base, extras, fromPrice };
+  return { base, fromPrice };
+}
+
+/**
+ * Короткое название этапа для строки «+ 7 500 ₽ — пребилд»: часть до
+ * тире, первая буква строчная. Аббревиатуры («КЛКТ») не трогаем.
+ */
+export function shortStageName(title: string): string {
+  const head = title.split(" — ")[0].trim();
+  if (head.length > 1 && head[1] === head[1].toUpperCase() && /\p{L}/u.test(head[1])) {
+    return head;
+  }
+  return head.charAt(0).toLowerCase() + head.slice(1);
 }
 
 /** 12000 → «12 000 ₽» (неразрывные пробелы, как принято в русском наборе). */

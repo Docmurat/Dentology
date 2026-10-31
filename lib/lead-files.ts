@@ -16,8 +16,9 @@ import { query, queryOne } from "@/lib/db";
  * сами заявки при этом принимаются как раньше.
  */
 
-// Снимков-картинок — до трёх, архив КЛКТ — один. Общий потолок мест
-// в базе (slot) — их сумма: его держит уникальный индекс.
+// Снимков-картинок — до трёх (места 1–3), архив КЛКТ — один (место 0).
+// Пару «заявка + место» держит уникальный индекс, поэтому оба лимита
+// соблюдаются и при одновременных запросах.
 export const MAX_IMAGES_PER_LEAD = 3;
 export const MAX_SCANS_PER_LEAD = 1;
 export const MAX_FILES_PER_LEAD = MAX_IMAGES_PER_LEAD + MAX_SCANS_PER_LEAD;
@@ -30,58 +31,15 @@ export const SCAN_PART_BYTES = 16 * 1024 * 1024;
 /** Ключ хранилища архива КЛКТ. Отдельная папка — у неё свой срок хранения. */
 export const SCAN_PREFIX = "lead-scans";
 
-// Типы архивов КЛКТ. Сверяются с первыми байтами уже загруженного файла.
-export const ARCHIVE_TYPES: Record<string, string> = {
-  zip: "application/zip",
-  rar: "application/vnd.rar",
-  "7z": "application/x-7z-compressed",
-};
-
-export function isArchiveType(contentType: string): boolean {
-  return Object.values(ARCHIVE_TYPES).includes(contentType);
-}
-
-/** Тип архива по имени файла (до загрузки) — null, если не архив. */
-export function archiveExtFromName(name: string): string | null {
-  const ext = (name.split(".").pop() || "").toLowerCase();
-  return ext in ARCHIVE_TYPES ? ext : null;
-}
-
-/** Тип архива по содержимому (после загрузки) — null, если не архив. */
-export function sniffArchive(b: Uint8Array): SniffedType | null {
-  if (b.length < 6) return null;
-  // ZIP: "PK\x03\x04" (обычный) или "PK\x05\x06" (пустой)
-  if (
-    b[0] === 0x50 &&
-    b[1] === 0x4b &&
-    ((b[2] === 0x03 && b[3] === 0x04) || (b[2] === 0x05 && b[3] === 0x06))
-  ) {
-    return { ext: "zip", contentType: ARCHIVE_TYPES.zip };
-  }
-  // RAR: "Rar!\x1a\x07"
-  if (
-    b[0] === 0x52 &&
-    b[1] === 0x61 &&
-    b[2] === 0x72 &&
-    b[3] === 0x21 &&
-    b[4] === 0x1a &&
-    b[5] === 0x07
-  ) {
-    return { ext: "rar", contentType: ARCHIVE_TYPES.rar };
-  }
-  // 7z: "7z\xbc\xaf\x27\x1c"
-  if (
-    b[0] === 0x37 &&
-    b[1] === 0x7a &&
-    b[2] === 0xbc &&
-    b[3] === 0xaf &&
-    b[4] === 0x27 &&
-    b[5] === 0x1c
-  ) {
-    return { ext: "7z", contentType: ARCHIVE_TYPES["7z"] };
-  }
-  return null;
-}
+// Типы архивов и их проверка — в lib/archive-sniff.ts: ту же проверку
+// делает браузер до загрузки, а этот модуль в браузер попадать не должен.
+export {
+  ARCHIVE_TYPES,
+  archiveExtFromName,
+  isArchiveType,
+  sniffArchive,
+} from "@/lib/archive-sniff";
+import { isArchiveType } from "@/lib/archive-sniff";
 
 export type LeadFile = {
   id: string;
@@ -89,7 +47,11 @@ export type LeadFile = {
   fileName: string;
   contentType: string;
   sizeBytes: number;
+  createdAt: string;
 };
+
+/** Сколько дней хранится архив КЛКТ (правило бакета, scripts/setup-bucket.mjs). */
+export const SCAN_KEEP_DAYS = 90;
 
 type Row = {
   id: string;
@@ -98,6 +60,7 @@ type Row = {
   file_name: string;
   content_type: string;
   size_bytes: number;
+  created_at: string;
 };
 
 // ── Определение типа по содержимому ──
@@ -181,9 +144,15 @@ export function cleanFileName(raw: string, ext: string): string {
 // сохранена. Чтобы к чужой заявке нельзя было приложить файл, сервер
 // выдаёт подписанный пропуск: «к заявке такой-то, до такого-то времени».
 
-// 6 часов: архив КЛКТ по медленному мобильному интернету грузится
-// долго, а завершать загрузку нужно тем же пропуском.
-const TOKEN_TTL_MS = 6 * 60 * 60 * 1000;
+// Два вида пропуска с разным сроком: снимки уходят сразу после заявки
+// (30 минут), а архив КЛКТ по медленному интернету может грузиться часами
+// и завершается тем же пропуском (12 часов). Вид вшит в подпись: пропуск
+// на КЛКТ не годится для снимков, и наоборот.
+export type UploadKind = "files" | "scan";
+const TOKEN_TTL_MS: Record<UploadKind, number> = {
+  files: 30 * 60 * 1000,
+  scan: 12 * 60 * 60 * 1000,
+};
 
 function tokenSecret(): string | null {
   return process.env.AUTH_SECRET || null;
@@ -194,24 +163,31 @@ function sign(payload: string, secret: string): string {
 }
 
 /** null — если подписать нечем (не задан AUTH_SECRET): загрузка выключена. */
-export function createUploadToken(leadId: string): string | null {
+export function createUploadToken(
+  leadId: string,
+  kind: UploadKind
+): string | null {
   const secret = tokenSecret();
   if (!secret) return null;
-  const exp = Date.now() + TOKEN_TTL_MS;
-  const payload = `${leadId}.${exp}`;
+  const exp = Date.now() + TOKEN_TTL_MS[kind];
+  const payload = `${leadId}.${kind}.${exp}`;
   return `${payload}.${sign(payload, secret)}`;
 }
 
 /** Возвращает id заявки или null, если пропуск подделан или истёк. */
-export function verifyUploadToken(token: unknown): string | null {
+export function verifyUploadToken(
+  token: unknown,
+  kind: UploadKind
+): string | null {
   const secret = tokenSecret();
   if (!secret || typeof token !== "string") return null;
 
   const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  const [leadId, expRaw, signature] = parts;
+  if (parts.length !== 4) return null;
+  const [leadId, tokenKind, expRaw, signature] = parts;
+  if (tokenKind !== kind) return null;
 
-  const expected = sign(`${leadId}.${expRaw}`, secret);
+  const expected = sign(`${leadId}.${tokenKind}.${expRaw}`, secret);
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
@@ -240,6 +216,7 @@ export async function leadExists(leadId: string): Promise<boolean> {
 export async function insertLeadFile(file: {
   id: string;
   leadId: string;
+  kind: "image" | "scan";
   storageKey: string;
   fileName: string;
   contentType: string;
@@ -250,6 +227,9 @@ export async function insertLeadFile(file: {
   // одновременных запросов: все они видят одно и то же число. С местами
   // лишний запрос упирается в уникальный индекс и повторяет попытку —
   // уже видя занятые места.
+  const [firstSlot, lastSlot] =
+    file.kind === "scan" ? [0, 0] : [1, MAX_IMAGES_PER_LEAD];
+
   for (let attempt = 0; attempt <= MAX_FILES_PER_LEAD; attempt++) {
     try {
       const rows = await query<{ id: string }>(
@@ -258,7 +238,7 @@ export async function insertLeadFile(file: {
          select $1, $2, free.slot, $3, $4, $5, $6
            from (
              select s as slot
-               from generate_series(1, $7::int) as s
+               from generate_series($7::int, $8::int) as s
               where not exists (
                       select 1 from lead_files
                        where lead_id = $2 and slot = s
@@ -274,7 +254,8 @@ export async function insertLeadFile(file: {
           file.fileName,
           file.contentType,
           file.sizeBytes,
-          MAX_FILES_PER_LEAD,
+          firstSlot,
+          lastSlot,
         ]
       );
       return rows.length > 0;
@@ -286,6 +267,15 @@ export async function insertLeadFile(file: {
   return false;
 }
 
+/** Есть ли уже запись о файле с таким ключом (повторное завершение загрузки). */
+export async function leadFileKeyExists(storageKey: string): Promise<boolean> {
+  const row = await queryOne<{ ok: number }>(
+    `select 1 as ok from lead_files where storage_key = $1`,
+    [storageKey]
+  );
+  return Boolean(row);
+}
+
 export async function deleteLeadFileRow(id: string): Promise<void> {
   await query(`delete from lead_files where id = $1`, [id]);
 }
@@ -295,7 +285,8 @@ export async function getLeadFileForDownload(
   id: string
 ): Promise<(LeadFile & { storageKey: string }) | null> {
   const row = await queryOne<Row>(
-    `select id, lead_id, storage_key, file_name, content_type, size_bytes
+    `select id, lead_id, storage_key, file_name, content_type, size_bytes,
+            created_at
        from lead_files where id = $1`,
     [id]
   );
@@ -306,6 +297,7 @@ export async function getLeadFileForDownload(
     fileName: row.file_name,
     contentType: row.content_type,
     sizeBytes: Number(row.size_bytes),
+    createdAt: row.created_at,
     storageKey: row.storage_key,
   };
 }
@@ -322,7 +314,8 @@ export async function getFilesForLeads(
 
   try {
     const rows = await query<Row>(
-      `select id, lead_id, storage_key, file_name, content_type, size_bytes
+      `select id, lead_id, storage_key, file_name, content_type, size_bytes,
+              created_at
          from lead_files
         where lead_id = any($1::text[])
         order by created_at`,
@@ -336,6 +329,7 @@ export async function getFilesForLeads(
         fileName: row.file_name,
         contentType: row.content_type,
         sizeBytes: Number(row.size_bytes),
+        createdAt: row.created_at,
       });
       out.set(row.lead_id, list);
     }

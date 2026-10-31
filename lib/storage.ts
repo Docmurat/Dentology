@@ -164,15 +164,23 @@ export async function startMultipartUpload(
   return res.UploadId;
 }
 
-/** Подписанные ссылки на загрузку частей 1..count. */
+/**
+ * Подписанные ссылки на загрузку частей. partSizes[i] — точный размер
+ * части i+1 в байтах.
+ *
+ * Размер вшит в подпись (content-length среди подписанных заголовков):
+ * хранилище отклонит часть другого размера. Без этого по одной ссылке
+ * можно было бы залить до 5 ГБ, а проверка размера после сборки
+ * не спасает, если загрузку так и не завершают.
+ */
 export async function signUploadParts(
   key: string,
   uploadId: string,
-  count: number,
+  partSizes: number[],
   expiresInSec: number
 ): Promise<string[]> {
   const urls: string[] = [];
-  for (let partNumber = 1; partNumber <= count; partNumber++) {
+  for (let i = 0; i < partSizes.length; i++) {
     urls.push(
       await getSignedUrl(
         directClient,
@@ -180,9 +188,13 @@ export async function signUploadParts(
           Bucket: BUCKET,
           Key: key,
           UploadId: uploadId,
-          PartNumber: partNumber,
+          PartNumber: i + 1,
+          ContentLength: partSizes[i],
         }),
-        { expiresIn: expiresInSec }
+        {
+          expiresIn: expiresInSec,
+          signableHeaders: new Set(["content-length"]),
+        }
       )
     );
   }
@@ -264,6 +276,14 @@ export async function deleteObjectQuiet(key: string): Promise<void> {
   }
 }
 
+/** encodeURIComponent оставляет ' ( ) *, а в filename* они недопустимы. */
+function encodeRfc5987(value: string): string {
+  return encodeURIComponent(value).replace(
+    /['()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
 /**
  * Короткая подписанная ссылка на скачивание закрытого объекта.
  * Выдаётся сотруднику после проверки прав: большой архив не нужно
@@ -279,7 +299,7 @@ export async function signDownload(
     new GetObjectCommand({
       Bucket: BUCKET,
       Key: key,
-      ResponseContentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+      ResponseContentDisposition: `attachment; filename*=UTF-8''${encodeRfc5987(fileName)}`,
     }),
     { expiresIn: expiresInSec }
   );

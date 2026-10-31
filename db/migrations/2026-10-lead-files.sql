@@ -17,7 +17,7 @@
 create table if not exists lead_files (
   id           uuid primary key,
   lead_id      text not null,
-  -- Номер места файла в заявке: 1, 2, 3. Вместе с lead_id уникален —
+  -- Номер места файла в заявке: 1–3 — снимки, 0 — архив КЛКТ. Вместе с lead_id уникален —
   -- так лимит файлов держит сама база, даже при одновременных запросах.
   slot         smallint not null,
   storage_key  text not null,

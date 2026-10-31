@@ -7,6 +7,7 @@ import { ToothIllustration } from "@/components/endo-prices/tooth-illustration";
 import {
   estimate,
   formatRub,
+  shortStageName,
   stageCost,
   stagesFor,
   type EndoPricesContent,
@@ -197,10 +198,7 @@ export function EndoPricesInteractive({
                 scenario={scenario}
                 className="mx-auto h-[380px] w-auto"
               />
-              <div
-                className="mt-6 border-t border-[var(--color-gray-100)] pt-5"
-                aria-live="polite"
-              >
+              <div className="mt-6 border-t border-[var(--color-gray-100)] pt-5">
                 <p
                   className={`${typography.eyebrowSm} text-[var(--color-teal)]`}
                 >
@@ -321,10 +319,7 @@ export function EndoPricesInteractive({
         </div>
       </div>
 
-      <div
-        className="mt-8 rounded-[28px] bg-[var(--color-navy)] px-5 py-8 text-white sm:px-8 sm:py-10 md:px-10"
-        aria-live="polite"
-      >
+      <div className="mt-8 rounded-[28px] bg-[var(--color-navy)] px-5 py-8 text-white sm:px-8 sm:py-10 md:px-10">
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div>
             <p className={`${typography.eyebrow} text-white/60`}>
@@ -332,12 +327,17 @@ export function EndoPricesInteractive({
               {scenario === "retreat" ? "перелечивание" : "первичное лечение"},{" "}
               {canals} {canalsWord(canals)}
             </p>
-            <p className="mt-3 text-4xl font-semibold leading-none sm:text-5xl">
-              {total.fromPrice && !extras.length ? "от " : ""}
+            <p
+              className="mt-3 text-4xl font-semibold leading-none sm:text-5xl"
+              aria-live="polite"
+            >
+              {total.fromPrice ? "от " : ""}
               {formatRub(total.base)}
             </p>
             <p className="mt-3 text-sm leading-6 text-white/75 sm:text-base sm:leading-7">
-              Обязательные этапы. Если понадобятся дополнительные:
+              {extras.length
+                ? "Обязательные этапы. Если понадобятся дополнительные:"
+                : "Все этапы лечения."}
             </p>
             {extras.length ? (
               <ul className="mt-2 space-y-1 text-sm leading-6 text-white/85">
@@ -345,7 +345,7 @@ export function EndoPricesInteractive({
                   <li key={stage.title}>
                     + {stage.priceFrom ? "от " : ""}
                     {formatRub(stageCost(stage, canals))} —{" "}
-                    {stage.title.split(" — ")[0].toLowerCase()}
+                    {shortStageName(stage.title)}
                   </li>
                 ))}
               </ul>

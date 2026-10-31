@@ -5,7 +5,7 @@ import nodemailer from "nodemailer";
 import { sendTelegramMessage, tgEscape } from "@/lib/telegram";
 import { sendPushToStaff } from "@/lib/push";
 import { createLead, markLeadNotified } from "@/lib/leads";
-import { createUploadToken, MAX_FILES_PER_LEAD } from "@/lib/lead-files";
+import { createUploadToken, MAX_IMAGES_PER_LEAD } from "@/lib/lead-files";
 import { XRAY_UPLOAD_ENABLED } from "@/lib/constants";
 import {
   isHoneypotFilled,
@@ -26,6 +26,8 @@ type ContactPayload = {
   // приходят отдельными запросами на /api/contact/files уже после того,
   // как заявка сохранена: так сбой загрузки не теряет заявку.
   filesCount?: number;
+  // Посетитель прикладывает архив КЛКТ (грузится отдельно и долго).
+  scan?: boolean;
   // Антиспам: скрытое поле и метка времени открытия формы.
   website?: string;
   startedAt?: number;
@@ -58,7 +60,7 @@ function expectedFiles(data: ContactPayload): number {
   if (!XRAY_UPLOAD_ENABLED) return 0;
   const n = Math.floor(Number(data.filesCount));
   if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.min(n, MAX_FILES_PER_LEAD);
+  return Math.min(n, MAX_IMAGES_PER_LEAD);
 }
 
 function isTooLong(data: ContactPayload): boolean {
@@ -101,11 +103,16 @@ async function notifyInBackground(
   // Сами снимки в уведомление не кладём: это сведения о здоровье, а почта
   // и Telegram — открытые каналы. Сообщаем только, что они есть в заявке.
   const files = expectedFiles(body);
+  const withScan = XRAY_UPLOAD_ENABLED && body.scan === true;
   // Уведомление уходит раньше, чем файлы загрузятся, поэтому пишем
   // «прикладывает», а не «приложено»: дошли ли они, видно в заявке.
   // Об архиве КЛКТ придёт отдельное уведомление, когда он загрузится.
-  const filesNote = files
-    ? `посетитель прикладывает файлов: ${files} — проверьте в разделе «Заявки»`
+  const attached = [
+    files ? `снимков: ${files}` : "",
+    withScan ? "КЛКТ (о загрузке придёт отдельное сообщение)" : "",
+  ].filter(Boolean);
+  const filesNote = attached.length
+    ? `посетитель прикладывает ${attached.join(", ")} — проверьте в разделе «Заявки»`
     : "";
 
   const tgText = [
@@ -140,7 +147,7 @@ async function notifyInBackground(
   tasks.push(
     sendPushToStaff({
       title: isCourseRequest ? "📅 Заявка с курса" : "🦷 Новая заявка",
-      body: `${body.name} · ${body.phone}${body.context ? ` · ${body.context}` : ""}${files ? " · со снимком" : ""}`,
+      body: `${body.name} · ${body.phone}${body.context ? ` · ${body.context}` : ""}${files || withScan ? " · с файлами" : ""}`,
       url: "/moderator",
     })
       .then((result) => markLeadNotified(leadId, "push", result.ok))
@@ -332,12 +339,20 @@ export async function POST(request: Request) {
     after(() => notifyInBackground(leadId, body, smtpConfigured));
 
     // Пропуск на загрузку файлов выдаём только тому, кто их обещал.
-    const uploadToken = expectedFiles(body) ? createUploadToken(leadId) : null;
+    // Отдельные пропуска: на снимки (короткий) и на КЛКТ (длинный).
+    const uploadToken = expectedFiles(body)
+      ? createUploadToken(leadId, "files")
+      : null;
+    const scanToken =
+      XRAY_UPLOAD_ENABLED && body.scan === true
+        ? createUploadToken(leadId, "scan")
+        : null;
 
     return NextResponse.json({
       ok: true,
       message: "Запрос отправлен. Мы свяжемся с вами.",
       ...(uploadToken ? { uploadToken } : {}),
+      ...(scanToken ? { scanToken } : {}),
     });
   } catch (error) {
     console.error("CONTACT_FORM_ERROR", error);

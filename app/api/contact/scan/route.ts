@@ -4,16 +4,15 @@ import { rateLimit } from "@/lib/anti-spam";
 import { XRAY_UPLOAD_ENABLED } from "@/lib/constants";
 import {
   MAX_SCAN_BYTES,
-  MAX_SCANS_PER_LEAD,
   SCAN_PART_BYTES,
   SCAN_PREFIX,
   ARCHIVE_TYPES,
   archiveExtFromName,
   cleanFileName,
-  countLeadFiles,
   insertLeadFile,
   leadContact,
   leadExists,
+  leadFileKeyExists,
   sniffArchive,
   verifyUploadToken,
 } from "@/lib/lead-files";
@@ -27,6 +26,7 @@ import {
   startMultipartUpload,
 } from "@/lib/storage";
 import { sendTelegramMessage, tgEscape } from "@/lib/telegram";
+import { queryOne } from "@/lib/db";
 import { sendPushToStaff } from "@/lib/push";
 
 /**
@@ -38,16 +38,19 @@ import { sendPushToStaff } from "@/lib/push";
  *   complete — собрать части, проверить, что это архив, записать в заявку;
  *   abort    — отменить незавершённую загрузку.
  *
- * Пропуск (x-upload-token) тот же, что у снимков: выдаётся при создании
- * заявки и привязан к ней. Ключ объекта строится здесь, и при complete
- * и abort проверяется, что он принадлежит той же заявке.
+ * Пропуск (x-upload-token) — отдельный, «на КЛКТ»: выдаётся при создании
+ * заявки, привязан к ней и живёт 12 часов. Ключ объекта строится здесь,
+ * и при complete и abort проверяется, что он принадлежит той же заявке.
+ *
+ * Объём ограничен на стороне хранилища: в ссылку каждой части вшит её
+ * точный размер. Один архив на заявку — отдельное место в базе (slot 0).
  *
  * Незавершённые загрузки бакет сам удаляет через сутки, готовые архивы —
  * через 90 дней (правила задаёт scripts/setup-bucket.mjs).
  */
 
 // Подписанные ссылки на части живут столько же, сколько пропуск.
-const PART_URL_TTL_SEC = 6 * 60 * 60;
+const PART_URL_TTL_SEC = 12 * 60 * 60;
 const MAX_PARTS = Math.ceil(MAX_SCAN_BYTES / SCAN_PART_BYTES);
 const UNAVAILABLE = "Не удалось загрузить КЛКТ. Заявка принята без него.";
 const UPLOAD_ID_RE = /^[A-Za-z0-9._~+/=-]{1,1024}$/;
@@ -72,7 +75,10 @@ type Body = {
 export async function POST(request: Request) {
   if (!XRAY_UPLOAD_ENABLED) return fail(UNAVAILABLE, 404);
 
-  const leadId = verifyUploadToken(request.headers.get("x-upload-token"));
+  const leadId = verifyUploadToken(
+    request.headers.get("x-upload-token"),
+    "scan"
+  );
   if (!leadId) {
     return fail("Срок загрузки истёк. Заявка принята без КЛКТ.", 403);
   }
@@ -127,24 +133,23 @@ async function start(leadId: string, ownPrefix: string, body: Body) {
   }
 
   if (!(await leadExists(leadId))) return fail(UNAVAILABLE, 404);
-
-  const { scans } = await countLeadFiles(leadId);
-  if (scans >= MAX_SCANS_PER_LEAD) {
+  if (await leadHasScan(leadId)) {
     return fail("К заявке уже приложен КЛКТ.", 409);
   }
 
   const key = `${ownPrefix}${crypto.randomUUID()}.${ext}`;
   const uploadId = await startMultipartUpload(key, ARCHIVE_TYPES[ext]);
   const partCount = Math.ceil(size / SCAN_PART_BYTES);
-  const urls = await signUploadParts(key, uploadId, partCount, PART_URL_TTL_SEC);
+  const partSizes = Array.from({ length: partCount }, (_, i) =>
+    i < partCount - 1 ? SCAN_PART_BYTES : size - SCAN_PART_BYTES * (partCount - 1)
+  );
+  const urls = await signUploadParts(key, uploadId, partSizes, PART_URL_TTL_SEC);
 
-  return NextResponse.json({
-    ok: true,
-    key,
-    uploadId,
-    partSize: SCAN_PART_BYTES,
-    urls,
-  });
+  return NextResponse.json(
+    { ok: true, key, uploadId, partSize: SCAN_PART_BYTES, urls },
+    // Подписанные ссылки — не для кэшей по пути.
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
 
 async function complete(leadId: string, ownPrefix: string, body: Body) {
@@ -171,41 +176,86 @@ async function complete(leadId: string, ownPrefix: string, body: Body) {
     );
   if (!valid) return fail("Некорректный запрос.", 400);
 
-  await completeMultipartUpload(key, uploadId, parts);
-
-  // Части грузил браузер напрямую, поэтому проверяем результат здесь:
-  // размер (ссылки на части не ограничивают объём) и что это архив.
-  const size = await objectSize(key);
-  if (size === null) return fail(UNAVAILABLE, 502);
-  if (size > MAX_SCAN_BYTES) {
-    await deleteObjectQuiet(key);
-    return fail("Архив больше 1,5 ГБ. Перешлите его на почту клиники.", 413);
+  // Повторный вызов (ответ на первый потерялся по дороге) должен быть
+  // безопасным: если этот архив уже записан к заявке — это успех. Проверка
+  // ДО сборки: иначе повтор упёрся бы в занятое место и удалил бы
+  // уже принятый файл.
+  if (await leadFileKeyExists(key)) {
+    return NextResponse.json({ ok: true, message: "КЛКТ получен." });
   }
 
-  const type = sniffArchive(await readObjectStart(key));
-  if (!type || ARCHIVE_TYPES[key.split(".").pop() ?? ""] !== type.contentType) {
-    await deleteObjectQuiet(key);
-    return fail("Файл не похож на архив .zip, .rar или .7z.", 415);
+  try {
+    await completeMultipartUpload(key, uploadId, parts);
+  } catch (error) {
+    if ((error as { name?: string })?.name !== "NoSuchUpload") throw error;
+    if (await leadFileKeyExists(key)) {
+      return NextResponse.json({ ok: true, message: "КЛКТ получен." });
+    }
+    if ((await objectSize(key)) === null) throw error;
   }
 
-  // Имя — только для показа сотруднику; расширение — по содержимому.
-  const fileName = cleanFileName(String(body.fileName ?? "КЛКТ"), type.ext);
-  const inserted = await insertLeadFile({
-    id: crypto.randomUUID(),
-    leadId,
-    storageKey: key,
-    fileName,
-    contentType: type.contentType,
-    sizeBytes: size,
-  });
-  if (!inserted) {
+  // Дальше объект уже собран. Если что-то пойдёт не так, его нужно
+  // удалить: иначе в хранилище останется медицинский файл без записи.
+  let size: number;
+  try {
+    // Заявку могли удалить, пока архив догружался.
+    if (!(await leadExists(leadId))) {
+      await deleteObjectQuiet(key);
+      return fail(UNAVAILABLE, 404);
+    }
+
+    const measured = await objectSize(key);
+    if (measured === null) return fail(UNAVAILABLE, 502);
+    size = measured;
+    if (size > MAX_SCAN_BYTES) {
+      await deleteObjectQuiet(key);
+      return fail("Архив больше 1,5 ГБ. Перешлите его на почту клиники.", 413);
+    }
+
+    // Формат — по содержимому, а не по имени: .rar, переименованный
+    // в .zip, тоже принимается.
+    const type = sniffArchive(await readObjectStart(key));
+    if (!type) {
+      await deleteObjectQuiet(key);
+      return fail("Файл не похож на архив .zip, .rar или .7z.", 415);
+    }
+
+    // Имя — только для показа сотруднику; расширение — по содержимому.
+    const fileName = cleanFileName(String(body.fileName ?? "КЛКТ"), type.ext);
+    const inserted = await insertLeadFile({
+      id: crypto.randomUUID(),
+      leadId,
+      kind: "scan",
+      storageKey: key,
+      fileName,
+      contentType: type.contentType,
+      sizeBytes: size,
+    });
+    if (!inserted) {
+      // Место занято. Если это наш же архив (параллельный повтор успел
+      // раньше) — успех, удалять нельзя. Иначе это лишний второй архив.
+      if (await leadFileKeyExists(key)) {
+        return NextResponse.json({ ok: true, message: "КЛКТ получен." });
+      }
+      await deleteObjectQuiet(key);
+      return fail("К заявке уже приложен КЛКТ.", 409);
+    }
+  } catch (error) {
     await deleteObjectQuiet(key);
-    return fail("К заявке уже приложено максимальное число файлов.", 409);
+    throw error;
   }
 
   after(() => notifyScan(leadId, size));
 
   return NextResponse.json({ ok: true, message: "КЛКТ получен." });
+}
+
+async function leadHasScan(leadId: string): Promise<boolean> {
+  const row = await queryOne<{ ok: number }>(
+    `select 1 as ok from lead_files where lead_id = $1 and slot = 0`,
+    [leadId]
+  );
+  return Boolean(row);
 }
 
 async function abort(ownPrefix: string, body: Body) {

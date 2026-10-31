@@ -43,6 +43,10 @@ export function EndoPricesEditor({ initial }: { initial: EndoPricesContent }) {
     });
   }
 
+  // Этап без названия сайт не покажет, а пустой список заменится
+  // стандартными этапами. Не даём сохранить такое молча.
+  const invalid = !stages.length || stages.some((s) => !s.title.trim());
+
   return (
     <form action={saveEndoPricesContent} className="space-y-4">
       <input type="hidden" name="stages" value={JSON.stringify(stages)} />
@@ -184,10 +188,18 @@ export function EndoPricesEditor({ initial }: { initial: EndoPricesContent }) {
         <p className={hintCls}>Каждое пояснение с новой строки.</p>
       </div>
 
+      {invalid ? (
+        <p className="text-sm text-red-600">
+          Чтобы сохранить, у каждого этапа должно быть название, и хотя бы один
+          этап должен остаться.
+        </p>
+      ) : null}
+
       <button
         type="submit"
+        disabled={invalid}
         style={{ color: "#ffffff" }}
-        className="rounded-lg bg-[var(--color-navy)] px-5 py-2.5 text-sm font-medium hover:opacity-90"
+        className="rounded-lg bg-[var(--color-navy)] px-5 py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-40"
       >
         Сохранить блок
       </button>

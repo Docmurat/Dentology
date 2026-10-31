@@ -10,6 +10,7 @@ import {
 import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { setLeadStatusAction, deleteLead } from "@/app/admin/leads/actions";
 import { PushToggle } from "@/components/admin/push-toggle";
+import { SCAN_KEEP_DAYS } from "@/lib/lead-files";
 
 // Общий список заявок. Используется админкой и кабинетом модератора,
 // поэтому базовый адрес для вкладок приходит снаружи.
@@ -27,6 +28,13 @@ function fmtDate(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+// Архивы КЛКТ бакет удаляет сам по сроку — ссылка на них вела бы в ошибку.
+function isExpiredScan(file: { contentType: string; createdAt: string }) {
+  if (fileLabel(file.contentType) !== "КЛКТ") return false;
+  const age = Date.now() - new Date(file.createdAt).getTime();
+  return age > SCAN_KEEP_DAYS * 24 * 60 * 60 * 1000;
 }
 
 function fileLabel(contentType: string) {
@@ -186,7 +194,11 @@ export async function LeadsBoard({
                     />
                   ) : null}
                   {lead.status !== "done" ? (
-                    <StatusButton id={lead.id} status="done" label="Обработана" />
+                    <StatusButton
+                      id={lead.id}
+                      status="done"
+                      label="Обработана"
+                    />
                   ) : null}
                   {lead.status !== "spam" ? (
                     <StatusButton id={lead.id} status="spam" label="Спам" />
@@ -217,22 +229,31 @@ export async function LeadsBoard({
                   <span className="text-sm font-medium text-[var(--color-navy)]">
                     Файлы:
                   </span>
-                  {lead.files.map((file, index) => (
-                    // Обычная ссылка, не <Link>: это файл, а не страница.
-                    <a
-                      key={file.id}
-                      href={`/api/leads/files/${file.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={file.fileName}
-                      className="rounded-lg border border-[var(--color-teal)] px-3 py-1.5 text-sm font-medium text-[var(--color-teal)] hover:bg-[var(--color-teal)]/10"
-                    >
-                      {fileLabel(file.contentType)} {index + 1}
-                      <span className="ml-1.5 font-normal text-[var(--color-gray-500)]">
-                        {fmtSize(file.sizeBytes)}
+                  {lead.files.map((file, index) =>
+                    isExpiredScan(file) ? (
+                      <span
+                        key={file.id}
+                        className="rounded-lg border border-[var(--color-gray-200)] px-3 py-1.5 text-sm text-[var(--color-gray-500)]"
+                      >
+                        КЛКТ удалён: срок хранения {SCAN_KEEP_DAYS} дней
                       </span>
-                    </a>
-                  ))}
+                    ) : (
+                      // Обычная ссылка, не <Link>: это файл, а не страница.
+                      <a
+                        key={file.id}
+                        href={`/api/leads/files/${file.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={file.fileName}
+                        className="rounded-lg border border-[var(--color-teal)] px-3 py-1.5 text-sm font-medium text-[var(--color-teal)] hover:bg-[var(--color-teal)]/10"
+                      >
+                        {fileLabel(file.contentType)} {index + 1}
+                        <span className="ml-1.5 font-normal text-[var(--color-gray-500)]">
+                          {fmtSize(file.sizeBytes)}
+                        </span>
+                      </a>
+                    ),
+                  )}
                 </div>
               ) : null}
 
@@ -243,9 +264,7 @@ export async function LeadsBoard({
                 <span>
                   Telegram: {lead.notifiedTelegram ? "отправлен" : "не дошёл"}
                 </span>
-                <span>
-                  Пуш: {lead.notifiedPush ? "доставлен" : "не дошёл"}
-                </span>
+                <span>Пуш: {lead.notifiedPush ? "доставлен" : "не дошёл"}</span>
                 {lead.sourceIp ? <span>IP: {lead.sourceIp}</span> : null}
               </div>
             </div>

@@ -7,7 +7,24 @@
 // Пациенту делить архив не нужно: File.slice() отдаёт кусок файла без
 // чтения его целиком в память, поэтому даже 1,5 ГБ не нагружают телефон.
 
+import { sniffArchive } from "@/lib/archive-sniff";
+
 export type ScanProgress = { sent: number; total: number };
+
+/**
+ * Проверка до загрузки: первые байты файла — это zip, rar или 7z?
+ * Читается 8 байт, а не весь архив. null — всё в порядке.
+ */
+export async function checkScanFile(file: File): Promise<string | null> {
+  try {
+    const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+    return sniffArchive(head)
+      ? null
+      : "Файл не похож на архив .zip, .rar или .7z. Папку с КЛКТ сначала сожмите в zip.";
+  } catch {
+    return "Не удалось прочитать файл.";
+  }
+}
 
 type StartResponse = {
   ok: boolean;
@@ -20,7 +37,9 @@ type StartResponse = {
 
 const PARALLEL_PARTS = 3;
 const PART_ATTEMPTS = 4;
-const PART_TIMEOUT_MS = 15 * 60 * 1000;
+// 16 МБ при трёх параллельных частях даже на 0,2 Мбит/с укладываются.
+const PART_TIMEOUT_MS = 30 * 60 * 1000;
+const COMPLETE_ATTEMPTS = 3;
 
 class UploadAborted extends Error {}
 
@@ -95,15 +114,16 @@ function putPart(
 
 function wait(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        reject(new UploadAborted());
-      },
-      { once: true }
-    );
+    if (signal.aborted) return reject(new UploadAborted());
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new UploadAborted());
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -145,9 +165,16 @@ export async function uploadScan(
 
   let next = 0;
   let noEtag = false;
+  // Внутренняя отмена: при первой окончательной ошибке останавливаем все
+  // потоки сразу, иначе они продолжали бы грузить и двигать полосу
+  // уже после того, как пациенту показана ошибка.
+  const inner = new AbortController();
+  const stopAll = () => inner.abort();
+  signal.addEventListener("abort", stopAll, { once: true });
+  let firstError: unknown = null;
 
   async function worker() {
-    while (next < urls.length) {
+    while (next < urls.length && !inner.signal.aborted) {
       const index = next++;
       const blob = file.slice(index * partSize, Math.min(total, (index + 1) * partSize));
 
@@ -160,7 +187,7 @@ export async function uploadScan(
               sentByPart[index] = sent;
               report();
             },
-            signal
+            inner.signal
           );
           sentByPart[index] = blob.size;
           report();
@@ -175,20 +202,29 @@ export async function uploadScan(
           report();
           if (attempt >= PART_ATTEMPTS) throw err;
           // Пауза растёт: 2, 4, 8 секунд — даём связи восстановиться.
-          await wait(1000 * 2 ** attempt, signal);
+          await wait(1000 * 2 ** attempt, inner.signal);
         }
       }
     }
   }
 
-  try {
-    await Promise.all(
-      Array.from({ length: Math.min(PARALLEL_PARTS, urls.length) }, worker)
-    );
-  } catch (err) {
+  // Ждём, пока остановятся ВСЕ потоки, а не только первый упавший.
+  await Promise.allSettled(
+    Array.from({ length: Math.min(PARALLEL_PARTS, urls.length) }, () =>
+      worker().catch((err) => {
+        if (firstError === null) firstError = err;
+        stopAll();
+      })
+    )
+  );
+  signal.removeEventListener("abort", stopAll);
+
+  if (firstError !== null || signal.aborted) {
     // Незавершённую загрузку закрываем, чтобы части не лежали в хранилище.
     api(token, { action: "abort", key, uploadId }).catch(() => undefined);
-    if (err instanceof UploadAborted) return "Загрузка отменена.";
+    if (signal.aborted || firstError instanceof UploadAborted) {
+      return "Загрузка отменена.";
+    }
     if (noEtag) {
       console.error("SCAN_UPLOAD: ETag header not exposed — bucket CORS needs ExposeHeaders: ETag");
       return "Хранилище не приняло файл.";
@@ -196,17 +232,28 @@ export async function uploadScan(
     return "Связь прервалась, и загрузить архив не удалось.";
   }
 
-  let done: { ok: boolean; message?: string };
-  try {
-    done = await api(token, {
-      action: "complete",
-      key,
-      uploadId,
-      fileName: file.name,
-      parts: etags.map((ETag, i) => ({ PartNumber: i + 1, ETag })),
-    });
-  } catch {
-    return "Нет соединения с сервером при завершении загрузки.";
+  // Завершение безопасно повторять: сервер узнаёт уже собранный архив.
+  const payload = {
+    action: "complete",
+    key,
+    uploadId,
+    fileName: file.name,
+    parts: etags.map((ETag, i) => ({ PartNumber: i + 1, ETag })),
+  };
+  let lastMessage = "Нет соединения с сервером при завершении загрузки.";
+  for (let attempt = 1; attempt <= COMPLETE_ATTEMPTS; attempt++) {
+    try {
+      const done = await api(token, payload);
+      if (done.ok) return null;
+      lastMessage = done.message || "Не удалось завершить загрузку.";
+      // Отказ по существу (не архив, слишком большой) повторять бессмысленно.
+      if (!/Не удалось загрузить КЛКТ/.test(lastMessage)) return lastMessage;
+    } catch {
+      lastMessage = "Нет соединения с сервером при завершении загрузки.";
+    }
+    if (attempt < COMPLETE_ATTEMPTS) {
+      await new Promise((r) => setTimeout(r, 3000 * attempt));
+    }
   }
-  return done.ok ? null : done.message || "Не удалось завершить загрузку.";
+  return lastMessage;
 }
