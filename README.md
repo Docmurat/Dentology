@@ -13,7 +13,7 @@
 через SSH-туннель. Открой **PowerShell** и выполни:
 
 ```
-ssh -i $env:USERPROFILE\.ssh\lucenta -o ServerAliveInterval=30 -L 6432:rc1a-kicoc4psaq9sd2vm.mdb.yandexcloud.net:6432 ubuntu@46.21.246.139
+ssh -i $env:USERPROFILE\.ssh\lucenta ubuntu@46.21.246.139 "grep PGHOST ~/lucenta/.env"
 ```
 
 Окажешься на сервере. **Это окно не закрывать** — оно держит туннель.
