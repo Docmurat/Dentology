@@ -51,6 +51,7 @@ export default async function SitemapPage() {
               <li><Link href="/about" className={linkCls}>О враче</Link></li>
               <li><Link href="/education" className={linkCls}>Обучение</Link></li>
               <li><Link href="/reviews" className={linkCls}>Отзывы</Link></li>
+              <li><Link href="/prices" className={linkCls}>Цены</Link></li>
               <li><Link href="/contacts" className={linkCls}>Контакты</Link></li>
             </ul>
           </Card>

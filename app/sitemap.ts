@@ -16,6 +16,7 @@ const STATIC_PATHS = [
   "/contacts",
   "/reviews",
   "/situations",
+  "/prices",
   ...SITUATIONS.map((item) => `/situations/${item.slug}`),
   "/sitemap",
   "/legal/privacy",

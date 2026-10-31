@@ -6,6 +6,7 @@ export const siteConfig = {
   navigation: [
     { label: "Направления", href: "/#directions" },
     { label: "Клинические случаи", href: "/cases" },
+    { label: "Цены", href: "/prices" },
     { label: "Отзывы", href: "/reviews" },
     { label: "Команда", href: "/team" },
     { label: "Обучение", href: "/education" },

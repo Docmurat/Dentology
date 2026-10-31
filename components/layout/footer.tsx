@@ -67,6 +67,7 @@ export async function Footer({
               <Link href="/team">Команда</Link>
               <Link href="/about">О враче</Link>
               <Link href="/situations">Ситуации пациентов</Link>
+              <Link href="/prices">Цены</Link>
               <Link href="/education">Обучение</Link>
               <Link href="/contacts">Контакты</Link>
             </div>
